@@ -1,0 +1,12 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Node / tooling
+node_modules/
+package-lock.json
+
+# Editor / session
+.claude/
