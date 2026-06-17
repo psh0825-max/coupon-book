@@ -1,0 +1,114 @@
+.card[data-skin="stone"],
+.detail-header[data-skin="stone"],
+.skin-option[data-skin="stone"] {
+  --skin-from: #22d3ee;
+  --skin-to: #0ea5e9;
+  --skin: #18bedf;
+  --skin-soft: rgba(34, 211, 238, 0.16);
+  --skin-grad: linear-gradient(135deg, var(--skin-from), var(--skin-to));
+  --skin-glow: rgba(14, 165, 233, 0.32);
+}
+
+.card[data-skin="sage"],
+.detail-header[data-skin="sage"],
+.skin-option[data-skin="sage"] {
+  --skin-from: #3b82f6;
+  --skin-to: #6366f1;
+  --skin: #4f74f4;
+  --skin-soft: rgba(59, 130, 246, 0.16);
+  --skin-grad: linear-gradient(135deg, var(--skin-from), var(--skin-to));
+  --skin-glow: rgba(99, 102, 241, 0.32);
+}
+
+.card[data-skin="espresso"],
+.detail-header[data-skin="espresso"],
+.skin-option[data-skin="espresso"] {
+  --skin-from: #fb923c;
+  --skin-to: #f59e0b;
+  --skin: #fa8a23;
+  --skin-soft: rgba(251, 146, 60, 0.16);
+  --skin-grad: linear-gradient(135deg, var(--skin-from), var(--skin-to));
+  --skin-glow: rgba(245, 158, 11, 0.32);
+}
+
+.card[data-skin="midnight"],
+.detail-header[data-skin="midnight"],
+.skin-option[data-skin="midnight"] {
+  --skin-from: #818cf8;
+  --skin-to: #a855f7;
+  --skin: #9471f7;
+  --skin-soft: rgba(129, 140, 248, 0.16);
+  --skin-grad: linear-gradient(135deg, var(--skin-from), var(--skin-to));
+  --skin-glow: rgba(168, 85, 247, 0.32);
+}
+
+.card[data-skin="coral"],
+.detail-header[data-skin="coral"],
+.skin-option[data-skin="coral"] {
+  --skin-from: #fb7185;
+  --skin-to: #ef4444;
+  --skin: #f55763;
+  --skin-soft: rgba(251, 113, 133, 0.16);
+  --skin-grad: linear-gradient(135deg, var(--skin-from), var(--skin-to));
+  --skin-glow: rgba(239, 68, 68, 0.32);
+}
+
+.card[data-skin]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--skin-grad);
+  z-index: 1;
+}
+
+.card[data-skin] .card-icon {
+  background: var(--skin-grad);
+  border: none;
+  color: #fff;
+  box-shadow: 0 6px 18px var(--skin-glow);
+}
+
+.card[data-skin] .progress-fill {
+  background: var(--skin-grad);
+}
+
+.card[data-skin] .stamp.used {
+  background: var(--skin-grad);
+  border-color: transparent;
+}
+
+.card[data-skin] .stamp.used svg {
+  stroke: #fff;
+}
+
+.card[data-skin]:hover {
+  box-shadow: 0 18px 40px var(--skin-glow);
+  border-color: color-mix(in srgb, var(--skin) 40%, transparent);
+}
+
+.detail-header[data-skin] {
+  position: relative;
+  overflow: hidden;
+}
+
+.detail-header[data-skin]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: var(--skin-grad);
+  z-index: 1;
+}
+
+.detail-header[data-skin] .hero {
+  background: var(--skin-soft);
+}
+
+.skin-option[data-skin] .swatch {
+  background: var(--skin-grad) !important;
+}
