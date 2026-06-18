@@ -1,0 +1,11 @@
+# Google AdSense ads.txt
+# Replace pub-XXXXXXXXXXXXXXXX with YOUR publisher ID (the digits after "ca-", no "ca-" prefix).
+# NOTE: AdSense reads ads.txt from the DOMAIN ROOT. This file is served at
+#   https://psh0825-max.github.io/coupon-book/ads.txt
+# but AdSense will look for it at
+#   https://psh0825-max.github.io/ads.txt
+# On a github.io project (subpath) site that root path is owned by a separate
+# "psh0825-max.github.io" repo. For full ads.txt recognition, either:
+#   (a) add a custom domain to GitHub Pages and place ads.txt at its root, or
+#   (b) create a public "psh0825-max.github.io" repo containing ads.txt at root.
+google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
