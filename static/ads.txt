@@ -7,4 +7,4 @@
 # no separate root repo is required.
 # (If AdSense is instead registered for the apex lightonpluslab.com, an ads.txt at the
 # apex root must be served by that site's own repo — see rootdomain/README.md.)
-google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+google.com, pub-7180935400084577, DIRECT, f08c47fec0942fa0
