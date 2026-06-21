@@ -161,3 +161,37 @@ body.overlay-open .main {
   color: var(--text-muted);
   font-size: 0.85rem;
 }
+
+/* ── Distinct "my location" map marker ────────────────────────────────────── */
+/* Shop pins keep their shared chrome from components.css; the 'me' marker is
+   restyled as a classic pulsing blue location dot so it's unmistakable. */
+.coupon-map-pin.me {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  position: relative;
+}
+.coupon-map-pin.me span {
+  width: 16px;
+  height: 16px;
+  background: #2563eb;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, .55), 0 2px 6px rgba(0, 0, 0, .35);
+}
+.coupon-map-pin.me::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, .25);
+  z-index: -1;
+  animation: me-pulse 2s ease-out infinite;
+}
+@keyframes me-pulse {
+  0% { transform: scale(.5); opacity: .75; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .coupon-map-pin.me::after { animation: none; }
+}
