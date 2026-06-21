@@ -12,7 +12,8 @@ export const DEFAULTS = {
   notifyDelay: 5,
   remindersEnabled: false,
   reminderDays: [7, 3, 1],
-  onboarded: false
+  onboarded: false,
+  backupHinted: false
 };
 
 // ── Normalization (pure) ─────────────────────────────────────────────────────
