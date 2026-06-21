@@ -1,0 +1,171 @@
+// views/edit.js — add/edit shop form with live stamp preview, set-current-location,
+// skin selector, and delete (edit mode). All inputs have associated labels.
+
+import { h, clear } from '../core/h.js';
+import { stampBoard, skinSelector } from '../ui/components.js';
+import { getCurrentPosition } from '../services/location.js';
+import { CATEGORIES, getDefaultSkin } from '../data/skins.js';
+import { showToast } from '../ui/toast.js';
+import { showConfirm } from '../ui/overlay.js';
+
+export function render(ctx, params = {}) {
+  const { store, router, actions } = ctx;
+  const st = store.getState();
+  const isEdit = !!params.id;
+  const shop = isEdit ? (st.shops || []).find((s) => s.id === params.id) : null;
+  if (isEdit && !shop) {
+    showToast('업체를 찾을 수 없어요', 'danger');
+    router.navigate('home');
+    return h('div');
+  }
+
+  const field = (labelText, forId, ...controls) => h('div', { class: 'form-group' },
+    h('label', { attrs: { for: forId } }, labelText),
+    ...controls
+  );
+
+  const root = h('div');
+  root.appendChild(h('div', { class: 'page-header' }, h('h2', null, isEdit ? '업체 편집' : '업체 추가')));
+
+  const form = h('form', { id: 'shop-form' });
+  root.appendChild(form);
+
+  // name
+  const nameInput = h('input', { id: 'f-name', attrs: { type: 'text', name: 'name', required: '', placeholder: '예: 안양 스타 마사지', value: isEdit ? shop.name : '' } });
+  form.appendChild(field('업체 이름', 'f-name', nameInput));
+
+  // category + total
+  const catSelect = h('select', { id: 'f-category', attrs: { name: 'category' } },
+    Object.keys(CATEGORIES).map((c) => h('option', {
+      attrs: { value: c, selected: isEdit && shop.category === c ? '' : null }
+    }, c))
+  );
+  const totalInput = h('input', { id: 'f-total', attrs: { type: 'number', name: 'totalCoupons', min: '1', max: '100', required: '', value: isEdit ? String(shop.totalCoupons) : '10' } });
+  form.appendChild(h('div', { class: 'form-row' },
+    field('카테고리', 'f-category', catSelect),
+    field('쿠폰 총 개수', 'f-total', totalInput)
+  ));
+
+  // used + live stamp preview
+  const usedInput = h('input', { id: 'f-used', attrs: { type: 'number', name: 'usedCoupons', min: '0', max: '100', value: isEdit ? String(shop.usedCoupons || 0) : '0' } });
+  const counter = h('span', { class: 'stamp-counter', id: 'f-stamp-counter' }, '0 / 10');
+  const previewBoard = h('div', { class: 'stamp-board stamp-preview', id: 'f-stamp-preview' });
+  form.appendChild(h('div', { class: 'form-group' },
+    h('div', { class: 'stamp-preview-head' },
+      h('label', { attrs: { for: 'f-used' }, style: { margin: '0' } }, '현재 적립 개수'),
+      counter
+    ),
+    usedInput,
+    h('p', { class: 'field-hint' }, '이미 도장을 찍은 종이 쿠폰이라면 현재 개수를 입력하세요.'),
+    previewBoard
+  ));
+
+  function renderPreview() {
+    const total = Math.max(1, Math.min(100, parseInt(totalInput.value) || 0));
+    const used = Math.max(0, Math.min(parseInt(usedInput.value) || 0, total));
+    counter.textContent = `${used} / ${total}`;
+    clear(previewBoard);
+    previewBoard.appendChild(stampBoard(total, used));
+  }
+  totalInput.addEventListener('input', renderPreview);
+  usedInput.addEventListener('input', renderPreview);
+
+  // address
+  const addressInput = h('input', { id: 'f-address', attrs: { type: 'text', name: 'address', placeholder: '주소를 입력하세요', value: isEdit ? (shop.address || '') : '' } });
+  form.appendChild(field('주소', 'f-address', addressInput));
+
+  // phone + expiry
+  const phoneInput = h('input', { id: 'f-phone', attrs: { type: 'tel', name: 'phone', placeholder: '예: 031-000-0000', value: isEdit ? (shop.phone || '') : '' } });
+  const expiresInput = h('input', { id: 'f-expires', attrs: { type: 'date', name: 'expiresAt', value: isEdit ? (shop.expiresAt || '') : '' } });
+  form.appendChild(h('div', { class: 'form-row' },
+    field('전화번호', 'f-phone', phoneInput),
+    field('만료일', 'f-expires', expiresInput)
+  ));
+
+  // location
+  const latInput = h('input', { id: 'f-lat', attrs: { type: 'text', name: 'lat', placeholder: '위도', readonly: '', 'aria-label': '위도', value: isEdit && shop.lat != null ? String(shop.lat) : '' } });
+  const lngInput = h('input', { id: 'f-lng', attrs: { type: 'text', name: 'lng', placeholder: '경도', readonly: '', 'aria-label': '경도', value: isEdit && shop.lng != null ? String(shop.lng) : '' } });
+  const locBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, style: { 'margin-top': '8px' } }, '현재 위치로 설정');
+  locBtn.addEventListener('click', async () => {
+    try {
+      const pos = await getCurrentPosition();
+      latInput.value = pos.lat.toFixed(6);
+      lngInput.value = pos.lng.toFixed(6);
+      showToast('현재 위치가 설정되었어요');
+    } catch (e) {
+      showToast('위치 정보를 가져올 수 없어요', 'danger');
+    }
+  });
+  form.appendChild(h('div', { class: 'form-group' },
+    h('label', { attrs: { for: 'f-lat' } }, '위치'),
+    h('div', { class: 'form-row' }, latInput, lngInput),
+    locBtn
+  ));
+
+  // skin selector — default by category for new shops, by shop.skin for edit
+  let currentSkin = isEdit ? (shop.skin || 'midnight') : getDefaultSkin(catSelect.value);
+  const skinContainer = h('div', { id: 'skin-selector' });
+  const mountSkin = (selected) => {
+    clear(skinContainer);
+    skinContainer.appendChild(skinSelector(selected, (sk) => { currentSkin = sk; }));
+  };
+  mountSkin(currentSkin);
+  catSelect.addEventListener('change', () => {
+    if (isEdit) return;
+    currentSkin = getDefaultSkin(catSelect.value);
+    mountSkin(currentSkin);
+  });
+  form.appendChild(h('div', { class: 'form-group' },
+    h('label', null, '스킨 테마'),
+    skinContainer
+  ));
+
+  // memo
+  const memoInput = h('textarea', { id: 'f-memo', attrs: { name: 'memo', rows: '3', placeholder: '예: 평일 오전 할인, 주차 가능' } }, isEdit ? (shop.memo || '') : '');
+  form.appendChild(field('메모', 'f-memo', memoInput));
+
+  form.appendChild(h('div', { class: 'form-spacer' }));
+  form.appendChild(h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'submit' } }, isEdit ? '저장하기' : '추가하기'));
+
+  if (isEdit) {
+    const delBtn = h('button', { class: 'btn btn-danger btn-block subtle-danger', attrs: { type: 'button' } }, '업체 삭제');
+    delBtn.addEventListener('click', async () => {
+      const ok = await showConfirm({
+        title: '업체 삭제',
+        message: '이 업체와 연결된 사용 내역을 모두 삭제할까요? 이 작업은 되돌릴 수 없어요.',
+        confirmLabel: '삭제',
+        danger: true
+      });
+      if (!ok) return;
+      await actions.deleteShop(shop.id);
+      showToast('삭제되었어요');
+      router.navigate('home');
+    });
+    form.appendChild(delBtn);
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const total = Math.max(1, Math.min(100, parseInt(totalInput.value) || 10));
+    const used = Math.max(0, Math.min(parseInt(usedInput.value) || 0, total));
+    const data = {
+      name: nameInput.value.trim(),
+      category: catSelect.value,
+      totalCoupons: total,
+      address: addressInput.value.trim(),
+      phone: phoneInput.value.trim(),
+      expiresAt: expiresInput.value || '',
+      memo: memoInput.value.trim(),
+      lat: parseFloat(latInput.value) || null,
+      lng: parseFloat(lngInput.value) || null,
+      usedCoupons: used,
+      skin: currentSkin
+    };
+    await actions.saveShop(data, params.id);
+    showToast(isEdit ? '저장되었어요' : '추가되었어요');
+    router.navigate('home');
+  });
+
+  renderPreview();
+  return root;
+}

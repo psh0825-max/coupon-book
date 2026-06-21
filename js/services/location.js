@@ -1,3 +1,6 @@
+// services/location.js — geolocation + dwell-based geofence. Self-contained;
+// ported verbatim in behavior from the original static/js/location.js.
+
 export const EARTH_RADIUS = 6371000; // meters
 
 export function haversine(lat1, lon1, lat2, lon2) {
