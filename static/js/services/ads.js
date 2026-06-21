@@ -2,16 +2,16 @@
 //
 // The app ships with neutral placeholder banners (see adBanner in ui/components.js)
 // while ads are OFF. To turn on real ads (Auto Ads):
-//   1) Sign up at https://adsense.google.com and add the site
-//      (psh0825-max.github.io). Get your publisher ID: ca-pub-XXXXXXXXXXXXXXXX
-//   2) Set AD_CONFIG.enabled = true and paste your ID into AD_CONFIG.client below.
+//   1) Site (lightonpluslab.com, covers coupon.lightonpluslab.com) is registered in
+//      AdSense under publisher ID ca-pub-7180935400084577 (already set below).
+//   2) Once the AdSense site review is APPROVED, set AD_CONFIG.enabled = true.
 //   3) Redeploy, then in the AdSense dashboard turn ON "Auto ads" for the site.
-//   4) Update static/ads.txt at the site root with the same publisher ID.
+//   4) ads.txt (static/ads.txt) already carries the publisher ID.
 // Google then places ads automatically (anchor / in-content) — no slot wiring.
 
 export const AD_CONFIG = {
-  enabled: false,                          // flip to true once you have a publisher ID
-  client: 'ca-pub-XXXXXXXXXXXXXXXX'        // your AdSense publisher ID (ca-pub-…)
+  enabled: false,                          // flip to true AFTER AdSense approval
+  client: 'ca-pub-7180935400084577'        // LightOn Plus Lab AdSense publisher ID
 };
 
 const isPlaceholder = () => !AD_CONFIG.client || AD_CONFIG.client.includes('XXXX');
