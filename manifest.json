@@ -5,6 +5,7 @@
   "lang": "ko",
   "dir": "ltr",
   "categories": ["lifestyle", "productivity"],
+  "id": "./",
   "start_url": ".",
   "scope": "./",
   "display": "standalone",

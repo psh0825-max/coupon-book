@@ -223,7 +223,9 @@ export function render(ctx) {
 
   // ── (g) about ──
   root.appendChild(h('p', { class: 'field-hint', style: { 'text-align': 'center', 'margin-top': '8px' } },
-    '쿠폰북 v3 · 로컬에 저장되는 개인 쿠폰 지갑'));
+    '쿠폰북 v3 · 로컬에 저장되는 개인 쿠폰 지갑',
+    h('br'),
+    h('a', { attrs: { href: 'privacy.html', target: '_blank', rel: 'noopener' } }, '개인정보처리방침')));
 
   return root;
 }
