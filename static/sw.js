@@ -1,7 +1,8 @@
-const CACHE_NAME = 'coupon-book-v4';
+const CACHE_NAME = 'coupon-book-v7';
 const URLS_TO_CACHE = [
   './',
   './index.html',
+  './manifest.json',
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
@@ -10,17 +11,41 @@ const URLS_TO_CACHE = [
   './css/layout.css',
   './css/components.css',
   './css/skins.css',
+  './css/extras.css',
   './vendor/leaflet/leaflet.css',
   './vendor/leaflet/leaflet.js',
   './vendor/leaflet/leaflet-src.esm.js',
-  './js/db.js',
-  './js/skins.js',
-  './js/ui.js',
-  './js/location.js',
-  './js/fx.js',
-  './js/ads.js',
+  './vendor/qr/qrcode.js',
+  './vendor/barcode/JsBarcode.all.min.js',
   './js/app.js',
-  './manifest.json'
+  './js/core/h.js',
+  './js/core/store.js',
+  './js/core/router.js',
+  './js/data/db.js',
+  './js/data/skins.js',
+  './js/data/repo.js',
+  './js/domain.js',
+  './js/services/format.js',
+  './js/services/codes.js',
+  './js/services/maps.js',
+  './js/services/location.js',
+  './js/services/reminders.js',
+  './js/services/pwa.js',
+  './js/services/backup.js',
+  './js/services/fx.js',
+  './js/services/ads.js',
+  './js/ui/toast.js',
+  './js/ui/overlay.js',
+  './js/ui/reward.js',
+  './js/ui/components.js',
+  './js/views/home.js',
+  './js/views/list.js',
+  './js/views/detail.js',
+  './js/views/edit.js',
+  './js/views/map.js',
+  './js/views/history.js',
+  './js/views/settings.js',
+  './js/views/onboarding.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -34,22 +59,29 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((names) =>
       Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
+// Stale-while-revalidate for same-origin GET: serve cache immediately when present
+// while refreshing it in the background; fall back to network, then to the app shell
+// for navigations. Cross-origin requests (leaflet tiles, fonts) are left untouched.
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) {
+  const req = e.request;
+  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) {
     return;
   }
   e.respondWith(
-    fetch(e.request)
-      .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy));
-        return res;
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.match(req).then((cached) => {
+        const network = fetch(req)
+          .then((res) => {
+            if (res && res.status === 200) cache.put(req, res.clone());
+            return res;
+          })
+          .catch(() => cached || (req.mode === 'navigate' ? cache.match('./index.html') : undefined));
+        return cached || network;
       })
-      .catch(() => caches.match(e.request).then((res) => res || caches.match('./index.html')))
+    )
   );
 });

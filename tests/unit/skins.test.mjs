@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getCategoryIcon, getDefaultSkin } from '../../static/js/skins.js';
+import { getCategoryIcon, getDefaultSkin } from '../../static/js/data/skins.js';
 
 test('getCategoryIcon: known category returns its emoji', () => {
   assert.equal(getCategoryIcon('카페'), '☕');

@@ -1,3 +1,5 @@
+// data/skins.js — skin + category data (pure). renderSkinSelector moved to ui.
+
 export const SKINS = {
   stone: {
     name: '아쿠아',
@@ -46,26 +48,4 @@ export function getCategoryIcon(cat) {
 
 export function getDefaultSkin(cat) {
   return CATEGORIES[cat]?.defaultSkin || 'midnight';
-}
-
-export function renderSkinSelector(currentSkin, onSelect) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'skin-grid';
-  Object.entries(SKINS).forEach(([key, skin]) => {
-    const div = document.createElement('div');
-    div.className = `skin-option ${key === currentSkin ? 'selected' : ''}`;
-    div.dataset.skin = key;
-    div.innerHTML = `
-      <div class="swatch" style="background:${skin.color}"></div>
-      <div class="name">${skin.name}</div>
-      <div class="desc">${skin.desc}</div>
-    `;
-    div.onclick = () => {
-      wrapper.querySelectorAll('.skin-option').forEach(el => el.classList.remove('selected'));
-      div.classList.add('selected');
-      onSelect(key);
-    };
-    wrapper.appendChild(div);
-  });
-  return wrapper;
 }

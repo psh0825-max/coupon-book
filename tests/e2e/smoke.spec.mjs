@@ -43,43 +43,51 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('smoke: header, seed sample, use coupon, navigate tabs', async ({ page }) => {
-  // Start from a clean IndexedDB so the empty-state seed button appears.
+test('smoke: onboarding, seed sample, use coupon, chrome, navigate tabs', async ({ page }) => {
+  // Start from a fully clean slate so the first-run onboarding appears.
   await page.goto(BASE_URL);
   await page.evaluate(async () => {
     await new Promise((resolve) => {
-      const req = indexedDB.deleteDatabase('coupon-book');
+      const req = indexedDB.deleteDatabase('CouponBookDB');
       req.onsuccess = req.onerror = req.onblocked = () => resolve();
     });
+    localStorage.clear();
   });
   await page.reload();
 
-  // Header shows the app name.
-  await expect(page.locator('#page-title')).toHaveText('Coupon Book');
+  // First run → onboarding is the active section, header reflects it.
+  await expect(page.locator('#onboarding')).toHaveClass(/active/, { timeout: 10000 });
+  await expect(page.locator('[data-page-title]')).toHaveText('시작하기');
 
-  // Seed sample shops via the empty-state button.
-  const sampleBtn = page.locator('[data-empty-action="demo"]').first();
-  await expect(sampleBtn).toBeVisible({ timeout: 10000 });
-  await sampleBtn.click();
+  // Step through onboarding: 다음 → 샘플 보기 (seeds demo + advances) → 시작하기.
+  await page.getByRole('button', { name: '다음' }).click();
+  await page.getByRole('button', { name: '샘플 보기' }).click();
+  await page.getByRole('button', { name: '시작하기' }).click();
 
-  // At least one shop card appears in the rail.
-  const cards = page.locator('#shop-rail .card, #shop-rail [data-action="quick-use"]');
-  await expect(cards.first()).toBeVisible({ timeout: 10000 });
+  // Home: shop rail has cards and the header shows the app name.
+  await expect(page.locator('.shop-rail .card').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('[data-page-title]')).toHaveText('Coupon Book');
 
-  // Use a coupon from the first card; expect a toast or reward modal.
-  await page.locator('#shop-rail [data-action="quick-use"]').first().click();
-  const feedback = page.locator('#toast.active, #reward-modal.active');
-  await expect(feedback.first()).toBeVisible({ timeout: 5000 });
+  // Use a coupon from the first card → toast or reward modal appears.
+  await page.locator('.shop-rail [data-action="quick-use"]').first().click();
+  await expect(page.locator('#toast.active, #reward-modal.active').first())
+    .toBeVisible({ timeout: 5000 });
 
-  // Navigate to 지도 (map) and 설정 (settings) tabs.
-  await page.locator('.nav-item[data-page="map"]').click();
+  // Chrome visibility fix: back hidden on home, FAB visible on home.
+  await expect(page.locator('[data-back]')).toBeHidden();
+  await expect(page.locator('[data-fab]')).toBeVisible();
+
+  // Navigate tabs: 지도 (map) then 설정 (settings).
+  await page.locator('.nav-item[data-nav="map"]').click();
   await expect(page.locator('#map')).toHaveClass(/active/);
 
-  await page.locator('.nav-item[data-page="settings"]').click();
+  await page.locator('.nav-item[data-nav="settings"]').click();
   await expect(page.locator('#settings')).toHaveClass(/active/);
+  // New feature surfaced in settings.
+  await expect(page.getByText('만료 임박 알림')).toBeVisible();
 
-  // No console errors during the flow (Leaflet tile network noise excluded).
+  // No console errors during the flow (tile/network/sw/favicon/geolocation noise excluded).
   const realErrors = consoleErrors.filter(e =>
-    !/tile|favicon|sw\.js|ERR_INTERNET|net::|manifest/i.test(e));
+    !/tile|favicon|sw\.js|ERR_INTERNET|net::|manifest|geolocation/i.test(e));
   expect(realErrors, `console errors: ${realErrors.join(' | ')}`).toHaveLength(0);
 });
