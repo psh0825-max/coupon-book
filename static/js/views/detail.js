@@ -43,9 +43,13 @@ export function render(ctx, params = {}) {
   const phoneEl = shop.phone
     ? h('a', { class: 'quick-action', attrs: { href: `tel:${shop.phone}` } }, '전화')
     : h('span', { class: 'quick-action disabled' }, '전화');
+  const mapUrl = mapViewUrl(shop);
+  const mapEl = mapUrl
+    ? h('a', { class: 'quick-action', attrs: { href: mapUrl, target: '_blank', rel: 'noopener' } }, '지도')
+    : h('span', { class: 'quick-action disabled' }, '지도');
   root.appendChild(h('div', { class: 'detail-meta-grid' },
     phoneEl,
-    h('a', { class: 'quick-action', attrs: { href: mapViewUrl(shop), target: '_blank', rel: 'noopener' } }, '지도'),
+    mapEl,
     h('div', { class: 'quick-action readonly' }, shop.expiresAt ? formatExpiry(shop.expiresAt) : '만료 없음')
   ));
 

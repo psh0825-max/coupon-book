@@ -13,7 +13,7 @@ import {
 } from './services/location.js';
 import { syncReminders, ensurePermission } from './services/reminders.js';
 import {
-  registerSW, initInstallPrompt, canInstall, promptInstall, isStandalone, isIos
+  registerSW, applyUpdate, initInstallPrompt, canInstall, promptInstall, isStandalone, isIos
 } from './services/pwa.js';
 import { exportData as backupExport, importData as backupImport } from './services/backup.js';
 import { haptic, celebrate } from './services/fx.js';
@@ -85,6 +85,19 @@ function onGeofence(notifyList) {
 
 function onReminderDue(shop, days) {
   showToast(`${shop.name} · ${days === 0 ? '오늘 만료' : 'D-' + days} 만료 임박`, 'danger');
+}
+
+// A new service worker is waiting. Offer an accessible refresh prompt; applying it
+// posts SKIP_WAITING and the controllerchange handler reloads the page once.
+function onUpdateAvailable(reg) {
+  showSheet({
+    title: '업데이트',
+    body: '새 버전이 준비됐어요. 새로고침하면 적용돼요.',
+    actions: [
+      { id: 'later', label: '나중에', className: 'btn-secondary' },
+      { id: 'reload', label: '새로고침', className: 'btn-primary', onClick: () => applyUpdate(reg) }
+    ]
+  });
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
@@ -253,14 +266,14 @@ store.select(
   (s) => ({ shops: s.shops, logs: s.logs, settings: s.settings }),
   () => {
     const c = router.current();
-    if (c.name && !['onboarding', 'add'].includes(c.name)) router.navigate(c.name, c.params);
+    if (c.name && !['onboarding', 'add'].includes(c.name)) router.reload();
   }
 );
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 async function init() {
   document.body.dataset.theme = 'light';
-  registerSW();
+  registerSW(onUpdateAvailable);
   initInstallPrompt();
 
   await refresh();

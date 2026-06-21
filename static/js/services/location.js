@@ -64,12 +64,14 @@ export function stopLocationWatch() {
 }
 
 export function setNotifySettings({ radius, delay, enabled }) {
-  _settings = { radius: radius || 100, delay: (delay || 5) * 60, enabled: enabled !== false };
+  const d = (delay == null || delay === '') ? 5 : Number(delay);
+  _settings = { radius: radius || 100, delay: Math.max(0, d) * 60, enabled: enabled !== false };
 }
 
 export async function _checkLocation(shops) {
   try {
     const pos = await getCurrentPosition();
+    _warnedLocation = false; // genuine success — let a later real failure warn again
     const now = Date.now();
     const notifyList = [];
 
@@ -107,8 +109,4 @@ export async function _checkLocation(shops) {
       console.warn('위치 확인을 일시적으로 사용할 수 없어요:', e?.message || e);
     }
   }
-}
-
-export function getVisitedState() {
-  return Array.from(_visited.entries()).map(([id, state]) => ({ id, ...state }));
 }

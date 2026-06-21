@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coupon-book-v7';
+const CACHE_NAME = 'coupon-book-v8';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -52,7 +52,12 @@ self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(URLS_TO_CACHE))
   );
-  self.skipWaiting();
+  // No automatic skipWaiting: a new SW waits until the page asks it to take over
+  // (via the SKIP_WAITING message below), so it never swaps in mid-session.
+});
+
+self.addEventListener('message', (e) => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
