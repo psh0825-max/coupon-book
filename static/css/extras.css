@@ -23,6 +23,24 @@
   outline-offset: 2px;
 }
 
+/* ── Card main button (replaces former role=button card; no nested interactive) ── */
+.card-main {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  border-radius: inherit;
+}
+.card-main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 /* ── Scroll lock under modal/sheet ────────────────────────────────────────── */
 body.overlay-open .main {
   overflow: hidden;

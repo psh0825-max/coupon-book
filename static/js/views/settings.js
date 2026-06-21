@@ -67,7 +67,10 @@ export function render(ctx) {
 
   // ── (b) 만료 알림 + reminderDays ──
   const reminderDays = Array.isArray(settings.reminderDays) ? [...settings.reminderDays] : [7, 3, 1];
-  const daysWrap = h('div', { class: 'reminder-days' });
+  const daysWrap = h('div', {
+    class: 'reminder-days',
+    attrs: { role: 'group', 'aria-label': '만료 알림일' }
+  });
   const buildDayChips = () => {
     clear(daysWrap);
     [7, 3, 1].forEach((d) => {
@@ -92,8 +95,10 @@ export function render(ctx) {
     h('div', { class: 'toggle-row' },
       h('div', { class: 'info' }, h('h4', null, '만료 임박 알림'), h('p', null, 'D-7 / D-3 / D-1 에 만료 알림')),
       makeToggle(settings.remindersEnabled, async (next) => {
-        await actions.toggleReminders(next);
-        showToast(next ? '만료 알림이 켜졌어요' : '만료 알림이 꺼졌어요');
+        const { permission } = await actions.toggleReminders(next);
+        if (!next) showToast('만료 알림이 꺼졌어요');
+        else if (permission === 'granted') showToast('만료 알림이 켜졌어요');
+        else showToast('알림 권한이 차단돼 앱 실행 중에만 알려드려요', 'danger');
       })
     ),
     daysWrap

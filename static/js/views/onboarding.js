@@ -2,6 +2,7 @@
 // re-render of the card subtree. Skippable.
 
 import { h, clear } from '../core/h.js';
+import { showToast } from '../ui/toast.js';
 
 export function render(ctx) {
   const { router, actions } = ctx;
@@ -61,11 +62,20 @@ export function render(ctx) {
     } else {
       card.appendChild(hero('STAY ON TRACK', '만료 알림을 받아보세요',
         '쿠폰 만료가 다가오면 D-7 / D-3 / D-1 에 미리 알려드려요.'));
-      card.appendChild(h('button', {
+      const remindBtn = h('button', {
         class: 'btn btn-secondary btn-block',
-        attrs: { type: 'button' },
-        on: { click: () => actions.toggleReminders(true) }
-      }, '만료 알림 켜기'));
+        attrs: { type: 'button' }
+      }, '만료 알림 켜기');
+      remindBtn.addEventListener('click', async () => {
+        const { permission } = await actions.toggleReminders(true);
+        if (permission === 'granted') {
+          remindBtn.textContent = '만료 알림 켜짐';
+          showToast('만료 알림이 켜졌어요');
+        } else {
+          showToast('알림 권한이 차단돼 앱 실행 중에만 알려드려요', 'danger');
+        }
+      });
+      card.appendChild(remindBtn);
     }
     card.appendChild(renderFooter());
   }
