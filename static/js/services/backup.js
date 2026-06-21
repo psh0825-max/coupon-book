@@ -2,7 +2,7 @@
 // PRESERVES original ids (does not regenerate via Shops.add).
 
 import { generateId, put } from '../data/db.js';
-import { Shops, Logs, Settings, normalizeShop, normalizeLog } from '../data/repo.js';
+import { Shops, Logs, Settings, normalizeShop, normalizeLog, DEFAULTS } from '../data/repo.js';
 
 function dateStamp() {
   const d = new Date(Date.now());
@@ -29,12 +29,26 @@ export async function exportData() {
   URL.revokeObjectURL(url);
 }
 
+// Validate an imported setting value against the type of its repo default.
+function isValidSettingValue(key, value) {
+  const def = DEFAULTS[key];
+  if (Array.isArray(def)) {
+    return Array.isArray(value) && value.every((n) => typeof n === 'number' && Number.isFinite(n));
+  }
+  if (typeof def === 'boolean') return typeof value === 'boolean';
+  if (typeof def === 'number') return typeof value === 'number' && Number.isFinite(value);
+  return typeof value === typeof def;
+}
+
 export async function importData(file) {
   const text = await file.text();
   const data = JSON.parse(text);
 
   if (!Array.isArray(data.shops) || !Array.isArray(data.logs)) {
     throw new Error('올바른 백업 파일이 아니에요');
+  }
+  if (data.shops.length > 5000 || data.logs.length > 20000) {
+    throw new Error('백업 파일이 너무 큽니다');
   }
 
   const now = Date.now();
@@ -56,6 +70,8 @@ export async function importData(file) {
 
   if (Array.isArray(data.settings)) {
     for (const { key, value } of data.settings) {
+      if (!Object.prototype.hasOwnProperty.call(DEFAULTS, key)) continue;
+      if (!isValidSettingValue(key, value)) continue;
       await Settings.set(key, value);
     }
   }

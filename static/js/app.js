@@ -172,10 +172,12 @@ const actions = {
   },
 
   async toggleReminders(on) {
-    if (on) await ensurePermission();
+    let permission = 'granted';
+    if (on) permission = await ensurePermission();
     await Settings.set('remindersEnabled', on);
     await refresh();
     resyncServices();
+    return { enabled: on, permission };
   },
 
   async setReminderDays(days) {

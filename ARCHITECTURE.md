@@ -300,7 +300,8 @@ location/reminder services as needed.
 
 ## 7. PWA
 - `sw.js`: cache-first-with-network-update (stale-while-revalidate) for same-origin GET;
-  precache app shell + all v3 modules; bump cache name to `coupon-book-v5`; navigation
+  precache app shell + all v3 modules; the cache name (currently `coupon-book-v7`) is
+  bumped each release to evict the old shell; navigation
   fallback to `./index.html`; never cache cross-origin (leaflet tiles, fonts).
 - `manifest.json`: keep; ensure relative `start_url`/`scope` (`.`/`./`), categories,
   lang `ko`, add `shortcuts` (홈 추가) optional.

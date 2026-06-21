@@ -22,10 +22,10 @@ export function showToast(msg, type = 'success') {
     });
     document.body.appendChild(el);
   }
-  const check = icon('check');
-  check.style.setProperty('stroke', color);
+  const glyph = icon(type === 'danger' ? 'alert' : 'check');
+  glyph.style.setProperty('stroke', color);
   clear(el);
-  el.appendChild(check);
+  el.appendChild(glyph);
   el.appendChild(h('span', null, msg));
   el.classList.add('active');
   if (dismissTimer) clearTimeout(dismissTimer);
