@@ -199,6 +199,15 @@ body.overlay-open .main {
   font-size: 0.85rem;
 }
 
+/* ── Storage retention status line ────────────────────────────────────────── */
+.storage-status {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.storage-status.ok {
+  color: var(--success);
+}
+
 /* ── Distinct "my location" map marker ────────────────────────────────────── */
 /* Shop pins keep their shared chrome from components.css; the 'me' marker is
    restyled as a classic pulsing blue location dot so it's unmistakable. */

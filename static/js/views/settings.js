@@ -4,6 +4,7 @@
 import { h, clear } from '../core/h.js';
 import { stats } from '../domain.js';
 import * as pwa from '../services/pwa.js';
+import { isPersisted, storageEstimate, requestPersistentStorage } from '../services/storage.js';
 import { showToast } from '../ui/toast.js';
 import { showConfirm } from '../ui/overlay.js';
 
@@ -138,6 +139,41 @@ export function render(ctx) {
       ));
     }
   }
+
+  // ── (d2) 데이터 보관 ──
+  const fmtMB = (bytes) => (bytes / (1024 * 1024)).toFixed(1);
+  const storageStatus = h('p', { class: 'storage-status' }, '확인 중…');
+  const storageActions = h('div', { class: 'form-group' });
+  root.appendChild(card(
+    h('div', { class: 'info' }, h('h4', null, '데이터 보관'), storageStatus),
+    storageActions,
+    h('p', { class: 'field-hint' }, '쿠폰은 이 기기에만 저장됩니다. 정기적으로 백업하세요.')
+  ));
+  (async () => {
+    const [persisted, est] = await Promise.all([isPersisted(), storageEstimate()]);
+    const usageText = est && est.usage ? ` · 사용 중 ${fmtMB(est.usage)} MB` : '';
+    if (persisted) {
+      storageStatus.textContent = `영구 보관: 켜짐 ✓${usageText}`;
+      storageStatus.classList.add('ok');
+    } else {
+      storageStatus.textContent = `영구 보관: 꺼짐${usageText}`;
+      const enableBtn = h('button', {
+        class: 'btn btn-secondary btn-block',
+        attrs: { type: 'button' },
+        on: { click: async () => {
+          const r = await requestPersistentStorage();
+          showToast(
+            r === 'persisted' ? '영구 보관이 켜졌어요'
+              : r === 'denied' ? '브라우저가 허용하지 않았어요'
+                : '이 브라우저는 지원하지 않아요',
+            r === 'persisted' ? 'success' : 'danger'
+          );
+          ctx.router.navigate('settings');
+        } }
+      }, '영구 보관 켜기');
+      storageActions.appendChild(enableBtn);
+    }
+  })();
 
   // ── (e) 백업 / 복원 ──
   const importInput = h('input', { id: 's-import', attrs: { type: 'file', accept: '.json' } });

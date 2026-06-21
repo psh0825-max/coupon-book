@@ -16,6 +16,7 @@ import {
   registerSW, applyUpdate, initInstallPrompt, canInstall, promptInstall, isStandalone, isIos
 } from './services/pwa.js';
 import { exportData as backupExport, importData as backupImport } from './services/backup.js';
+import { requestPersistentStorage } from './services/storage.js';
 import { haptic, celebrate } from './services/fx.js';
 import { mountAds } from './services/ads.js';
 
@@ -159,6 +160,23 @@ const actions = {
     }
     await refresh();
     resyncServices();
+
+    // First-backup nudge: one time only, right after the user's very first shop.
+    if (!id) {
+      const st = store.getState();
+      if ((st.shops || []).length === 1 && !st.settings.backupHinted) {
+        await Settings.set('backupHinted', true);
+        store.setState((s) => ({ settings: { ...s.settings, backupHinted: true } }));
+        showSheet({
+          title: '백업을 권장해요',
+          body: h('p', null, '쿠폰은 이 기기에만 저장돼요. 기기를 바꾸거나 앱을 지우면 사라질 수 있어요. JSON으로 백업해 두면 안전해요.'),
+          actions: [
+            { id: 'later', label: '나중에', className: 'btn-secondary' },
+            { id: 'backup', label: '지금 백업', className: 'btn-primary', onClick: () => actions.exportData() }
+          ]
+        });
+      }
+    }
   },
 
   async deleteShop(id) {
@@ -279,6 +297,10 @@ async function init() {
   await refresh();
   store.setState({ ready: true });
   resyncServices();
+
+  // Best-effort: ask the browser to keep IndexedDB durable so coupons aren't
+  // silently evicted under storage pressure. Never await-block boot.
+  requestPersistentStorage().catch(() => {});
 
   // Chrome wiring (header back, bottom-nav, FAB).
   const backEl = document.querySelector('[data-back]');
