@@ -95,9 +95,3 @@ export function syncReminders(shops, settings, onDue) {
     });
   }
 }
-
-export function reminderState() {
-  const permission = typeof window !== 'undefined' && 'Notification' in window
-    ? Notification.permission : 'unsupported';
-  return { permission, enabled: !!_settings.remindersEnabled };
-}
