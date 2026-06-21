@@ -52,11 +52,20 @@ export function createRouter({ outlet, routes, onChange, getCtx } = {}) {
     return { name: currentName, params: currentParams };
   }
 
-  function render() {
+  // Re-render the current route in place without resetting scroll. Used after a
+  // data change so list/detail keep their scroll position.
+  function reload() {
+    if (currentName === null) return;
+    const top = outlet ? outlet.scrollTop : 0;
+    render({ keepScroll: true });
+    if (outlet) outlet.scrollTop = top;
+  }
+
+  function render({ keepScroll = false } = {}) {
     const ctx = getCtx ? getCtx() : {};
     const view = routes[currentName](ctx, currentParams);
     mountView(currentName, view);
-    syncChrome(currentName);
+    syncChrome(currentName, keepScroll);
     if (typeof onChange === 'function') {
       onChange({ name: currentName, params: currentParams });
     }
@@ -70,7 +79,7 @@ export function createRouter({ outlet, routes, onChange, getCtx } = {}) {
     sections.forEach((s) => s.classList.toggle('active', s.id === name));
   }
 
-  function syncChrome(name) {
+  function syncChrome(name, keepScroll = false) {
     const doc = outlet && outlet.ownerDocument;
     if (!doc) return;
     // bottom-nav active state
@@ -87,12 +96,15 @@ export function createRouter({ outlet, routes, onChange, getCtx } = {}) {
     // FAB: visible only on home + list
     const fabEl = doc.querySelector('[data-fab]');
     if (fabEl) fabEl.hidden = !FAB_PAGES.includes(name);
-    // scroll reset — #main is the scroll container, not the window
-    if (outlet && typeof outlet.scrollTo === 'function') outlet.scrollTo(0, 0);
-    else if (outlet) outlet.scrollTop = 0;
+    // scroll reset — #main is the scroll container, not the window. reload()
+    // skips this to preserve position across a data-driven re-render.
+    if (!keepScroll) {
+      if (outlet && typeof outlet.scrollTo === 'function') outlet.scrollTo(0, 0);
+      else if (outlet) outlet.scrollTop = 0;
+    }
   }
 
-  return { navigate, back, current };
+  return { navigate, back, current, reload };
 }
 
 function replaceChildren(parent, node) {

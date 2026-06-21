@@ -155,7 +155,19 @@ export function render(ctx, params = {}) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const total = Math.max(1, Math.min(100, parseInt(totalInput.value) || 10));
-    const used = Math.max(0, Math.min(parseInt(usedInput.value) || 0, total));
+    const usedRaw = Math.max(0, parseInt(usedInput.value) || 0);
+    // If the entered total is below the current stamp count, saving would clamp
+    // (and lose) stamps — confirm before proceeding.
+    if (usedRaw > total) {
+      const proceed = await showConfirm({
+        title: '적립 개수 조정',
+        message: `총 개수(${total})가 현재 적립(${usedRaw})보다 적어 적립이 ${total}개로 줄어듭니다. 계속할까요?`,
+        confirmLabel: '계속',
+        danger: true
+      });
+      if (!proceed) return;
+    }
+    const used = Math.min(usedRaw, total);
     const data = {
       name: nameInput.value.trim(),
       category: catSelect.value,
