@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coupon-book-v8';
+const CACHE_NAME = 'coupon-book-v9';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -29,6 +29,7 @@ const URLS_TO_CACHE = [
   './js/services/codes.js',
   './js/services/maps.js',
   './js/services/location.js',
+  './js/services/photo.js',
   './js/services/reminders.js',
   './js/services/pwa.js',
   './js/services/backup.js',
