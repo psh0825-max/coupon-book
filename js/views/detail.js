@@ -69,6 +69,8 @@ export function render(ctx, params = {}) {
 
   if (shop.code) root.appendChild(buildCodePanel(shop.code));
 
+  if (shop.photo) root.appendChild(buildPhotoPanel(shop.photo));
+
   root.appendChild(h('div', { class: 'stamp-head' },
     h('span', null, '스탬프 적립 현황'),
     h('strong', null, `${shop.usedCoupons || 0} `, h('em', null, `/ ${shop.totalCoupons}`))
@@ -140,4 +142,19 @@ function buildCodePanel(code) {
     h('div', { class: 'coupon-code-text' }, code),
     copyBtn
   );
+}
+
+// Real-coupon photo: tapping opens a larger view in a sheet.
+function buildPhotoPanel(photo) {
+  const img = h('img', {
+    class: 'coupon-photo-img',
+    attrs: { src: photo, alt: '실물 쿠폰 사진' }
+  });
+  img.addEventListener('click', () => {
+    showSheet({
+      title: '실물 쿠폰',
+      body: h('img', { class: 'coupon-photo-full', attrs: { src: photo, alt: '실물 쿠폰 사진' } })
+    });
+  });
+  return h('div', { class: 'coupon-photo' }, img);
 }

@@ -7,6 +7,7 @@ import { getCurrentPosition } from '../services/location.js';
 import { CATEGORIES, getDefaultSkin } from '../data/skins.js';
 import { showToast } from '../ui/toast.js';
 import { showConfirm } from '../ui/overlay.js';
+import { readAndDownscale, detectCode, supportsBarcodeScan } from '../services/photo.js';
 
 export function render(ctx, params = {}) {
   const { store, router, actions } = ctx;
@@ -33,6 +34,59 @@ export function render(ctx, params = {}) {
   // name
   const nameInput = h('input', { id: 'f-name', attrs: { type: 'text', name: 'name', required: '', placeholder: '예: 안양 스타 마사지', value: isEdit ? shop.name : '' } });
   form.appendChild(field('업체 이름', 'f-name', nameInput));
+
+  // coupon photo — first action so the camera leads. Downscaled JPEG kept locally;
+  // on capable devices a barcode/QR in the photo is auto-read into the code field.
+  let photo = isEdit ? (shop.photo || '') : '';
+  const photoPreview = h('img', { class: 'photo-preview', attrs: { alt: '쿠폰 사진 미리보기' } });
+  const clearPhotoBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, style: { 'margin-top': '8px' } }, '사진 삭제');
+  const renderPhoto = () => {
+    if (photo) {
+      photoPreview.src = photo;
+      photoPreview.hidden = false;
+      clearPhotoBtn.hidden = false;
+    } else {
+      photoPreview.removeAttribute('src');
+      photoPreview.hidden = true;
+      clearPhotoBtn.hidden = true;
+    }
+  };
+  const photoInput = h('input', { id: 'f-photo', attrs: { type: 'file', name: 'photo', accept: 'image/*', capture: 'environment' } });
+  photoInput.addEventListener('change', async () => {
+    const file = photoInput.files && photoInput.files[0];
+    if (!file) return;
+    try {
+      photo = await readAndDownscale(file);
+      renderPhoto();
+      showToast('사진이 추가됐어요');
+    } catch (e) {
+      showToast('사진을 불러올 수 없어요', 'danger');
+      return;
+    }
+    try {
+      const detected = await detectCode(file);
+      if (detected && !codeInput.value.trim()) {
+        codeInput.value = detected;
+        showToast('바코드를 자동 인식했어요');
+      }
+    } catch (e) { /* code detection is best-effort; photo is already attached */ }
+  });
+  clearPhotoBtn.addEventListener('click', () => {
+    photo = '';
+    photoInput.value = '';
+    renderPhoto();
+  });
+  const photoHint = supportsBarcodeScan()
+    ? '실물 쿠폰을 촬영하면 사진이 저장돼요 · 바코드/QR는 자동 인식돼요'
+    : '실물 쿠폰을 촬영하면 사진이 저장돼요';
+  form.appendChild(h('div', { class: 'form-group' },
+    h('label', { attrs: { for: 'f-photo' } }, '쿠폰 사진'),
+    photoInput,
+    h('p', { class: 'field-hint' }, photoHint),
+    photoPreview,
+    clearPhotoBtn
+  ));
+  renderPhoto();
 
   // category + total
   const catSelect = h('select', { id: 'f-category', attrs: { name: 'category' } },
@@ -177,6 +231,7 @@ export function render(ctx, params = {}) {
       expiresAt: expiresInput.value || '',
       memo: memoInput.value.trim(),
       code: codeInput.value.trim(),
+      photo,
       lat: parseFloat(latInput.value) || null,
       lng: parseFloat(lngInput.value) || null,
       usedCoupons: used,
