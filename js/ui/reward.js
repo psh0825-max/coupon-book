@@ -2,6 +2,9 @@
 
 import { h, icon, frag } from '../core/h.js';
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+
 /** showReward({ shopName, total }) — celebratory completion modal. */
 export function showReward({ shopName, total } = {}) {
   const prevFocus = document.activeElement;
@@ -47,7 +50,26 @@ export function showReward({ shopName, total } = {}) {
     }, 320);
   };
 
-  const onKeydown = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+  const trapFocus = (e) => {
+    const items = Array.from(card.querySelectorAll(FOCUSABLE))
+      .filter((el) => el.offsetParent !== null || el === document.activeElement);
+    if (!items.length) { e.preventDefault(); return; }
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || !card.contains(active))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
+  const onKeydown = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); close(); }
+    else if (e.key === 'Tab') trapFocus(e);
+  };
   document.addEventListener('keydown', onKeydown, true);
 
   closeBtn.addEventListener('click', close);

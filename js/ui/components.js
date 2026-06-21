@@ -32,22 +32,20 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
 
   const quickUse = h('button', {
     class: 'card-quick-use',
-    attrs: { type: 'button', 'data-action': 'quick-use', disabled: complete ? '' : null },
+    attrs: {
+      type: 'button', 'data-action': 'quick-use',
+      'aria-label': `${shop.name} 쿠폰 사용`,
+      disabled: complete ? '' : null
+    },
     on: {
-      click: (e) => { e.stopPropagation(); if (!complete) onQuickUse?.(shop); }
+      click: () => { if (!complete) onQuickUse?.(shop); }
     }
   }, '사용');
 
-  const card = h('div', {
-    class: `card${complete ? ' is-complete' : ''}`,
-    dataset: { skin: shop.skin || 'midnight', id: shop.id },
-    attrs: { role: 'button', tabindex: '0', 'aria-label': `${shop.name} ${status.label}` },
-    on: {
-      click: () => onOpen?.(shop),
-      keydown: (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen?.(shop); }
-      }
-    }
+  const cardMain = h('button', {
+    class: 'card-main',
+    attrs: { type: 'button', 'aria-label': `${shop.name} ${status.label}, 상세 보기` },
+    on: { click: () => onOpen?.(shop) }
   },
     h('div', { class: 'card-header' },
       h('div', { class: 'card-icon' },
@@ -74,7 +72,14 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
         remaining <= 0 ? '완성! 사장님께 보여주세요 ✨' : `${remaining}개 더 모으면 완성 🎉`
       ),
       stampBoard(shop.totalCoupons, shop.usedCoupons || 0)
-    ),
+    )
+  );
+
+  const card = h('div', {
+    class: `card${complete ? ' is-complete' : ''}`,
+    dataset: { skin: shop.skin || 'midnight', id: shop.id }
+  },
+    cardMain,
     h('div', { class: 'card-footer' },
       h('span', null, shop.phone ? shop.phone : `${shop.usedCoupons || 0} / ${shop.totalCoupons} 사용`),
       quickUse

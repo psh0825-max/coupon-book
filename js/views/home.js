@@ -91,7 +91,7 @@ export function render(ctx) {
     root.appendChild(rail);
   }
 
-  if (settings.notifyEnabled && shops.some((sh) => sh.lat && sh.lng)) {
+  if (settings.notifyEnabled && shops.some((sh) => Number.isFinite(Number(sh.lat)) && Number.isFinite(Number(sh.lng)))) {
     populateNearby(nearbyArea, shops, router);
   }
 
@@ -103,7 +103,7 @@ async function populateNearby(area, shops, router) {
   try {
     const pos = await getCurrentPosition();
     const nearby = shops.map((sh) => {
-      if (!sh.lat || !sh.lng) return null;
+      if (!Number.isFinite(Number(sh.lat)) || !Number.isFinite(Number(sh.lng))) return null;
       const d = haversine(pos.lat, pos.lng, Number(sh.lat), Number(sh.lng));
       return d <= 500 ? { shop: sh, distance: d } : null;
     }).filter(Boolean).sort((a, b) => a.distance - b.distance);

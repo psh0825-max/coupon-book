@@ -15,6 +15,14 @@ let _map = null;
 let _layer = null;
 
 export function render(ctx) {
+  // Tear down any prior map instance so navigating away and back never leaks it
+  // (including the no-located-shops early-return path below).
+  if (_map) {
+    try { _map.remove(); } catch { /* already detached */ }
+    _map = null;
+    _layer = null;
+  }
+
   const { store, router } = ctx;
   const st = store.getState();
   const located = (st.shops || []).filter((s) => Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng)));
