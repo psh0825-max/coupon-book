@@ -1,0 +1,3 @@
+# Replace pub-REPLACE_WITH_PUBLISHER_DIGITS with your AdSense publisher digits
+# (the number after "ca-pub-", e.g. ca-pub-1234567890123456 -> pub-1234567890123456).
+google.com, pub-REPLACE_WITH_PUBLISHER_DIGITS, DIRECT, f08c47fec0942fa0
