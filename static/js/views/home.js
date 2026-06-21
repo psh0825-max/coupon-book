@@ -7,6 +7,13 @@ import { stats, priorityShop, sortShops, couponStatus, progressPercent } from '.
 import { getCurrentPosition, haversine } from '../services/location.js';
 import { showToast } from '../ui/toast.js';
 
+// A shop is plottable only when both coords are present (not null/'') AND finite.
+// Number(null) and Number('') are 0 (finite), so the null/'' checks must come
+// first — otherwise no-coordinate shops would count as nearby. A genuine 0 passes.
+const hasCoords = (s) =>
+  s.lat != null && s.lng != null && s.lat !== '' && s.lng !== '' &&
+  Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng));
+
 export function render(ctx) {
   const { store, router, actions } = ctx;
   const st = store.getState();
@@ -91,7 +98,7 @@ export function render(ctx) {
     root.appendChild(rail);
   }
 
-  if (settings.notifyEnabled && shops.some((sh) => Number.isFinite(Number(sh.lat)) && Number.isFinite(Number(sh.lng)))) {
+  if (settings.notifyEnabled && shops.some(hasCoords)) {
     populateNearby(nearbyArea, shops, router);
   }
 
@@ -103,7 +110,7 @@ async function populateNearby(area, shops, router) {
   try {
     const pos = await getCurrentPosition();
     const nearby = shops.map((sh) => {
-      if (!Number.isFinite(Number(sh.lat)) || !Number.isFinite(Number(sh.lng))) return null;
+      if (!hasCoords(sh)) return null;
       const d = haversine(pos.lat, pos.lng, Number(sh.lat), Number(sh.lng));
       return d <= 500 ? { shop: sh, distance: d } : null;
     }).filter(Boolean).sort((a, b) => a.distance - b.distance);
