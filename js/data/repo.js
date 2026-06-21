@@ -46,6 +46,7 @@ export function normalizeShop(raw = {}) {
     phone: str(raw.phone, 30),
     expiresAt: raw.expiresAt ? str(raw.expiresAt, 20) : null,
     memo: str(raw.memo, 500),
+    code: str(raw.code, 120),
     lat: numOrNull(raw.lat),
     lng: numOrNull(raw.lng),
     totalCoupons: total,

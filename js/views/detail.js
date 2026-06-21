@@ -5,7 +5,9 @@ import { h } from '../core/h.js';
 import { stampBoard, timelineItem, adBanner } from '../ui/components.js';
 import { couponStatus, remainingCount, progressPercent, formatExpiry } from '../domain.js';
 import { mapViewUrl } from '../services/maps.js';
+import { renderQR, renderBarcode, copyCode } from '../services/codes.js';
 import { showSheet } from '../ui/overlay.js';
+import { showToast } from '../ui/toast.js';
 
 export function render(ctx, params = {}) {
   const { store, router, actions } = ctx;
@@ -61,6 +63,8 @@ export function render(ctx, params = {}) {
       remaining <= 0 ? '완성! 사장님께 보여주세요 ✨' : `${remaining}개 더 모으면 완성 🎉`)
   ));
 
+  if (shop.code) root.appendChild(buildCodePanel(shop.code));
+
   root.appendChild(h('div', { class: 'stamp-head' },
     h('span', null, '스탬프 적립 현황'),
     h('strong', null, `${shop.usedCoupons || 0} `, h('em', null, `/ ${shop.totalCoupons}`))
@@ -111,4 +115,25 @@ export function render(ctx, params = {}) {
 
   root.appendChild(adBanner({ slotId: 'detail-ad' }));
   return root;
+}
+
+// Coupon code panel: scannable QR + Code128 barcode + copyable text. Each renderer
+// degrades to null when its vendored library is unavailable; text + copy always show.
+function buildCodePanel(code) {
+  const qr = renderQR(code, { size: 180 });
+  const barcode = renderBarcode(code);
+
+  const media = h('div', { class: 'coupon-code-media' }, qr, barcode);
+
+  const copyBtn = h('button', {
+    class: 'btn btn-secondary', attrs: { type: 'button' },
+    on: { click: async () => { await copyCode(code); showToast('코드를 복사했어요'); } }
+  }, '코드 복사');
+
+  return h('div', { class: 'coupon-code' },
+    h('h3', null, '쿠폰 코드'),
+    (qr || barcode) ? media : null,
+    h('div', { class: 'coupon-code-text' }, code),
+    copyBtn
+  );
 }

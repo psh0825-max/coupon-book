@@ -124,6 +124,14 @@ export function render(ctx, params = {}) {
   const memoInput = h('textarea', { id: 'f-memo', attrs: { name: 'memo', rows: '3', placeholder: '예: 평일 오전 할인, 주차 가능' } }, isEdit ? (shop.memo || '') : '');
   form.appendChild(field('메모', 'f-memo', memoInput));
 
+  // coupon code (optional) — shown as scannable barcode/QR on the detail page
+  const codeInput = h('input', { id: 'f-code', attrs: { type: 'text', name: 'code', placeholder: '예: 1234-5678-9012 (선택)', value: isEdit ? (shop.code || '') : '' } });
+  form.appendChild(h('div', { class: 'form-group' },
+    h('label', { attrs: { for: 'f-code' } }, '쿠폰 코드'),
+    codeInput,
+    h('p', { class: 'field-hint' }, '입력하면 상세 화면에서 바코드·QR로 크게 보여줘요.')
+  ));
+
   form.appendChild(h('div', { class: 'form-spacer' }));
   form.appendChild(h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'submit' } }, isEdit ? '저장하기' : '추가하기'));
 
@@ -156,6 +164,7 @@ export function render(ctx, params = {}) {
       phone: phoneInput.value.trim(),
       expiresAt: expiresInput.value || '',
       memo: memoInput.value.trim(),
+      code: codeInput.value.trim(),
       lat: parseFloat(latInput.value) || null,
       lng: parseFloat(lngInput.value) || null,
       usedCoupons: used,
