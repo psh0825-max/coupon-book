@@ -39,3 +39,11 @@ test('normalizeShop: invalid skin falls back to category default', () => {
 test('normalizeShop: trims strings', () => {
   assert.equal(normalizeShop({ name: '  카페  ' }).name, '카페');
 });
+
+test('normalizeShop: preserves and trims code', () => {
+  assert.equal(normalizeShop({ code: '  1234-5678  ' }).code, '1234-5678');
+});
+
+test('normalizeShop: missing code -> empty string', () => {
+  assert.equal(normalizeShop({}).code, '');
+});
