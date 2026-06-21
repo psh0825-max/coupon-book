@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { haversine } from '../../static/js/location.js';
+import { haversine } from '../../static/js/services/location.js';
 
 // Seoul City Hall -> Gangnam Station: real-world straight-line distance ~8.5 km.
 test('haversine: Seoul City Hall to Gangnam is roughly 8-9 km', () => {

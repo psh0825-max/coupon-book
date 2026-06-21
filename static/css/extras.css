@@ -1,0 +1,109 @@
+/* extras.css — additive accessibility + onboarding/install polish. Append-only;
+   does not duplicate rules from base/layout/components/skins. */
+
+/* ── Hidden attribute wins over component display rules ───────────────────── */
+/* .btn{display:inline-flex} / .fab{display:flex} otherwise override the UA
+   [hidden]{display:none}, leaving toggled-off chrome visible. */
+[hidden] { display: none !important; }
+
+/* ── Focus visibility ─────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Drop the default outline only where :focus-visible is honored, keeping it for
+   keyboard users via the rule above. */
+@supports selector(:focus-visible) {
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+.toggle-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Scroll lock under modal/sheet ────────────────────────────────────────── */
+body.overlay-open .main {
+  overflow: hidden;
+}
+
+/* ── Screen-reader-only ───────────────────────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Onboarding ───────────────────────────────────────────────────────────── */
+.onboarding {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 60vh;
+}
+.onboarding-top {
+  display: flex;
+  justify-content: flex-end;
+}
+.onboarding-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.onboarding-choices {
+  display: grid;
+  gap: 10px;
+}
+.onboarding-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+.onboarding-footer .btn {
+  min-width: 96px;
+}
+
+/* ── Install hint ─────────────────────────────────────────────────────────── */
+.install-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── Reminder-day chips ───────────────────────────────────────────────────── */
+.reminder-days {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.chip[aria-pressed="true"] {
+  background: var(--grad-brand);
+  color: #fff;
+  border-color: transparent;
+}
+
+/* ── Geofence nearby sheet ────────────────────────────────────────────────── */
+.nearby-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nearby-sheet .nearby-card {
+  width: 100%;
+  text-align: left;
+}
+
+/* ── Detail timeline empty hint ───────────────────────────────────────────── */
+.detail-timeline-empty {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
