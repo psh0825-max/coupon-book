@@ -14,6 +14,13 @@ import { showToast } from '../ui/toast.js';
 let _map = null;
 let _layer = null;
 
+// A shop is plottable only when both coords are present (not null/'') AND finite.
+// Number(null) and Number('') are 0 (finite), so the null/'' checks must come
+// first — otherwise no-coordinate shops would plot at (0,0). A genuine 0 passes.
+const hasCoords = (s) =>
+  s.lat != null && s.lng != null && s.lat !== '' && s.lng !== '' &&
+  Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng));
+
 export function render(ctx) {
   // Tear down any prior map instance so navigating away and back never leaks it
   // (including the no-located-shops early-return path below).
@@ -25,7 +32,7 @@ export function render(ctx) {
 
   const { store, router } = ctx;
   const st = store.getState();
-  const located = (st.shops || []).filter((s) => Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng)));
+  const located = (st.shops || []).filter(hasCoords);
 
   const root = h('div', { class: 'map-page' });
 
@@ -86,12 +93,13 @@ async function drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, for
   }).addTo(_map);
   _layer = Leaflet.layerGroup().addTo(_map);
 
+  let meMarker = null;
   if (userPos) {
     Leaflet.circle([userPos.lat, userPos.lng], {
       radius: Math.max(35, userPos.accuracy || 60),
       color: '#77a8d8', fillColor: '#77a8d8', fillOpacity: 0.14, weight: 1
     }).addTo(_layer);
-    Leaflet.marker([userPos.lat, userPos.lng], { icon: createMapIcon('me') }).addTo(_layer).bindPopup('현재 위치');
+    meMarker = Leaflet.marker([userPos.lat, userPos.lng], { icon: createMapIcon('me') }).addTo(_layer).bindPopup('현재 위치');
   }
 
   const nearby = located.map((shop) => {
@@ -125,10 +133,27 @@ async function drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, for
   });
   if (nearby.length) showFloat(nearby[0].shop, nearby[0].distance);
 
-  const bounds = Leaflet.latLngBounds(located.map((shop) => [Number(shop.lat), Number(shop.lng)]));
-  if (userPos) bounds.extend([userPos.lat, userPos.lng]);
-  _map.fitBounds(bounds.pad(0.2), { maxZoom: 16 });
-  setTimeout(() => _map?.invalidateSize(), 80);
+  // Apply the camera AFTER invalidateSize so fitBounds/setView is computed
+  // against the container's real dimensions (not a zero/world-sized box).
+  function applyView() {
+    if (!_map) return;
+    _map.invalidateSize();
+    if (forceLocate && userPos) {
+      // '내 위치' pressed with a known position: pan+zoom straight to the user
+      // and surface the popup so the pulsing dot is unmistakable.
+      _map.setView([userPos.lat, userPos.lng], 16);
+      meMarker?.openPopup();
+    } else {
+      // Initial render (or locate-failed): frame every shop plus the user.
+      const bounds = Leaflet.latLngBounds(located.map((shop) => [Number(shop.lat), Number(shop.lng)]));
+      if (userPos) bounds.extend([userPos.lat, userPos.lng]);
+      _map.fitBounds(bounds.pad(0.2), { maxZoom: 16 });
+    }
+  }
+  // Once now (no long blank), and again after layout flushes so the final fit
+  // uses real dimensions. Calling fitBounds/setView twice is harmless.
+  applyView();
+  setTimeout(applyView, 120);
 
   const visibleNearby = nearby.filter((item) => item.distance === null || item.distance <= 3000);
   clear(summaryEl);
