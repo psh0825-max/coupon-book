@@ -3,9 +3,10 @@
 
 import { h, icon, frag } from '../core/h.js';
 import {
-  couponStatus, remainingCount, progressPercent, formatExpiry, isCompleted
+  couponStatus, remainingCount, remainingValue, progressPercent, formatExpiry, isCompleted,
+  isAmountKind, isCountKind, passTotal, passUsed, remainingLabel, totalLabel, usedLabel
 } from '../domain.js';
-import { formatDate, formatRelative } from '../services/format.js';
+import { formatDate, formatRelative, formatWon } from '../services/format.js';
 import { SKINS, getCategoryIcon } from '../data/skins.js';
 
 /** stampBoard(total, used) — grid of stamps; gift icon on the final unreached prize. */
@@ -25,22 +26,30 @@ export function stampBoard(total, used) {
 /** shopCard(shop, { onOpen, onQuickUse }) — keyboard-activatable card. */
 export function shopCard(shop, { onOpen, onQuickUse } = {}) {
   const status = couponStatus(shop);
-  const remaining = remainingCount(shop);
   const percent = progressPercent(shop);
-  const complete = isCompleted(shop) || remaining <= 0;
+  const complete = isCompleted(shop) || remainingValue(shop) <= 0;
   const categoryText = shop.category + (shop.expiresAt ? ` · ${formatExpiry(shop.expiresAt)}` : '');
 
   const quickUse = h('button', {
     class: 'card-quick-use',
     attrs: {
       type: 'button', 'data-action': 'quick-use',
-      'aria-label': `${shop.name} 쿠폰 사용`,
+      'aria-label': `${shop.name} 이용권 사용`,
       disabled: complete ? '' : null
     },
     on: {
       click: () => { if (!complete) onQuickUse?.(shop); }
     }
   }, '사용');
+
+  const hintText = complete
+    ? '모두 사용했어요'
+    : isAmountKind(shop)
+      ? `${remainingLabel(shop)} 남아있어요`
+      : `${remainingValue(shop)}회 남았어요`;
+
+  // Stamp board only makes sense for a count pass with a small, countable total.
+  const showStamps = isCountKind(shop) && passTotal(shop) <= 30;
 
   const cardMain = h('button', {
     class: 'card-main',
@@ -62,7 +71,7 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
     h('div', { class: 'card-body' },
       h('div', { class: 'card-progress-meta' },
         h('span', null, `${percent}%`),
-        h('span', null, `${remaining} / ${shop.totalCoupons}`)
+        h('span', null, `${remainingLabel(shop)} 남음`)
       ),
       h('div', { class: 'progress-bar' },
         h('div', {
@@ -70,10 +79,8 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
           style: { width: `${percent}%` }
         })
       ),
-      h('div', { class: `reward-hint${remaining <= 0 ? ' done' : ''}` },
-        remaining <= 0 ? '완성! 사장님께 보여주세요 ✨' : `${remaining}개 더 모으면 완성 🎉`
-      ),
-      stampBoard(shop.totalCoupons, shop.usedCoupons || 0)
+      h('div', { class: `reward-hint${complete ? ' done' : ''}` }, hintText),
+      showStamps ? stampBoard(passTotal(shop), passUsed(shop)) : null
     )
   );
 
@@ -83,7 +90,7 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
   },
     cardMain,
     h('div', { class: 'card-footer' },
-      h('span', null, shop.phone ? shop.phone : `${shop.usedCoupons || 0} / ${shop.totalCoupons} 사용`),
+      h('span', null, shop.phone ? shop.phone : `${usedLabel(shop)} / ${totalLabel(shop)} 사용`),
       quickUse
     )
   );
@@ -103,10 +110,14 @@ export function summaryCard(value, label, accent) {
 
 /** timelineItem(log, shopName) — usage history row. */
 export function timelineItem(log, shopName) {
+  const deduct = log.amount != null
+    ? `${formatWon(log.amount)} 사용`
+    : log.count != null ? `${log.count}회 사용` : null;
   return h('div', { class: 'timeline-item success' },
     h('div', { class: 'timeline-dot' }),
     h('div', { class: 'timeline-time' }, `${formatDate(log.usedAt)} · ${formatRelative(log.usedAt)}`),
     h('div', { class: 'timeline-title' }, shopName),
+    deduct ? h('div', { class: 'timeline-deduct' }, deduct) : null,
     log.note ? h('div', { class: 'timeline-note' }, log.note) : null
   );
 }

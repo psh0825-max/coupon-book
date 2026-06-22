@@ -2,8 +2,40 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeShop } from '../../static/js/data/repo.js';
 
-test('normalizeShop: clamps totalCoupons to 100 max', () => {
-  assert.equal(normalizeShop({ totalCoupons: 999 }).totalCoupons, 100);
+test('normalizeShop: clamps totalCoupons to 1000 max', () => {
+  assert.equal(normalizeShop({ totalCoupons: 9999 }).totalCoupons, 1000);
+});
+
+test('normalizeShop: default kind is count (no kind field)', () => {
+  assert.equal(normalizeShop({}).kind, 'count');
+  assert.equal(normalizeShop({ kind: 'weird' }).kind, 'count');
+});
+
+test('normalizeShop: kind amount is preserved', () => {
+  assert.equal(normalizeShop({ kind: 'amount' }).kind, 'amount');
+});
+
+test('normalizeShop: always stores all four pass fields', () => {
+  const s = normalizeShop({ kind: 'amount', totalAmount: 1000000, usedAmount: 150000 });
+  assert.equal(s.totalCoupons, 10); // default kept so switching kind never loses data
+  assert.equal(s.usedCoupons, 0);
+  assert.equal(s.totalAmount, 1000000);
+  assert.equal(s.usedAmount, 150000);
+});
+
+test('normalizeShop: clamps totalAmount to 1억 max', () => {
+  assert.equal(normalizeShop({ totalAmount: 999999999 }).totalAmount, 100000000);
+});
+
+test('normalizeShop: usedAmount clamped to totalAmount', () => {
+  const s = normalizeShop({ totalAmount: 500000, usedAmount: 900000 });
+  assert.equal(s.usedAmount, 500000);
+});
+
+test('normalizeShop: negative amounts -> 0', () => {
+  const s = normalizeShop({ totalAmount: -5, usedAmount: -5 });
+  assert.equal(s.totalAmount, 0);
+  assert.equal(s.usedAmount, 0);
 });
 
 test('normalizeShop: clamps usedCoupons to total', () => {

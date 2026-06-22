@@ -3,7 +3,7 @@
 
 import { h } from '../core/h.js';
 import { shopCard, summaryCard, adBanner, nearbyCard, emptyState } from '../ui/components.js';
-import { stats, priorityShop, sortShops, couponStatus, progressPercent } from '../domain.js';
+import { stats, priorityShop, sortShops, couponStatus, progressPercent, isAmountKind } from '../domain.js';
 import { getCurrentPosition, haversine } from '../services/location.js';
 import { showToast } from '../ui/toast.js';
 
@@ -27,13 +27,13 @@ export function render(ctx) {
 
   root.appendChild(h('div', { class: 'product-hero' },
     h('div', null,
-      h('div', { class: 'eyebrow' }, 'LOCAL COUPON WALLET'),
-      h('h1', null, '내 쿠폰을 한곳에서'),
+      h('div', { class: 'eyebrow' }, 'MEMBERSHIP & PASS WALLET'),
+      h('h1', null, '내 이용권을 한곳에서'),
       h('p', null, priority
-        ? `${priority.name} 쿠폰이 가장 먼저 챙길 대상이에요.`
-        : '가지고 있는 도장판·쿠폰을 등록해 진행률과 만료일을 한눈에 관리해요.')
+        ? `${priority.name} 이용권이 가장 먼저 챙길 대상이에요.`
+        : '가지고 있는 횟수권·금액권을 등록해 잔액과 만료일을 한눈에 관리해요.')
     ),
-    h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => router.navigate('add') } }, '내 쿠폰 추가')
+    h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => router.navigate('add') } }, '이용권 추가')
   ));
 
   root.appendChild(h('div', { class: 'summary-row' },
@@ -54,7 +54,7 @@ export function render(ctx) {
       on: { click: () => router.navigate('detail', { id: priority.id }) }
     },
       h('div', null,
-        h('div', { class: 'eyebrow' }, 'NEXT BEST COUPON'),
+        h('div', { class: 'eyebrow' }, 'NEXT BEST PASS'),
         h('strong', null, priority.name),
         h('span', null, `${status.label} · ${percent}% 진행`)
       ),
@@ -68,7 +68,7 @@ export function render(ctx) {
   root.appendChild(nearbyArea);
 
   root.appendChild(h('div', { class: 'rail-header' },
-    h('div', null, h('h2', null, '내 쿠폰'), h('p', null, '옆으로 넘기며 확인하세요')),
+    h('div', null, h('h2', null, '내 이용권'), h('p', null, '옆으로 넘기며 확인하세요')),
     h('button', { class: 'rail-more', attrs: { type: 'button' }, on: { click: () => router.navigate('list') } }, '모두보기 ›')
   ));
 
@@ -76,10 +76,10 @@ export function render(ctx) {
     const rail = h('div', { class: 'shop-rail is-empty' });
     rail.appendChild(emptyState({
       icon: 'store',
-      title: '등록된 쿠폰이 없어요',
-      desc: '+ 버튼을 눌러 첫 쿠폰을 등록해 보세요',
+      title: '등록된 이용권이 없어요',
+      desc: '+ 버튼을 눌러 첫 이용권을 등록해 보세요',
       actions: [
-        { label: '내 쿠폰 추가', className: 'btn-primary', onClick: () => router.navigate('add') },
+        { label: '이용권 추가', className: 'btn-primary', onClick: () => router.navigate('add') },
         { label: '샘플 보기', className: 'btn-secondary', onClick: async () => {
           const added = await actions.seedDemo();
           showToast(added ? `${added}개 샘플 업체를 추가했어요` : '이미 샘플 업체가 있어요');
@@ -92,7 +92,10 @@ export function render(ctx) {
     sortShops(shops, 'smart').slice(0, 10).forEach((shop) => {
       rail.appendChild(shopCard(shop, {
         onOpen: () => router.navigate('detail', { id: shop.id }),
-        onQuickUse: () => actions.useCoupon(shop.id, '홈에서 빠른 사용')
+        // Amount passes need an entry sheet; count passes fast-path one session.
+        onQuickUse: (s) => isAmountKind(s)
+          ? actions.promptUse(s)
+          : actions.usePass(s.id, { count: 1, note: '홈에서 빠른 사용' })
       }));
     });
     root.appendChild(rail);

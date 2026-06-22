@@ -1,6 +1,8 @@
 // domain.js — PURE business logic. The ONLY place coupon status/sort/filter/expiry
 // math lives. No DOM, no IndexedDB; reads Date.now() only.
 
+import { formatWon } from './services/format.js';
+
 const DAY_MS = 86400000;
 
 function parseDate(dateStr) {
@@ -27,8 +29,29 @@ export function daysUntil(dateStr) {
   return Math.round((t.getTime() - n.getTime()) / DAY_MS);
 }
 
+// ── Pass kind ────────────────────────────────────────────────────────────────
+// Two kinds of paid pass: 'count' (횟수권, sessions) and 'amount' (금액권, KRW).
+// Records predating the concept have no `kind` and are treated as 'count'.
+export function isAmountKind(shop) { return shop && shop.kind === 'amount'; }
+export function isCountKind(shop) { return !isAmountKind(shop); }
+
+/** generic total (won for amount, sessions for count) */
+export function passTotal(shop) {
+  return isAmountKind(shop) ? num(shop.totalAmount) : num(shop.totalCoupons);
+}
+
+/** generic used (won for amount, sessions for count) */
+export function passUsed(shop) {
+  return isAmountKind(shop) ? num(shop.usedAmount) : num(shop.usedCoupons);
+}
+
+/** generic numeric remaining (won or sessions), never negative */
+export function remainingValue(shop) {
+  return Math.max(0, passTotal(shop) - passUsed(shop));
+}
+
 export function isCompleted(shop) {
-  return num(shop.totalCoupons) > 0 && num(shop.usedCoupons) >= num(shop.totalCoupons);
+  return passTotal(shop) > 0 && passUsed(shop) >= passTotal(shop);
 }
 
 export function isExpired(shop) {
@@ -43,21 +66,39 @@ export function isExpiringSoon(shop, within = 30) {
   return days !== null && days >= 0 && days <= within;
 }
 
+/** Numeric remaining (won or sessions). Same as remainingValue for both kinds;
+ *  kept as a named export so existing count callers keep working. */
 export function remainingCount(shop) {
-  return Math.max(0, num(shop.totalCoupons) - num(shop.usedCoupons));
+  return remainingValue(shop);
+}
+
+/** remaining as display text: amount -> '850,000원'; count -> '8회' */
+export function remainingLabel(shop) {
+  return isAmountKind(shop) ? formatWon(remainingValue(shop)) : `${remainingValue(shop)}회`;
+}
+
+/** total as display text: amount -> '1,000,000원'; count -> '10회' */
+export function totalLabel(shop) {
+  return isAmountKind(shop) ? formatWon(passTotal(shop)) : `${passTotal(shop)}회`;
+}
+
+/** used as display text: amount -> '150,000원'; count -> '2회' */
+export function usedLabel(shop) {
+  return isAmountKind(shop) ? formatWon(passUsed(shop)) : `${passUsed(shop)}회`;
 }
 
 export function progressPercent(shop) {
-  const total = num(shop.totalCoupons);
+  const total = passTotal(shop);
   if (total <= 0) return 0;
-  return Math.min(100, Math.max(0, Math.round(num(shop.usedCoupons) / total * 100)));
+  return Math.min(100, Math.max(0, Math.round(passUsed(shop) / total * 100)));
 }
 
 /** { key, label, className, score } — lower score = higher priority. */
 export function couponStatus(shop) {
-  if (isCompleted(shop)) return { key: 'done', label: '완성', className: 'success', score: 0 };
+  // A used-up paid pass is depleted ('소진'), not a prize to redeem.
+  if (isCompleted(shop)) return { key: 'done', label: '소진', className: 'success', score: 0 };
   const days = daysUntil(shop.expiresAt);
-  const remaining = remainingCount(shop);
+  const remaining = remainingValue(shop);
   if (days !== null && days < 0) {
     return { key: 'expired', label: '만료됨', className: 'danger', score: 10 };
   }
@@ -65,13 +106,18 @@ export function couponStatus(shop) {
     const label = days === 0 ? '오늘 만료' : `만료 D-${days}`;
     return { key: 'urgent', label, className: 'danger', score: 20 + days };
   }
-  if (remaining <= 2) {
-    return { key: 'low', label: `${remaining}개 남음`, className: 'warning', score: 40 + remaining };
+  const total = passTotal(shop);
+  const lowBalance = isAmountKind(shop)
+    ? (total > 0 && remaining <= total * 0.2)
+    : remaining <= 2;
+  if (lowBalance) {
+    const label = isAmountKind(shop) ? `${formatWon(remaining)} 남음` : `${remaining}회 남음`;
+    return { key: 'low', label, className: 'warning', score: 40 + Math.min(remaining, 9) };
   }
   if (days !== null && days <= 30) {
     return { key: 'soon', label: `만료 D-${days}`, className: 'warning', score: 60 + days };
   }
-  return { key: 'neutral', label: '진행 중', className: 'neutral', score: 100 + remaining };
+  return { key: 'neutral', label: '이용 중', className: 'neutral', score: 100 + Math.min(remaining, 99) };
 }
 
 export function formatExpiry(dateStr) {
@@ -133,7 +179,11 @@ export function stats(shops = [], logs = []) {
   const totalShops = shops.length;
   const totalCoupons = shops.reduce((acc, s) => acc + num(s.totalCoupons), 0);
   const usedCoupons = shops.reduce((acc, s) => acc + num(s.usedCoupons), 0);
-  const completionRate = totalCoupons ? Math.round(usedCoupons / totalCoupons * 100) : 0;
+  // Average of each shop's progress %. Summing raw totals would mix won and
+  // sessions across kinds, which is meaningless — per-shop % is comparable.
+  const completionRate = totalShops
+    ? Math.round(shops.reduce((acc, s) => acc + progressPercent(s), 0) / totalShops)
+    : 0;
   const expiringCount = shops.filter((s) => isExpiringSoon(s)).length;
   const completedCount = shops.filter(isCompleted).length;
   const now = new Date(Date.now());

@@ -241,3 +241,75 @@ body.overlay-open .main {
 @media (prefers-reduced-motion: reduce) {
   .coupon-map-pin.me::after { animation: none; }
 }
+
+/* ===== Paid-pass UI (kind: count / amount) ===== */
+.pass-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+.pass-balance .amt {
+  font-size: 1.6rem;
+  font-weight: 850;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.pass-balance .sub {
+  font-size: .85rem;
+  color: var(--text-muted);
+}
+
+/* segmented control for choosing pass kind */
+.seg {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  margin-bottom: 14px;
+}
+.seg button {
+  flex: 1;
+  min-height: 38px;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  color: var(--text-muted);
+}
+.seg button.active {
+  background: var(--grad-brand);
+  color: #fff;
+}
+
+/* quick-amount chips in the use sheet */
+.use-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+.amount-preview {
+  margin-top: 8px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+/* use-sheet / form helpers */
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+  font-size: .9rem;
+  color: var(--text-primary);
+}
+.timeline-deduct {
+  margin-top: 2px;
+  font-weight: 700;
+  font-size: .85rem;
+  color: var(--accent);
+}

@@ -49,7 +49,7 @@ export function render(ctx) {
     ),
     h('div', { class: 'metric-grid' },
       metric(s.totalShops, '업체'),
-      metric(s.totalCoupons, '쿠폰 총'),
+      metric(s.totalCoupons, '이용권 수'),
       metric(s.usedCoupons, '사용'),
       metric(s.completedCount, '완성')
     )

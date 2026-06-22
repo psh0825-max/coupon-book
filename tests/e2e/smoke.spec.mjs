@@ -68,10 +68,20 @@ test('smoke: onboarding, seed sample, use coupon, chrome, navigate tabs', async 
   await expect(page.locator('.shop-rail .card').first()).toBeVisible({ timeout: 10000 });
   await expect(page.locator('[data-page-title]')).toHaveText('Coupon Book');
 
-  // Use a coupon from the first card → toast or reward modal appears.
+  // Use the first card's pass. Count passes deduct one session immediately;
+  // amount passes open an entry sheet — fill an amount and confirm. Either way
+  // we end with a success toast.
   await page.locator('.shop-rail [data-action="quick-use"]').first().click();
-  await expect(page.locator('#toast.active, #reward-modal.active').first())
-    .toBeVisible({ timeout: 5000 });
+  const amountInput = page.locator('#use-amount');
+  const sheetOpened = await amountInput
+    .waitFor({ state: 'visible', timeout: 1500 })
+    .then(() => true)
+    .catch(() => false);
+  if (sheetOpened) {
+    await amountInput.fill('10000');
+    await page.locator('.popup-footer').getByRole('button', { name: '사용' }).click();
+  }
+  await expect(page.locator('#toast.active')).toBeVisible({ timeout: 5000 });
 
   // Chrome visibility fix: back hidden on home, FAB visible on home.
   await expect(page.locator('[data-back]')).toBeHidden();

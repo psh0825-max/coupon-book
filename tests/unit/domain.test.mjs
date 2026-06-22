@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   daysUntil, isCompleted, isExpired, isExpiringSoon, remainingCount, progressPercent,
-  couponStatus, formatExpiry, priorityShop, sortShops, filterShops, stats, dueReminders
+  couponStatus, formatExpiry, priorityShop, sortShops, filterShops, stats, dueReminders,
+  isAmountKind, isCountKind, passTotal, passUsed, remainingValue,
+  remainingLabel, totalLabel, usedLabel
 } from '../../static/js/domain.js';
 
 // Local YYYY-MM-DD offset from today, matching domain's local-date parsing.
@@ -39,6 +41,56 @@ test('isCompleted / remainingCount / progressPercent', () => {
   assert.equal(progressPercent(shop({ totalCoupons: 0 })), 0);
 });
 
+const amountShop = (over = {}) => ({ kind: 'amount', totalAmount: 1000000, usedAmount: 0, ...over });
+
+test('amount kind: helpers and labels', () => {
+  const s = amountShop({ usedAmount: 150000 });
+  assert.equal(isAmountKind(s), true);
+  assert.equal(isCountKind(s), false);
+  assert.equal(passTotal(s), 1000000);
+  assert.equal(passUsed(s), 150000);
+  assert.equal(remainingValue(s), 850000);
+  assert.equal(remainingCount(s), 850000);
+  assert.equal(remainingLabel(s), '850,000원');
+  assert.equal(totalLabel(s), '1,000,000원');
+  assert.equal(usedLabel(s), '150,000원');
+});
+
+test('count kind: labels', () => {
+  const s = shop({ usedCoupons: 2 });
+  assert.equal(isCountKind(s), true);
+  assert.equal(remainingLabel(s), '8회');
+  assert.equal(totalLabel(s), '10회');
+  assert.equal(usedLabel(s), '2회');
+});
+
+test('amount kind: isCompleted and progressPercent', () => {
+  assert.equal(isCompleted(amountShop({ usedAmount: 1000000 })), true);
+  assert.equal(isCompleted(amountShop({ usedAmount: 999999 })), false);
+  assert.equal(isCompleted(amountShop({ totalAmount: 0, usedAmount: 0 })), false);
+  assert.equal(progressPercent(amountShop({ usedAmount: 250000 })), 25);
+  assert.equal(progressPercent(amountShop({ totalAmount: 0 })), 0);
+});
+
+test('couponStatus amount: completed -> 소진', () => {
+  const s = couponStatus(amountShop({ usedAmount: 1000000 }));
+  assert.deepEqual([s.key, s.className, s.label], ['done', 'success', '소진']);
+});
+
+test('couponStatus amount: low balance (<=20%) -> warning 원 남음', () => {
+  // 150,000 remaining of 1,000,000 = 15% <= 20%
+  const s = couponStatus(amountShop({ usedAmount: 850000, expiresAt: dateOffset(100) }));
+  assert.equal(s.className, 'warning');
+  assert.equal(s.key, 'low');
+  assert.ok(s.label.includes('원 남음'));
+  assert.equal(s.label, '150,000원 남음');
+});
+
+test('couponStatus amount: healthy balance -> neutral 이용 중', () => {
+  const s = couponStatus(amountShop({ usedAmount: 100000, expiresAt: dateOffset(100) }));
+  assert.deepEqual([s.key, s.className, s.label], ['neutral', 'neutral', '이용 중']);
+});
+
 test('isExpired: has date & days<0 & not completed', () => {
   assert.equal(isExpired(shop({ expiresAt: dateOffset(-1) })), true);
   assert.equal(isExpired(shop({ expiresAt: dateOffset(1) })), false);
@@ -57,7 +109,7 @@ test('isExpiringSoon: 0..within days and not completed', () => {
 test('couponStatus tiers', () => {
   // completed
   let s = couponStatus(shop({ usedCoupons: 10 }));
-  assert.deepEqual([s.key, s.className, s.score, s.label], ['done', 'success', 0, '완성']);
+  assert.deepEqual([s.key, s.className, s.score, s.label], ['done', 'success', 0, '소진']);
   // expired
   s = couponStatus(shop({ usedCoupons: 1, expiresAt: dateOffset(-2) }));
   assert.deepEqual([s.className, s.score, s.label], ['danger', 10, '만료됨']);
@@ -68,13 +120,13 @@ test('couponStatus tiers', () => {
   assert.deepEqual([s.className, s.score, s.label], ['danger', 23, '만료 D-3']);
   // remaining <= 2 (no near expiry)
   s = couponStatus(shop({ usedCoupons: 9, expiresAt: dateOffset(100) }));
-  assert.deepEqual([s.className, s.score, s.label], ['warning', 41, '1개 남음']);
+  assert.deepEqual([s.className, s.score, s.label], ['warning', 41, '1회 남음']);
   // days <= 30 (soon)
   s = couponStatus(shop({ usedCoupons: 1, expiresAt: dateOffset(20) }));
   assert.deepEqual([s.className, s.score, s.label], ['warning', 80, '만료 D-20']);
   // neutral
   s = couponStatus(shop({ usedCoupons: 1, expiresAt: dateOffset(100) }));
-  assert.deepEqual([s.key, s.className, s.score, s.label], ['neutral', 'neutral', 109, '진행 중']);
+  assert.deepEqual([s.key, s.className, s.score, s.label], ['neutral', 'neutral', 109, '이용 중']);
   // neutral, no expiry
   s = couponStatus(shop({ usedCoupons: 1 }));
   assert.equal(s.className, 'neutral');

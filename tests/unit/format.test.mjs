@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatDistance, formatRelative } from '../../static/js/services/format.js';
+import { formatDistance, formatRelative, formatWon } from '../../static/js/services/format.js';
 
 test('formatDistance: under 1000m shows meters', () => {
   assert.equal(formatDistance(120), '120m');
@@ -27,4 +27,22 @@ test('formatRelative: buckets', () => {
 test('formatRelative: 7+ days shows a date string', () => {
   const out = formatRelative(Date.now() - 10 * 86400000);
   assert.match(out, /^\d{4}\.\d{2}\.\d{2}$/);
+});
+
+test('formatWon: thousands separators + 원 suffix', () => {
+  assert.equal(formatWon(850000), '850,000원');
+  assert.equal(formatWon(1000000), '1,000,000원');
+  assert.equal(formatWon(0), '0원');
+  assert.equal(formatWon(1500), '1,500원');
+});
+
+test('formatWon: non-finite -> 0원', () => {
+  assert.equal(formatWon(NaN), '0원');
+  assert.equal(formatWon(Infinity), '0원');
+  assert.equal(formatWon(null), '0원');
+  assert.equal(formatWon('abc'), '0원');
+});
+
+test('formatWon: rounds and floors decimals', () => {
+  assert.equal(formatWon(1234.6), '1,235원');
 });
