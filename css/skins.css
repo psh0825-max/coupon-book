@@ -75,12 +75,12 @@
   background: var(--skin-grad);
 }
 
-.card[data-skin] .stamp.used {
+.card[data-skin] .stamp.valid {
   background: var(--skin-grad);
   border-color: transparent;
 }
 
-.card[data-skin] .stamp.used svg {
+.card[data-skin] .stamp.valid svg {
   stroke: #fff;
 }
 

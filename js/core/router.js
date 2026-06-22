@@ -8,7 +8,7 @@ const TITLES = {
   home: 'Coupon Book',
   list: '내 쿠폰',
   map: '주변 지도',
-  add: '업체',
+  add: '이용권',
   detail: '상세',
   settings: '설정',
   history: '사용 내역',
