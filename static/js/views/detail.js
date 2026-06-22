@@ -80,17 +80,19 @@ export function render(ctx, params = {}) {
       h('div', { class: 'amt' }, remainingLabel(shop)),
       h('div', { class: 'sub' }, `총 ${totalLabel(shop)} · 사용 ${usedLabel(shop)}`)
     ));
-  } else if (passTotal(shop) <= 30) {
-    root.appendChild(h('div', { class: 'stamp-head' },
-      h('span', null, '이용 현황'),
-      h('strong', null, `${usedLabel(shop)} `, h('em', null, `/ ${totalLabel(shop)}`))
-    ));
-    root.appendChild(stampBoard(passTotal(shop), passUsed(shop)));
   } else {
+    // Count pass: prominent remaining-count block, mirroring the amount balance.
+    root.appendChild(h('div', { class: 'pass-balance' },
+      h('div', { class: 'sub' }, '남은 횟수'),
+      h('div', { class: 'amt' }, `${remainingValue(shop)}회`),
+      h('div', { class: 'sub' }, `총 ${totalLabel(shop)} · 사용 ${usedLabel(shop)}`)
+    ));
     root.appendChild(h('div', { class: 'stamp-head' },
       h('span', null, '이용 현황'),
       h('strong', null, `${usedLabel(shop)} `, h('em', null, `/ ${totalLabel(shop)}`))
     ));
+    // Depleting ticket board only when small/countable; large passes show just the block.
+    if (passTotal(shop) <= 30) root.appendChild(stampBoard(passTotal(shop), passUsed(shop)));
   }
 
   root.appendChild(h('div', { class: 'detail-actions' },
@@ -106,6 +108,29 @@ export function render(ctx, params = {}) {
       on: { click: () => actions.undoLastCoupon(shop.id) }
     }, '사용 취소')
   ));
+
+  // Depleted pass → offer re-registration (재구매) carrying the setup but not usage/period.
+  if (depleted) {
+    root.appendChild(h('div', { class: 'detail-actions', style: { 'grid-template-columns': '1fr' } },
+      h('button', {
+        class: 'btn btn-primary btn-block',
+        attrs: { type: 'button' },
+        on: { click: () => router.navigate('add', { prefill: {
+          name: shop.name,
+          category: shop.category,
+          code: shop.code || '',
+          address: shop.address || '',
+          phone: shop.phone || '',
+          lat: shop.lat ?? null,
+          lng: shop.lng ?? null,
+          skin: shop.skin || 'midnight',
+          kind: shop.kind || 'count',
+          totalCoupons: shop.totalCoupons,
+          totalAmount: shop.totalAmount
+        } }) }
+      }, '다시 등록 (재구매)')
+    ));
+  }
 
   root.appendChild(h('div', { class: 'page-header', style: { 'margin-top': '24px' } }, h('h2', null, '사용 내역')));
   const timeline = h('div', { class: 'timeline' });
