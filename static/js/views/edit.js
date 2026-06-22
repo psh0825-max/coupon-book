@@ -8,7 +8,8 @@ import { CATEGORIES, getDefaultSkin } from '../data/skins.js';
 import { showToast } from '../ui/toast.js';
 import { showConfirm } from '../ui/overlay.js';
 import { readAndDownscale, detectCode, supportsBarcodeScan } from '../services/photo.js';
-import { formatWon } from '../services/format.js';
+import { formatWon, formatDistance } from '../services/format.js';
+import { isConfigured as placesConfigured, searchPlaces } from '../services/places.js';
 
 export function render(ctx, params = {}) {
   const { store, router, actions } = ctx;
@@ -31,6 +32,83 @@ export function render(ctx, params = {}) {
 
   const form = h('form', { id: 'shop-form' });
   root.appendChild(form);
+
+  // ── 매장 검색 (Kakao keyword search → auto-fill). Only when configured;
+  // manual entry always works even if search is unavailable. ──
+  if (placesConfigured()) {
+    const searchInput = h('input', { id: 'f-place-search', attrs: { type: 'search', name: 'placeSearch', autocomplete: 'off', placeholder: '예: 마사지, 스타벅스 — 내 주변 검색' } });
+    const results = h('div', { class: 'place-results', hidden: true });
+
+    const showMessage = (cls, text) => {
+      clear(results);
+      results.appendChild(h('p', { class: cls }, text));
+      results.hidden = false;
+    };
+    const hideResults = () => { clear(results); results.hidden = true; };
+
+    const renderResults = (places) => {
+      clear(results);
+      if (!places.length) { showMessage('place-empty', '검색 결과가 없어요'); return; }
+      for (const p of places) {
+        const top = h('div', null,
+          h('span', { class: 'pname' }, p.name),
+          p.category ? h('span', { class: 'pcat' }, p.category) : null
+        );
+        const where = p.road || p.address;
+        const meta = [];
+        if (p.phone) meta.push(h('span', null, p.phone));
+        if (p.phone && p.distance != null) meta.push(' · ');
+        if (p.distance != null) meta.push(h('span', { class: 'pdist' }, formatDistance(p.distance)));
+        const row = h('button', { class: 'place-row', attrs: { type: 'button' } },
+          top,
+          where ? h('div', { class: 'pmeta' }, where) : null,
+          meta.length ? h('div', { class: 'pmeta' }, ...meta) : null
+        );
+        row.addEventListener('click', () => {
+          nameInput.value = p.name;
+          addressInput.value = p.road || p.address;
+          phoneInput.value = p.phone;
+          if (Number.isFinite(p.lat)) latInput.value = p.lat.toFixed(6);
+          if (Number.isFinite(p.lng)) lngInput.value = p.lng.toFixed(6);
+          hideResults();
+          searchInput.value = '';
+          showToast('매장 정보를 불러왔어요');
+        });
+        results.appendChild(row);
+      }
+      results.hidden = false;
+    };
+
+    let latestQuery = '';
+    let debounceTimer = null;
+    const runSearch = async (query) => {
+      showMessage('place-empty', '검색 중…');
+      let pos;
+      try { pos = await getCurrentPosition(); } catch (e) { pos = undefined; }
+      try {
+        const places = await searchPlaces(query, pos || {});
+        if (query !== latestQuery) return; // out-of-order guard
+        renderResults(places);
+      } catch (e) {
+        if (query !== latestQuery) return;
+        showMessage('place-empty', '검색을 사용할 수 없어요 (네트워크/도메인 확인)');
+      }
+    };
+    searchInput.addEventListener('input', () => {
+      const query = searchInput.value.trim();
+      latestQuery = query;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (query.length < 2) { hideResults(); return; }
+      debounceTimer = setTimeout(() => runSearch(query), 400);
+    });
+
+    form.appendChild(h('div', { class: 'form-group place-search' },
+      h('label', { attrs: { for: 'f-place-search' } }, '매장 검색'),
+      searchInput,
+      h('p', { class: 'place-hint' }, '이름으로 검색하면 주소·전화·위치를 자동으로 채워요. (내 위치 기준 가까운 순)'),
+      results
+    ));
+  }
 
   // name
   const nameInput = h('input', { id: 'f-name', attrs: { type: 'text', name: 'name', required: '', placeholder: '예: 안양 스타 마사지', value: isEdit ? shop.name : '' } });
