@@ -9,7 +9,6 @@ import {
 } from '../domain.js';
 import { mapViewUrl } from '../services/maps.js';
 import { renderQR, renderBarcode, copyCode } from '../services/codes.js';
-import { showSheet } from '../ui/overlay.js';
 import { showToast } from '../ui/toast.js';
 
 export function render(ctx, params = {}) {
@@ -73,8 +72,6 @@ export function render(ctx, params = {}) {
   ));
 
   if (shop.code) root.appendChild(buildCodePanel(shop.code));
-
-  if (shop.photo) root.appendChild(buildPhotoPanel(shop.photo));
 
   if (amount) {
     // Amount pass: a prominent balance block reads better than a stamp board.
@@ -142,19 +139,4 @@ function buildCodePanel(code) {
     h('div', { class: 'coupon-code-text' }, code),
     copyBtn
   );
-}
-
-// Real-coupon photo: tapping opens a larger view in a sheet.
-function buildPhotoPanel(photo) {
-  const img = h('img', {
-    class: 'coupon-photo-img',
-    attrs: { src: photo, alt: '실물 쿠폰 사진' }
-  });
-  img.addEventListener('click', () => {
-    showSheet({
-      title: '실물 쿠폰',
-      body: h('img', { class: 'coupon-photo-full', attrs: { src: photo, alt: '실물 쿠폰 사진' } })
-    });
-  });
-  return h('div', { class: 'coupon-photo' }, img);
 }

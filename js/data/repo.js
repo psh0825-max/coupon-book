@@ -44,9 +44,6 @@ export function normalizeShop(raw = {}) {
   const rawCat = str(raw.category, 20);
   const category = CATEGORIES[rawCat] ? rawCat : '기타';
   const skin = raw.skin && SKINS[raw.skin] ? raw.skin : getDefaultSkin(category);
-  // Photo is a downscaled JPEG data URL; never run it through str() (the generic
-  // length limiter would corrupt it). Keep only valid image data URLs.
-  const photo = (typeof raw.photo === 'string' && raw.photo.startsWith('data:image/')) ? raw.photo : '';
   const shop = {
     name: str(raw.name, 60),
     category,
@@ -55,7 +52,6 @@ export function normalizeShop(raw = {}) {
     expiresAt: raw.expiresAt ? str(raw.expiresAt, 20) : null,
     memo: str(raw.memo, 500),
     code: str(raw.code, 120),
-    photo,
     lat: numOrNull(raw.lat),
     lng: numOrNull(raw.lng),
     kind,
