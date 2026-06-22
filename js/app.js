@@ -6,7 +6,8 @@ import { createRouter } from './core/router.js';
 import { h } from './core/h.js';
 
 import { Shops, Logs, Settings, seedDemoData, clearAll } from './data/repo.js';
-import { remainingCount } from './domain.js';
+import { remainingCount, remainingValue, remainingLabel, isAmountKind } from './domain.js';
+import { formatWon } from './services/format.js';
 
 import {
   setNotifySettings, startLocationWatch, stopLocationWatch, getCurrentPosition
@@ -17,12 +18,11 @@ import {
 } from './services/pwa.js';
 import { exportData as backupExport, importData as backupImport } from './services/backup.js';
 import { requestPersistentStorage } from './services/storage.js';
-import { haptic, celebrate } from './services/fx.js';
+import { haptic } from './services/fx.js';
 import { mountAds } from './services/ads.js';
 
 import { showToast } from './ui/toast.js';
 import { showSheet, showConfirm, closeOverlay } from './ui/overlay.js';
-import { showReward } from './ui/reward.js';
 
 import * as Home from './views/home.js';
 import * as List from './views/list.js';
@@ -101,41 +101,126 @@ function onUpdateAvailable(reg) {
   });
 }
 
+// clamp to an integer range; NaN propagates so callers can guard with `if (!v)`.
+const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+
 // ── Actions ──────────────────────────────────────────────────────────────────
 const actions = {
-  async useCoupon(shopId, note) {
+  // Kind-aware "use": deduct won (amount pass) or sessions (count pass). A used-up
+  // paid pass is depleted, not a prize — no confetti/reward here.
+  async usePass(shopId, opts = {}) {
     const shop = store.getState().shops.find((s) => s.id === shopId);
     if (!shop) return;
-    if (remainingCount(shop) <= 0) {
-      showToast('남은 쿠폰이 없어요', 'danger');
+    if (remainingValue(shop) <= 0) {
+      showToast('남은 이용권이 없어요', 'danger');
       return;
+    }
+    const updated = { ...shop };
+    let logFields;
+    if (isAmountKind(shop)) {
+      const amt = clamp(Math.round(opts.amount), 1, remainingValue(shop));
+      if (!amt) return;
+      updated.usedAmount = (shop.usedAmount || 0) + amt;
+      logFields = { amount: amt };
+    } else {
+      const n = clamp(Math.round(opts.count || 1), 1, remainingValue(shop));
+      updated.usedCoupons = (shop.usedCoupons || 0) + n;
+      logFields = { count: n };
     }
     let pos = null;
     try { pos = await getCurrentPosition(); } catch { /* location optional */ }
-    const updated = { ...shop, usedCoupons: (shop.usedCoupons || 0) + 1 };
     await Shops.update(updated);
     await Logs.add({
       shopId,
-      note: note || undefined,
-      location: pos ? { lat: pos.lat, lng: pos.lng } : undefined
+      note: opts.note || undefined,
+      location: pos ? { lat: pos.lat, lng: pos.lng } : undefined,
+      ...logFields
     });
     await refresh();
-    const done = remainingCount(updated) <= 0;
-    if (done) {
-      haptic('heavy');
-      celebrate();
-      showReward({ shopName: shop.name, total: shop.totalCoupons });
-    } else {
+    const depleted = remainingValue(updated) <= 0;
+    if (depleted) {
       haptic('medium');
-      showToast('쿠폰이 사용되었어요!');
+      showToast('이용권을 모두 사용했어요');
+    } else {
+      haptic('light');
+      showToast(`사용 완료 · ${remainingLabel(updated)} 남음`);
     }
     resyncServices();
+  },
+
+  // Opens an accessible use-entry sheet, then delegates to usePass.
+  promptUse(shop) {
+    if (!shop) return;
+    if (remainingValue(shop) <= 0) {
+      showToast('남은 이용권이 없어요', 'danger');
+      return;
+    }
+    const remaining = remainingValue(shop);
+    const memoInput = h('textarea', {
+      class: 'memo-input', id: 'use-memo',
+      attrs: { rows: '2', placeholder: '메모 (선택)' }
+    });
+
+    if (isAmountKind(shop)) {
+      const amountInput = h('input', {
+        id: 'use-amount',
+        attrs: { type: 'number', inputmode: 'numeric', min: '1', max: String(remaining), placeholder: '예: 30,000' }
+      });
+      const chipValues = [10000, 30000, 50000, 100000];
+      const chips = h('div', { class: 'use-chips' },
+        chipValues.map((v) => h('button', {
+          class: 'chip', attrs: { type: 'button' },
+          on: { click: () => { amountInput.value = String(Math.min(v, remaining)); } }
+        }, formatWon(v))),
+        h('button', {
+          class: 'chip', attrs: { type: 'button' },
+          on: { click: () => { amountInput.value = String(remaining); } }
+        }, '전액')
+      );
+      showSheet({
+        title: '금액 사용',
+        body: h('div', null,
+          h('label', { class: 'field-label', attrs: { for: 'use-amount' } }, '사용 금액(원)'),
+          amountInput,
+          chips,
+          h('div', { class: 'amount-preview' }, `남은 금액: ${formatWon(remaining)}`),
+          memoInput
+        ),
+        actions: [
+          { id: 'cancel', label: '취소', className: 'btn-secondary' },
+          {
+            id: 'confirm', label: '사용', className: 'btn-primary',
+            onClick: () => actions.usePass(shop.id, { amount: Number(amountInput.value), note: memoInput.value.trim() })
+          }
+        ]
+      });
+    } else {
+      const countInput = h('input', {
+        id: 'use-count',
+        attrs: { type: 'number', inputmode: 'numeric', min: '1', max: String(remaining), value: '1' }
+      });
+      showSheet({
+        title: '횟수 사용',
+        body: h('div', null,
+          h('label', { class: 'field-label', attrs: { for: 'use-count' } }, '사용 횟수'),
+          countInput,
+          memoInput
+        ),
+        actions: [
+          { id: 'cancel', label: '취소', className: 'btn-secondary' },
+          {
+            id: 'confirm', label: '사용', className: 'btn-primary',
+            onClick: () => actions.usePass(shop.id, { count: Number(countInput.value) || 1, note: memoInput.value.trim() })
+          }
+        ]
+      });
+    }
   },
 
   async undoLastCoupon(shopId) {
     const ok = await showConfirm({
       title: '사용 기록 취소',
-      message: '마지막 쿠폰 사용 기록을 취소하고 스탬프를 하나 되돌릴까요?',
+      message: '마지막 이용권 사용 기록을 취소하고 사용량을 되돌릴까요?',
       confirmLabel: '되돌리기'
     });
     if (!ok) return;
@@ -145,8 +230,14 @@ const actions = {
       .filter((l) => l.shopId === shopId)
       .sort((a, b) => b.usedAt - a.usedAt);
     if (!logs.length) return;
-    await Shops.update({ ...shop, usedCoupons: Math.max(0, (shop.usedCoupons || 0) - 1) });
-    await Logs.remove(logs[0].id);
+    const last = logs[0];
+    // Restore exactly what the last use deducted (falls back to one session for
+    // legacy logs that predate per-use amount/count fields).
+    const restored = last.amount != null
+      ? { ...shop, usedAmount: Math.max(0, (shop.usedAmount || 0) - last.amount) }
+      : { ...shop, usedCoupons: Math.max(0, (shop.usedCoupons || 0) - (last.count || 1)) };
+    await Shops.update(restored);
+    await Logs.remove(last.id);
     showToast('마지막 사용 기록을 취소했어요');
     await refresh();
   },

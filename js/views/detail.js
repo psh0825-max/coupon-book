@@ -3,7 +3,10 @@
 
 import { h } from '../core/h.js';
 import { stampBoard, timelineItem, adBanner } from '../ui/components.js';
-import { couponStatus, remainingCount, progressPercent, formatExpiry } from '../domain.js';
+import {
+  couponStatus, remainingValue, progressPercent, formatExpiry,
+  isAmountKind, passTotal, passUsed, totalLabel, usedLabel, remainingLabel
+} from '../domain.js';
 import { mapViewUrl } from '../services/maps.js';
 import { renderQR, renderBarcode, copyCode } from '../services/codes.js';
 import { showSheet } from '../ui/overlay.js';
@@ -16,9 +19,11 @@ export function render(ctx, params = {}) {
   if (!shop) { router.navigate('home'); return h('div'); }
 
   const logs = (st.logs || []).filter((l) => l.shopId === shop.id).sort((a, b) => b.usedAt - a.usedAt);
-  const remaining = remainingCount(shop);
+  const remaining = remainingValue(shop);
   const percent = progressPercent(shop);
   const status = couponStatus(shop);
+  const amount = isAmountKind(shop);
+  const depleted = remaining <= 0;
 
   const stat = (value, label) => h('div', { class: 'stat' },
     h('div', { class: 'num' }, String(value)),
@@ -34,9 +39,9 @@ export function render(ctx, params = {}) {
       h('div', { class: 'address' }, `${shop.address || '주소 없음'} · ${shop.category}`)
     ),
     h('div', { class: 'stats' },
-      stat(shop.totalCoupons, '총 쿠폰'),
-      stat(shop.usedCoupons || 0, '사용'),
-      stat(remaining, '남음')
+      stat(totalLabel(shop), amount ? '총 금액' : '총 횟수'),
+      stat(usedLabel(shop), '사용'),
+      stat(remainingLabel(shop), '남음')
     )
   ));
 
@@ -58,50 +63,45 @@ export function render(ctx, params = {}) {
   root.appendChild(h('div', { class: 'progress-wrap' },
     h('div', { class: 'progress-meta' },
       h('span', null, `${percent}% 사용`),
-      h('span', null, `${remaining}개 남음`)
+      h('span', null, `${remainingLabel(shop)} 남음`)
     ),
     h('div', { class: 'progress-bar' },
       h('div', { class: `progress-fill${percent >= 100 ? ' success' : ''}`, style: { width: `${percent}%` } })
     ),
-    h('div', { class: `reward-hint${remaining <= 0 ? ' done' : ''}` },
-      remaining <= 0 ? '완성! 사장님께 보여주세요 ✨' : `${remaining}개 더 모으면 완성 🎉`)
+    h('div', { class: `reward-hint${depleted ? ' done' : ''}` },
+      depleted ? '모두 사용했어요' : `${remainingLabel(shop)} 남아있어요`)
   ));
 
   if (shop.code) root.appendChild(buildCodePanel(shop.code));
 
   if (shop.photo) root.appendChild(buildPhotoPanel(shop.photo));
 
-  root.appendChild(h('div', { class: 'stamp-head' },
-    h('span', null, '스탬프 적립 현황'),
-    h('strong', null, `${shop.usedCoupons || 0} `, h('em', null, `/ ${shop.totalCoupons}`))
-  ));
-  root.appendChild(stampBoard(shop.totalCoupons, shop.usedCoupons || 0));
-
-  const openUseSheet = () => {
-    if (remaining <= 0) return;
-    const memoInput = h('textarea', {
-      class: 'memo-input', id: 'use-memo',
-      attrs: { rows: '3', placeholder: '예: 60분 마사지' }
-    });
-    showSheet({
-      title: '쿠폰 사용',
-      body: h('div', null,
-        h('p', { class: 'field-hint' }, '사용 내역에 남길 메모가 있다면 입력하세요.'),
-        memoInput
-      ),
-      actions: [
-        { id: 'cancel', label: '취소', className: 'btn-secondary' },
-        { id: 'confirm', label: '사용하기', className: 'btn-primary', onClick: () => actions.useCoupon(shop.id, memoInput.value.trim()) }
-      ]
-    });
-  };
+  if (amount) {
+    // Amount pass: a prominent balance block reads better than a stamp board.
+    root.appendChild(h('div', { class: 'pass-balance' },
+      h('div', { class: 'sub' }, '남은 금액'),
+      h('div', { class: 'amt' }, remainingLabel(shop)),
+      h('div', { class: 'sub' }, `총 ${totalLabel(shop)} · 사용 ${usedLabel(shop)}`)
+    ));
+  } else if (passTotal(shop) <= 30) {
+    root.appendChild(h('div', { class: 'stamp-head' },
+      h('span', null, '이용 현황'),
+      h('strong', null, `${usedLabel(shop)} `, h('em', null, `/ ${totalLabel(shop)}`))
+    ));
+    root.appendChild(stampBoard(passTotal(shop), passUsed(shop)));
+  } else {
+    root.appendChild(h('div', { class: 'stamp-head' },
+      h('span', null, '이용 현황'),
+      h('strong', null, `${usedLabel(shop)} `, h('em', null, `/ ${totalLabel(shop)}`))
+    ));
+  }
 
   root.appendChild(h('div', { class: 'detail-actions' },
     h('button', {
       class: 'btn btn-primary btn-block',
-      attrs: { type: 'button', disabled: remaining <= 0 ? '' : null },
-      on: { click: openUseSheet }
-    }, '쿠폰 사용하기'),
+      attrs: { type: 'button', disabled: depleted ? '' : null },
+      on: { click: () => actions.promptUse(shop) }
+    }, '사용하기'),
     h('button', { class: 'btn btn-secondary', attrs: { type: 'button' }, on: { click: () => router.navigate('add', { id: shop.id }) } }, '편집'),
     h('button', {
       class: 'btn btn-secondary',

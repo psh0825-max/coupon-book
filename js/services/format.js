@@ -29,3 +29,10 @@ export function formatDistance(m) {
   if (n < 1000) return `${Math.round(n)}m`;
   return `${(n / 1000).toFixed(1)}km`;
 }
+
+/** integer KRW with thousands separators + '원', e.g. 850000 -> '850,000원' */
+export function formatWon(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '0원';
+  return `${Math.round(v).toLocaleString('en-US')}원`;
+}

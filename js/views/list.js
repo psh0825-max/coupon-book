@@ -4,7 +4,7 @@
 
 import { h, clear } from '../core/h.js';
 import { shopCard, emptyState } from '../ui/components.js';
-import { filterShops, sortShops } from '../domain.js';
+import { filterShops, sortShops, isAmountKind } from '../domain.js';
 import { CATEGORIES, getCategoryIcon } from '../data/skins.js';
 import { showToast } from '../ui/toast.js';
 
@@ -25,7 +25,7 @@ export function render(ctx) {
 
   const root = h('div');
   root.appendChild(h('div', { class: 'page-header' },
-    h('h2', null, '내 쿠폰'), h('p', null, '등록한 모든 가게')));
+    h('h2', null, '내 이용권'), h('p', null, '등록한 모든 이용권')));
 
   // ── status tabs ──
   const tabs = h('div', { class: 'status-tabs', attrs: { role: 'tablist' } });
@@ -109,10 +109,10 @@ export function render(ctx) {
     if (shops.length === 0) {
       grid.appendChild(emptyState({
         icon: 'store',
-        title: '등록된 업체가 없어요',
-        desc: '하단 + 버튼을 눌러 처음 업체를 등록해 보세요',
+        title: '등록된 이용권이 없어요',
+        desc: '하단 + 버튼을 눌러 처음 이용권을 등록해 보세요',
         actions: [
-          { label: '처음 업체 등록', className: 'btn-primary', onClick: () => router.navigate('add') },
+          { label: '이용권 등록', className: 'btn-primary', onClick: () => router.navigate('add') },
           { label: '샘플 보기', className: 'btn-secondary', onClick: async () => {
             const added = await actions.seedDemo();
             showToast(added ? `${added}개 샘플 업체를 추가했어요` : '이미 샘플 업체가 있어요');
@@ -132,7 +132,9 @@ export function render(ctx) {
     }
     filtered.forEach((shop) => grid.appendChild(shopCard(shop, {
       onOpen: () => router.navigate('detail', { id: shop.id }),
-      onQuickUse: () => actions.useCoupon(shop.id, '목록에서 빠른 사용')
+      onQuickUse: (s) => isAmountKind(s)
+        ? actions.promptUse(s)
+        : actions.usePass(s.id, { count: 1, note: '목록에서 빠른 사용' })
     })));
   }
 
