@@ -9,16 +9,17 @@ import {
 import { formatDate, formatRelative, formatWon } from '../services/format.js';
 import { SKINS, getCategoryIcon } from '../data/skins.js';
 
-/** stampBoard(total, used) — grid of stamps; gift icon on the final unreached prize. */
+/** stampBoard(total, used) — depletion model: VALID tickets cluster at the start
+ *  and disappear (become SPENT) as `used` grows. The next ticket to be torn off
+ *  is highlighted. */
 export function stampBoard(total, used) {
+  const remaining = Math.max(0, total - used);
   const stamps = [];
   for (let i = 0; i < total; i++) {
-    const isReward = i === total - 1 && i >= used; // final prize, not yet reached
-    const classes = ['stamp'];
-    if (i < used) classes.push('used');
-    if (i === used) classes.push('current');
-    if (isReward) classes.push('reward');
-    stamps.push(h('div', { class: classes.join(' ') }, icon(isReward ? 'gift' : 'check')));
+    const valid = i < remaining;
+    const classes = ['stamp', valid ? 'valid' : 'spent'];
+    if (valid && i === remaining - 1) classes.push('next'); // next ticket to be used
+    stamps.push(h('div', { class: classes.join(' ') }, valid ? icon('check') : null));
   }
   return h('div', { class: 'stamp-board' }, stamps);
 }

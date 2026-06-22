@@ -16,10 +16,14 @@ export function render(ctx, params = {}) {
   const isEdit = !!params.id;
   const shop = isEdit ? (st.shops || []).find((s) => s.id === params.id) : null;
   if (isEdit && !shop) {
-    showToast('업체를 찾을 수 없어요', 'danger');
+    showToast('이용권을 찾을 수 없어요', 'danger');
     router.navigate('home');
     return h('div');
   }
+  // Initial field values come from the shop (edit) or a renew prefill (new). A
+  // prefill carries the pass setup but NOT usage/period — those reset to empty.
+  const src = isEdit ? shop : (params.prefill || null);
+  const hasInit = !!src;
 
   const field = (labelText, forId, ...controls) => h('div', { class: 'form-group' },
     h('label', { attrs: { for: forId } }, labelText),
@@ -27,7 +31,7 @@ export function render(ctx, params = {}) {
   );
 
   const root = h('div');
-  root.appendChild(h('div', { class: 'page-header' }, h('h2', null, isEdit ? '업체 편집' : '업체 추가')));
+  root.appendChild(h('div', { class: 'page-header' }, h('h2', null, isEdit ? '이용권 편집' : '이용권 추가')));
 
   const form = h('form', { id: 'shop-form' });
   root.appendChild(form);
@@ -110,19 +114,19 @@ export function render(ctx, params = {}) {
   }
 
   // name
-  const nameInput = h('input', { id: 'f-name', attrs: { type: 'text', name: 'name', required: '', placeholder: '예: 안양 스타 마사지', value: isEdit ? shop.name : '' } });
-  form.appendChild(field('업체 이름', 'f-name', nameInput));
+  const nameInput = h('input', { id: 'f-name', attrs: { type: 'text', name: 'name', required: '', placeholder: '예: 안양 스타 마사지', value: hasInit ? (src.name || '') : '' } });
+  form.appendChild(field('매장 이름', 'f-name', nameInput));
 
   // category (shared across kinds)
   const catSelect = h('select', { id: 'f-category', attrs: { name: 'category' } },
     Object.keys(CATEGORIES).map((c) => h('option', {
-      attrs: { value: c, selected: isEdit && shop.category === c ? '' : null }
+      attrs: { value: c, selected: hasInit && src.category === c ? '' : null }
     }, c))
   );
   form.appendChild(field('카테고리', 'f-category', catSelect));
 
   // ── pass kind: 횟수권 (count) vs 금액권 (amount) ──
-  let kind = isEdit && shop.kind === 'amount' ? 'amount' : 'count';
+  let kind = src && src.kind === 'amount' ? 'amount' : 'count';
   const segCount = h('button', { class: kind === 'count' ? 'active' : '', attrs: { type: 'button', 'aria-pressed': kind === 'count' ? 'true' : 'false' } }, '횟수권');
   const segAmount = h('button', { class: kind === 'amount' ? 'active' : '', attrs: { type: 'button', 'aria-pressed': kind === 'amount' ? 'true' : 'false' } }, '금액권');
   const seg = h('div', { class: 'seg', attrs: { role: 'group', 'aria-label': '이용권 종류' } }, segCount, segAmount);
@@ -132,7 +136,7 @@ export function render(ctx, params = {}) {
   ));
 
   // ── COUNT fields: 총 횟수 + 현재 사용 횟수 + live stamp preview ──
-  const totalInput = h('input', { id: 'f-total', attrs: { type: 'number', name: 'totalCoupons', min: '1', max: '1000', value: isEdit ? String(shop.totalCoupons) : '10' } });
+  const totalInput = h('input', { id: 'f-total', attrs: { type: 'number', name: 'totalCoupons', min: '1', max: '1000', value: hasInit && src.totalCoupons != null ? String(src.totalCoupons) : '10' } });
   const usedInput = h('input', { id: 'f-used', attrs: { type: 'number', name: 'usedCoupons', min: '0', max: '1000', value: isEdit ? String(shop.usedCoupons || 0) : '0' } });
   const counter = h('span', { class: 'stamp-counter', id: 'f-stamp-counter' }, '0 / 10');
   const previewBoard = h('div', { class: 'stamp-board stamp-preview', id: 'f-stamp-preview' });
@@ -151,7 +155,7 @@ export function render(ctx, params = {}) {
   form.appendChild(countGroup);
 
   // ── AMOUNT fields: 총 금액 + 현재 사용 금액 + live 남은 금액 preview ──
-  const totalAmountInput = h('input', { id: 'f-total-amount', attrs: { type: 'number', name: 'totalAmount', inputmode: 'numeric', min: '0', max: '100000000', placeholder: '예: 1000000', value: isEdit ? String(shop.totalAmount || 0) : '' } });
+  const totalAmountInput = h('input', { id: 'f-total-amount', attrs: { type: 'number', name: 'totalAmount', inputmode: 'numeric', min: '0', max: '100000000', placeholder: '예: 1000000', value: hasInit && src.totalAmount ? String(src.totalAmount) : '' } });
   const usedAmountInput = h('input', { id: 'f-used-amount', attrs: { type: 'number', name: 'usedAmount', inputmode: 'numeric', min: '0', max: '100000000', value: isEdit ? String(shop.usedAmount || 0) : '0' } });
   const amountPreview = h('p', { class: 'amount-preview', id: 'f-amount-preview' }, '남은 금액: 0원');
   const amountGroup = h('div', { id: 'amount-fields' },
@@ -192,11 +196,11 @@ export function render(ctx, params = {}) {
   segAmount.addEventListener('click', () => { kind = 'amount'; applyKind(); });
 
   // address
-  const addressInput = h('input', { id: 'f-address', attrs: { type: 'text', name: 'address', placeholder: '주소를 입력하세요', value: isEdit ? (shop.address || '') : '' } });
+  const addressInput = h('input', { id: 'f-address', attrs: { type: 'text', name: 'address', placeholder: '주소를 입력하세요', value: hasInit ? (src.address || '') : '' } });
   form.appendChild(field('주소', 'f-address', addressInput));
 
   // phone + expiry
-  const phoneInput = h('input', { id: 'f-phone', attrs: { type: 'tel', name: 'phone', placeholder: '예: 031-000-0000', value: isEdit ? (shop.phone || '') : '' } });
+  const phoneInput = h('input', { id: 'f-phone', attrs: { type: 'tel', name: 'phone', placeholder: '예: 031-000-0000', value: hasInit ? (src.phone || '') : '' } });
   const expiresInput = h('input', { id: 'f-expires', attrs: { type: 'date', name: 'expiresAt', value: isEdit ? (shop.expiresAt || '') : '' } });
   form.appendChild(h('div', { class: 'form-row' },
     field('전화번호', 'f-phone', phoneInput),
@@ -204,8 +208,8 @@ export function render(ctx, params = {}) {
   ));
 
   // location
-  const latInput = h('input', { id: 'f-lat', attrs: { type: 'text', name: 'lat', placeholder: '위도', readonly: '', 'aria-label': '위도', value: isEdit && shop.lat != null ? String(shop.lat) : '' } });
-  const lngInput = h('input', { id: 'f-lng', attrs: { type: 'text', name: 'lng', placeholder: '경도', readonly: '', 'aria-label': '경도', value: isEdit && shop.lng != null ? String(shop.lng) : '' } });
+  const latInput = h('input', { id: 'f-lat', attrs: { type: 'text', name: 'lat', placeholder: '위도', readonly: '', 'aria-label': '위도', value: hasInit && src.lat != null ? String(src.lat) : '' } });
+  const lngInput = h('input', { id: 'f-lng', attrs: { type: 'text', name: 'lng', placeholder: '경도', readonly: '', 'aria-label': '경도', value: hasInit && src.lng != null ? String(src.lng) : '' } });
   const locBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, style: { 'margin-top': '8px' } }, '현재 위치로 설정');
   locBtn.addEventListener('click', async () => {
     try {
@@ -224,7 +228,7 @@ export function render(ctx, params = {}) {
   ));
 
   // skin selector — default by category for new shops, by shop.skin for edit
-  let currentSkin = isEdit ? (shop.skin || 'midnight') : getDefaultSkin(catSelect.value);
+  let currentSkin = hasInit ? (src.skin || 'midnight') : getDefaultSkin(catSelect.value);
   const skinContainer = h('div', { id: 'skin-selector' });
   const mountSkin = (selected) => {
     clear(skinContainer);
@@ -246,7 +250,7 @@ export function render(ctx, params = {}) {
   form.appendChild(field('메모', 'f-memo', memoInput));
 
   // coupon code (optional) — shown as scannable barcode/QR on the detail page
-  const codeInput = h('input', { id: 'f-code', attrs: { type: 'text', name: 'code', placeholder: '예: 1234-5678-9012 (선택)', value: isEdit ? (shop.code || '') : '' } });
+  const codeInput = h('input', { id: 'f-code', attrs: { type: 'text', name: 'code', placeholder: '예: 1234-5678-9012 (선택)', value: hasInit ? (src.code || '') : '' } });
   form.appendChild(h('div', { class: 'form-group' },
     h('label', { attrs: { for: 'f-code' } }, '쿠폰 코드'),
     codeInput,
@@ -257,11 +261,11 @@ export function render(ctx, params = {}) {
   form.appendChild(h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'submit' } }, isEdit ? '저장하기' : '추가하기'));
 
   if (isEdit) {
-    const delBtn = h('button', { class: 'btn btn-danger btn-block subtle-danger', attrs: { type: 'button' } }, '업체 삭제');
+    const delBtn = h('button', { class: 'btn btn-danger btn-block subtle-danger', attrs: { type: 'button' } }, '이용권 삭제');
     delBtn.addEventListener('click', async () => {
       const ok = await showConfirm({
-        title: '업체 삭제',
-        message: '이 업체와 연결된 사용 내역을 모두 삭제할까요? 이 작업은 되돌릴 수 없어요.',
+        title: '이용권 삭제',
+        message: '이 이용권과 연결된 사용 내역을 모두 삭제할까요? 이 작업은 되돌릴 수 없어요.',
         confirmLabel: '삭제',
         danger: true
       });
