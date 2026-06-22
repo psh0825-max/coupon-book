@@ -8,6 +8,7 @@ import { CATEGORIES, getDefaultSkin } from '../data/skins.js';
 import { showToast } from '../ui/toast.js';
 import { showConfirm } from '../ui/overlay.js';
 import { readAndDownscale, detectCode, supportsBarcodeScan } from '../services/photo.js';
+import { formatWon } from '../services/format.js';
 
 export function render(ctx, params = {}) {
   const { store, router, actions } = ctx;
@@ -88,34 +89,56 @@ export function render(ctx, params = {}) {
   ));
   renderPhoto();
 
-  // category + total
+  // category (shared across kinds)
   const catSelect = h('select', { id: 'f-category', attrs: { name: 'category' } },
     Object.keys(CATEGORIES).map((c) => h('option', {
       attrs: { value: c, selected: isEdit && shop.category === c ? '' : null }
     }, c))
   );
-  const totalInput = h('input', { id: 'f-total', attrs: { type: 'number', name: 'totalCoupons', min: '1', max: '100', required: '', value: isEdit ? String(shop.totalCoupons) : '10' } });
-  form.appendChild(h('div', { class: 'form-row' },
-    field('카테고리', 'f-category', catSelect),
-    field('쿠폰 총 개수', 'f-total', totalInput)
+  form.appendChild(field('카테고리', 'f-category', catSelect));
+
+  // ── pass kind: 횟수권 (count) vs 금액권 (amount) ──
+  let kind = isEdit && shop.kind === 'amount' ? 'amount' : 'count';
+  const segCount = h('button', { class: kind === 'count' ? 'active' : '', attrs: { type: 'button', 'aria-pressed': kind === 'count' ? 'true' : 'false' } }, '횟수권');
+  const segAmount = h('button', { class: kind === 'amount' ? 'active' : '', attrs: { type: 'button', 'aria-pressed': kind === 'amount' ? 'true' : 'false' } }, '금액권');
+  const seg = h('div', { class: 'seg', attrs: { role: 'group', 'aria-label': '이용권 종류' } }, segCount, segAmount);
+  form.appendChild(h('div', { class: 'form-group' },
+    h('label', null, '이용권 종류'),
+    seg
   ));
 
-  // used + live stamp preview
-  const usedInput = h('input', { id: 'f-used', attrs: { type: 'number', name: 'usedCoupons', min: '0', max: '100', value: isEdit ? String(shop.usedCoupons || 0) : '0' } });
+  // ── COUNT fields: 총 횟수 + 현재 사용 횟수 + live stamp preview ──
+  const totalInput = h('input', { id: 'f-total', attrs: { type: 'number', name: 'totalCoupons', min: '1', max: '1000', value: isEdit ? String(shop.totalCoupons) : '10' } });
+  const usedInput = h('input', { id: 'f-used', attrs: { type: 'number', name: 'usedCoupons', min: '0', max: '1000', value: isEdit ? String(shop.usedCoupons || 0) : '0' } });
   const counter = h('span', { class: 'stamp-counter', id: 'f-stamp-counter' }, '0 / 10');
   const previewBoard = h('div', { class: 'stamp-board stamp-preview', id: 'f-stamp-preview' });
-  form.appendChild(h('div', { class: 'form-group' },
-    h('div', { class: 'stamp-preview-head' },
-      h('label', { attrs: { for: 'f-used' }, style: { margin: '0' } }, '현재 적립 개수'),
-      counter
-    ),
-    usedInput,
-    h('p', { class: 'field-hint' }, '이미 도장을 찍은 종이 쿠폰이라면 현재 개수를 입력하세요.'),
-    previewBoard
-  ));
+  const countGroup = h('div', { id: 'count-fields' },
+    field('총 횟수(회)', 'f-total', totalInput),
+    h('div', { class: 'form-group' },
+      h('div', { class: 'stamp-preview-head' },
+        h('label', { attrs: { for: 'f-used' }, style: { margin: '0' } }, '현재 사용 횟수'),
+        counter
+      ),
+      usedInput,
+      h('p', { class: 'field-hint' }, '이미 사용한 횟수가 있다면 현재 사용 횟수를 입력하세요.'),
+      previewBoard
+    )
+  );
+  form.appendChild(countGroup);
+
+  // ── AMOUNT fields: 총 금액 + 현재 사용 금액 + live 남은 금액 preview ──
+  const totalAmountInput = h('input', { id: 'f-total-amount', attrs: { type: 'number', name: 'totalAmount', inputmode: 'numeric', min: '0', max: '100000000', placeholder: '예: 1000000', value: isEdit ? String(shop.totalAmount || 0) : '' } });
+  const usedAmountInput = h('input', { id: 'f-used-amount', attrs: { type: 'number', name: 'usedAmount', inputmode: 'numeric', min: '0', max: '100000000', value: isEdit ? String(shop.usedAmount || 0) : '0' } });
+  const amountPreview = h('p', { class: 'amount-preview', id: 'f-amount-preview' }, '남은 금액: 0원');
+  const amountGroup = h('div', { id: 'amount-fields' },
+    field('총 금액(원)', 'f-total-amount', totalAmountInput),
+    field('현재 사용 금액(원)', 'f-used-amount', usedAmountInput),
+    amountPreview
+  );
+  form.appendChild(amountGroup);
 
   function renderPreview() {
-    const total = Math.max(1, Math.min(100, parseInt(totalInput.value) || 0));
+    const total = Math.max(1, Math.min(1000, parseInt(totalInput.value) || 0));
     const used = Math.max(0, Math.min(parseInt(usedInput.value) || 0, total));
     counter.textContent = `${used} / ${total}`;
     clear(previewBoard);
@@ -123,6 +146,26 @@ export function render(ctx, params = {}) {
   }
   totalInput.addEventListener('input', renderPreview);
   usedInput.addEventListener('input', renderPreview);
+
+  function renderAmountPreview() {
+    const total = Math.max(0, parseInt(totalAmountInput.value) || 0);
+    const used = Math.max(0, Math.min(parseInt(usedAmountInput.value) || 0, total));
+    amountPreview.textContent = `남은 금액: ${formatWon(total - used)}`;
+  }
+  totalAmountInput.addEventListener('input', renderAmountPreview);
+  usedAmountInput.addEventListener('input', renderAmountPreview);
+
+  function applyKind() {
+    segCount.classList.toggle('active', kind === 'count');
+    segAmount.classList.toggle('active', kind === 'amount');
+    segCount.setAttribute('aria-pressed', kind === 'count' ? 'true' : 'false');
+    segAmount.setAttribute('aria-pressed', kind === 'amount' ? 'true' : 'false');
+    countGroup.hidden = kind !== 'count';
+    amountGroup.hidden = kind !== 'amount';
+    if (kind === 'count') renderPreview(); else renderAmountPreview();
+  }
+  segCount.addEventListener('click', () => { kind = 'count'; applyKind(); });
+  segAmount.addEventListener('click', () => { kind = 'amount'; applyKind(); });
 
   // address
   const addressInput = h('input', { id: 'f-address', attrs: { type: 'text', name: 'address', placeholder: '주소를 입력하세요', value: isEdit ? (shop.address || '') : '' } });
@@ -208,24 +251,31 @@ export function render(ctx, params = {}) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const total = Math.max(1, Math.min(100, parseInt(totalInput.value) || 10));
+    const total = Math.max(1, Math.min(1000, parseInt(totalInput.value) || 10));
     const usedRaw = Math.max(0, parseInt(usedInput.value) || 0);
-    // If the entered total is below the current stamp count, saving would clamp
-    // (and lose) stamps — confirm before proceeding.
-    if (usedRaw > total) {
+    // Count mode only: if the entered total is below the current used count,
+    // saving would clamp (and lose) sessions — confirm before proceeding.
+    if (kind === 'count' && usedRaw > total) {
       const proceed = await showConfirm({
-        title: '적립 개수 조정',
-        message: `총 개수(${total})가 현재 적립(${usedRaw})보다 적어 적립이 ${total}개로 줄어듭니다. 계속할까요?`,
+        title: '사용 횟수 조정',
+        message: `총 횟수(${total})가 현재 사용(${usedRaw})보다 적어 사용 횟수가 ${total}회로 줄어듭니다. 계속할까요?`,
         confirmLabel: '계속',
         danger: true
       });
       if (!proceed) return;
     }
     const used = Math.min(usedRaw, total);
+    const totalAmount = Math.max(0, Math.min(100000000, parseInt(totalAmountInput.value) || 0));
+    const usedAmount = Math.min(Math.max(0, parseInt(usedAmountInput.value) || 0), totalAmount);
+    // Always persist BOTH kinds' fields so toggling kind never loses data.
     const data = {
       name: nameInput.value.trim(),
       category: catSelect.value,
+      kind,
       totalCoupons: total,
+      usedCoupons: used,
+      totalAmount,
+      usedAmount,
       address: addressInput.value.trim(),
       phone: phoneInput.value.trim(),
       expiresAt: expiresInput.value || '',
@@ -234,7 +284,6 @@ export function render(ctx, params = {}) {
       photo,
       lat: parseFloat(latInput.value) || null,
       lng: parseFloat(lngInput.value) || null,
-      usedCoupons: used,
       skin: currentSkin
     };
     await actions.saveShop(data, params.id);
@@ -242,6 +291,6 @@ export function render(ctx, params = {}) {
     router.navigate('home');
   });
 
-  renderPreview();
+  applyKind();
   return root;
 }

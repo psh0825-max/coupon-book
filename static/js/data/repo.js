@@ -35,8 +35,12 @@ function numOrNull(value) {
 }
 
 export function normalizeShop(raw = {}) {
-  const total = clampInt(raw.totalCoupons, 1, 100, 10);
+  // Records predating the pass-kind concept have no `kind`; treat them as 'count'.
+  const kind = raw.kind === 'amount' ? 'amount' : 'count';
+  const total = clampInt(raw.totalCoupons, 1, 1000, 10);
   const used = clampInt(raw.usedCoupons, 0, total, 0);
+  const totalAmount = clampInt(raw.totalAmount, 0, 100000000, 0); // up to 1억 KRW
+  const usedAmount = clampInt(raw.usedAmount, 0, totalAmount, 0);
   const rawCat = str(raw.category, 20);
   const category = CATEGORIES[rawCat] ? rawCat : '기타';
   const skin = raw.skin && SKINS[raw.skin] ? raw.skin : getDefaultSkin(category);
@@ -54,8 +58,12 @@ export function normalizeShop(raw = {}) {
     photo,
     lat: numOrNull(raw.lat),
     lng: numOrNull(raw.lng),
+    kind,
+    // Both pairs are always stored so toggling kind never loses the other's value.
     totalCoupons: total,
     usedCoupons: used,
+    totalAmount,
+    usedAmount,
     skin
   };
   if (raw.id != null) shop.id = raw.id;
@@ -73,6 +81,12 @@ export function normalizeLog(raw = {}) {
   if (raw.location && typeof raw.location === 'object') {
     log.location = { lat: numOrNull(raw.location.lat), lng: numOrNull(raw.location.lng) };
   }
+  // Optional per-use deduction record (how much this use consumed): won for an
+  // amount pass, sessions for a count pass. Used to undo the exact amount.
+  const amount = Number(raw.amount);
+  if (Number.isFinite(amount) && amount >= 0) log.amount = amount;
+  const count = Number(raw.count);
+  if (Number.isFinite(count) && count >= 1) log.count = Math.round(count);
   if (raw.id != null) log.id = raw.id;
   return log;
 }
@@ -139,7 +153,7 @@ export const Settings = {
 
 // ── Demo / bulk ──────────────────────────────────────────────────────────────
 const DEMO_SHOPS = [
-  { name: '안양 스타 마사지', category: '마사지', address: '경기도 안양시 동안구 시민대로 1234', phone: '031-000-1200', expiresAt: '2026-12-31', memo: '평일 오전 예약 시 적립 확인', lat: 37.4012, lng: 126.9523, totalCoupons: 10, skin: 'sage' },
+  { name: '안양 스타 마사지', category: '마사지', address: '경기도 안양시 동안구 시민대로 1234', phone: '031-000-1200', expiresAt: '2026-12-31', memo: '100만원 충전권, 15만원 사용', lat: 37.4012, lng: 126.9523, kind: 'amount', totalAmount: 1000000, usedAmount: 150000, skin: 'sage' },
   { name: '허브 커피 로스터스', category: '카페', address: '경기도 안양시 동안구 관악로 56', phone: '031-000-3400', expiresAt: '2026-09-30', memo: '원두 구매도 스탬프 적립 가능', lat: 37.4025, lng: 126.9530, totalCoupons: 12, skin: 'espresso' },
   { name: '태양 찜질방', category: '찜질방', address: '경기도 안양시 만안구 성남대로 789', phone: '031-000-5600', expiresAt: '2026-08-31', memo: '주말 입장권은 쿠폰 제외 여부 확인', lat: 37.4000, lng: 126.9510, totalCoupons: 8, skin: 'sage' }
 ];
