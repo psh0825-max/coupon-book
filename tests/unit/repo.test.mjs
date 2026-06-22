@@ -79,14 +79,3 @@ test('normalizeShop: preserves and trims code', () => {
 test('normalizeShop: missing code -> empty string', () => {
   assert.equal(normalizeShop({}).code, '');
 });
-
-test('normalizeShop: keeps a valid image data URL unchanged', () => {
-  const photo = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD';
-  assert.equal(normalizeShop({ photo }).photo, photo);
-});
-
-test('normalizeShop: drops a non-image photo string', () => {
-  assert.equal(normalizeShop({ photo: 'javascript:alert(1)' }).photo, '');
-  assert.equal(normalizeShop({ photo: 'data:text/html,<b>x' }).photo, '');
-  assert.equal(normalizeShop({}).photo, '');
-});

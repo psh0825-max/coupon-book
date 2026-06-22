@@ -58,9 +58,7 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
   },
     h('div', { class: 'card-header' },
       h('div', { class: 'card-icon' },
-        shop.photo
-          ? h('img', { class: 'card-photo', attrs: { src: shop.photo, alt: '' } })
-          : h('span', { class: 'category-icon' }, getCategoryIcon(shop.category))
+        h('span', { class: 'category-icon' }, getCategoryIcon(shop.category))
       ),
       h('div', { class: 'card-info' },
         h('h3', null, shop.name),
