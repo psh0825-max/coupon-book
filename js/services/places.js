@@ -4,7 +4,7 @@
 // only on registered origins (coupon.lightonpluslab.com + localhost); elsewhere
 // search rejects and callers must degrade gracefully.
 
-export const KAKAO_CONFIG = { jsKey: '079a1c50d07997c7d1c49fe49d1d0d01' };
+export const KAKAO_CONFIG = { jsKey: 'a96a80050b4933a9409ca5a797ec765b' };
 
 export function isConfigured() {
   return !!KAKAO_CONFIG.jsKey && !KAKAO_CONFIG.jsKey.includes('XXXX');
