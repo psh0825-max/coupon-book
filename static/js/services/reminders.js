@@ -2,7 +2,8 @@
 // Notification API is unsupported or denied: always calls onDue so the app can
 // show an in-app badge/toast fallback.
 
-import { daysUntil, dueReminders } from '../domain.js';
+import { daysUntil, dueReminders, lowBalancePasses, remainingValue } from '../domain.js';
+import { formatWon } from './format.js';
 
 // Latest inputs, kept in module scope so the visibilitychange listener re-runs
 // checkDueNow with fresh data without re-binding.
@@ -30,17 +31,21 @@ function markerKey(shopId, days) {
   return `cb_reminder:${shopId}:${days}:${todayKey()}`;
 }
 
-function alreadyFired(shopId, days) {
+function balanceMarkerKey(shopId) {
+  return `cb_balalert:${shopId}:${todayKey()}`;
+}
+
+function alreadyFired(key) {
   try {
-    return localStorage.getItem(markerKey(shopId, days)) === '1';
+    return localStorage.getItem(key) === '1';
   } catch (e) {
     return false;
   }
 }
 
-function markFired(shopId, days) {
+function markFired(key) {
   try {
-    localStorage.setItem(markerKey(shopId, days), '1');
+    localStorage.setItem(key, '1');
   } catch (e) {
     // storage unavailable/full — best-effort, ignore
   }
@@ -61,8 +66,9 @@ export function checkDueNow(shops, settings, onDue) {
   for (const shop of due) {
     const days = daysUntil(shop.expiresAt);
     if (days === null) continue;
-    if (alreadyFired(shop.id, days)) continue;
-    markFired(shop.id, days);
+    const key = markerKey(shop.id, days);
+    if (alreadyFired(key)) continue;
+    markFired(key);
 
     if (granted) {
       try {
@@ -75,7 +81,28 @@ export function checkDueNow(shops, settings, onDue) {
       }
     }
 
-    if (typeof onDue === 'function') onDue(shop, days);
+    if (typeof onDue === 'function') onDue(shop, { type: 'expiry', days });
+  }
+
+  // Low-balance alerts for amount passes (잔액 20% 이하), at most once per day each.
+  for (const shop of lowBalancePasses(shops)) {
+    const key = balanceMarkerKey(shop.id);
+    if (alreadyFired(key)) continue;
+    markFired(key);
+    const remaining = remainingValue(shop);
+
+    if (granted) {
+      try {
+        new Notification('잔액 임박', {
+          body: `${shop.name} · ${formatWon(remaining)} 남음`,
+          tag: `cb_balalert:${shop.id}`
+        });
+      } catch (e) {
+        // construction can throw on some platforms — fall through to onDue
+      }
+    }
+
+    if (typeof onDue === 'function') onDue(shop, { type: 'lowbalance', remaining });
   }
 }
 

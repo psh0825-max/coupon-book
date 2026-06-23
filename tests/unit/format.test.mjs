@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { formatDistance, formatRelative, formatWon } from '../../static/js/services/format.js';
+import { formatDistance, formatRelative, formatWon, groupDigits, parseNumber } from '../../static/js/services/format.js';
 
 test('formatDistance: under 1000m shows meters', () => {
   assert.equal(formatDistance(120), '120m');
@@ -45,4 +45,19 @@ test('formatWon: non-finite -> 0원', () => {
 
 test('formatWon: rounds and floors decimals', () => {
   assert.equal(formatWon(1234.6), '1,235원');
+});
+
+test('groupDigits: digits grouped, non-digits stripped, empty stays empty', () => {
+  assert.equal(groupDigits('1000000'), '1,000,000');
+  assert.equal(groupDigits(''), '');
+  assert.equal(groupDigits('1,000,000원'), '1,000,000');
+  assert.equal(groupDigits(50000), '50,000');
+  assert.equal(groupDigits(null), '');
+});
+
+test('parseNumber: strips non-digits to an integer', () => {
+  assert.equal(parseNumber('1,000,000원'), 1000000);
+  assert.equal(parseNumber(''), 0);
+  assert.equal(parseNumber(null), 0);
+  assert.equal(parseNumber('30,000'), 30000);
 });
