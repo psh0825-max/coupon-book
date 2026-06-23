@@ -1,35 +1,43 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="40" y1="20" x2="472" y2="492" gradientUnits="userSpaceOnUse">
+    <linearGradient id="bg" x1="64" y1="48" x2="448" y2="464" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#3b82f6"/>
-      <stop offset="0.55" stop-color="#2563eb"/>
+      <stop offset="0.52" stop-color="#2563eb"/>
       <stop offset="1" stop-color="#06b6d4"/>
     </linearGradient>
-    <linearGradient id="gloss" x1="256" y1="0" x2="256" y2="300" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.20"/>
+    <radialGradient id="light" cx="172" cy="128" r="392" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.26"/>
       <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="paper" x1="256" y1="176" x2="256" y2="336" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e8eef7"/>
     </linearGradient>
-    <linearGradient id="star" x1="215" y1="196" x2="215" y2="316" gradientUnits="userSpaceOnUse">
+    <linearGradient id="back" x1="256" y1="176" x2="256" y2="336" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#dbe8fb"/>
+      <stop offset="1" stop-color="#bcd2f2"/>
+    </linearGradient>
+    <linearGradient id="star" x1="202" y1="198" x2="300" y2="300" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="0.55" stop-color="#fbbf24"/>
       <stop offset="1" stop-color="#f59e0b"/>
     </linearGradient>
   </defs>
 
   <rect width="512" height="512" fill="url(#bg)"/>
-  <rect width="512" height="512" fill="url(#gloss)"/>
+  <rect width="512" height="512" fill="url(#light)"/>
 
-  <path d="M312 178 A18 18 0 0 0 348 178 L380 178 A26 26 0 0 1 406 204 L406 320 A26 26 0 0 1 380 346 L348 346 A18 18 0 0 0 312 346 L144 346 A26 26 0 0 1 118 320 L118 204 A26 26 0 0 1 144 178 Z"
-        fill="#0b1220" opacity="0.18"/>
+  <!-- back coupon (the "book": a stack/collection) -->
+  <g transform="rotate(11 256 256) translate(2 -20)">
+    <g transform="translate(0 7)"><path d="M158 176 L354 176 A30 30 0 0 1 384 206 L384 234 A22 22 0 0 0 384 278 L384 306 A30 30 0 0 1 354 336 L158 336 A30 30 0 0 1 128 306 L128 278 A22 22 0 0 0 128 234 L128 206 A30 30 0 0 1 158 176 Z" fill="#06184a" opacity="0.12"/></g>
+    <path d="M158 176 L354 176 A30 30 0 0 1 384 206 L384 234 A22 22 0 0 0 384 278 L384 306 A30 30 0 0 1 354 336 L158 336 A30 30 0 0 1 128 306 L128 278 A22 22 0 0 0 128 234 L128 206 A30 30 0 0 1 158 176 Z" fill="url(#back)"/>
+  </g>
 
-  <path d="M306 168 A18 18 0 0 0 342 168 L374 168 A26 26 0 0 1 400 194 L400 318 A26 26 0 0 1 374 344 L342 344 A18 18 0 0 0 306 344 L138 344 A26 26 0 0 1 112 318 L112 194 A26 26 0 0 1 138 168 Z"
-        fill="#ffffff"/>
-
-  <line x1="324" y1="196" x2="324" y2="316" stroke="#93c5fd" stroke-width="7" stroke-linecap="round" stroke-dasharray="0.5 19"/>
-
-  <path d="M215 196 L230.3 235 L272.1 237.5 L239.7 264 L250.3 304.5 L215 282 L179.7 304.5 L190.3 264 L157.9 237.5 L199.7 235 Z"
-        fill="url(#star)"/>
-
-  <circle cx="362" cy="232" r="7" fill="#bfdbfe"/>
-  <circle cx="362" cy="256" r="7" fill="#bfdbfe"/>
-  <circle cx="362" cy="280" r="7" fill="#bfdbfe"/>
+  <!-- front coupon with reward star -->
+  <g transform="rotate(-7 256 256)">
+    <g transform="translate(0 17)"><path d="M158 176 L354 176 A30 30 0 0 1 384 206 L384 234 A22 22 0 0 0 384 278 L384 306 A30 30 0 0 1 354 336 L158 336 A30 30 0 0 1 128 306 L128 278 A22 22 0 0 0 128 234 L128 206 A30 30 0 0 1 158 176 Z" fill="#06184a" opacity="0.10"/></g>
+    <g transform="translate(0 8)"><path d="M158 176 L354 176 A30 30 0 0 1 384 206 L384 234 A22 22 0 0 0 384 278 L384 306 A30 30 0 0 1 354 336 L158 336 A30 30 0 0 1 128 306 L128 278 A22 22 0 0 0 128 234 L128 206 A30 30 0 0 1 158 176 Z" fill="#06184a" opacity="0.13"/></g>
+    <path d="M158 176 L354 176 A30 30 0 0 1 384 206 L384 234 A22 22 0 0 0 384 278 L384 306 A30 30 0 0 1 354 336 L158 336 A30 30 0 0 1 128 306 L128 278 A22 22 0 0 0 128 234 L128 206 A30 30 0 0 1 158 176 Z" fill="url(#paper)"/>
+    <path d="M256 198 L268.93 236.2 L309.26 236.7 L276.92 260.8 L288.92 299.3 L256 276 L223.08 299.3 L235.08 260.8 L202.74 236.7 L243.07 236.2 Z" fill="url(#star)" stroke="#f7b733" stroke-width="6" stroke-linejoin="round"/>
+  </g>
 </svg>
