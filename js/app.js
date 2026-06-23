@@ -7,7 +7,7 @@ import { h } from './core/h.js';
 
 import { Shops, Logs, Settings, seedDemoData, clearAll } from './data/repo.js';
 import { remainingCount, remainingValue, remainingLabel, isAmountKind } from './domain.js';
-import { formatWon } from './services/format.js';
+import { formatWon, groupDigits, parseNumber } from './services/format.js';
 
 import {
   setNotifySettings, startLocationWatch, stopLocationWatch, getCurrentPosition
@@ -84,8 +84,12 @@ function onGeofence(notifyList) {
   showSheet({ title: '근처 가게 방문 감지', body: list });
 }
 
-function onReminderDue(shop, days) {
-  showToast(`${shop.name} · ${days === 0 ? '오늘 만료' : 'D-' + days} 만료 임박`, 'danger');
+function onReminderDue(shop, info) {
+  if (info.type === 'lowbalance') {
+    showToast(`${shop.name} · 잔액 ${formatWon(info.remaining)} 남음`, 'danger');
+  } else {
+    showToast(`${shop.name} · ${info.days === 0 ? '오늘 만료' : 'D-' + info.days} 만료 임박`, 'danger');
+  }
 }
 
 // A new service worker is waiting. Offer an accessible refresh prompt; applying it
@@ -164,17 +168,18 @@ const actions = {
     if (isAmountKind(shop)) {
       const amountInput = h('input', {
         id: 'use-amount',
-        attrs: { type: 'number', inputmode: 'numeric', min: '1', max: String(remaining), placeholder: '예: 30,000' }
+        attrs: { type: 'text', inputmode: 'numeric', placeholder: '예: 30,000' }
       });
+      amountInput.addEventListener('input', () => { amountInput.value = groupDigits(amountInput.value); });
       const chipValues = [10000, 30000, 50000, 100000];
       const chips = h('div', { class: 'use-chips' },
         chipValues.map((v) => h('button', {
           class: 'chip', attrs: { type: 'button' },
-          on: { click: () => { amountInput.value = String(Math.min(v, remaining)); } }
+          on: { click: () => { amountInput.value = groupDigits(Math.min(v, remaining)); } }
         }, formatWon(v))),
         h('button', {
           class: 'chip', attrs: { type: 'button' },
-          on: { click: () => { amountInput.value = String(remaining); } }
+          on: { click: () => { amountInput.value = groupDigits(remaining); } }
         }, '전액')
       );
       showSheet({
@@ -190,7 +195,7 @@ const actions = {
           { id: 'cancel', label: '취소', className: 'btn-secondary' },
           {
             id: 'confirm', label: '사용', className: 'btn-primary',
-            onClick: () => actions.usePass(shop.id, { amount: Number(amountInput.value), note: memoInput.value.trim() })
+            onClick: () => actions.usePass(shop.id, { amount: parseNumber(amountInput.value), note: memoInput.value.trim() })
           }
         ]
       });

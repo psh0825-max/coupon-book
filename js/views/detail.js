@@ -159,7 +159,7 @@ function buildCodePanel(code) {
   }, '코드 복사');
 
   return h('div', { class: 'coupon-code' },
-    h('h3', null, '쿠폰 코드'),
+    h('h3', null, '쿠폰/멤버십 코드'),
     (qr || barcode) ? media : null,
     h('div', { class: 'coupon-code-text' }, code),
     copyBtn

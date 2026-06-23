@@ -94,7 +94,7 @@ export function render(ctx) {
   buildDayChips();
   root.appendChild(card(
     h('div', { class: 'toggle-row' },
-      h('div', { class: 'info' }, h('h4', null, '만료 임박 알림'), h('p', null, 'D-7 / D-3 / D-1 에 만료 알림')),
+      h('div', { class: 'info' }, h('h4', null, '만료 임박 알림'), h('p', null, 'D-7 / D-3 / D-1 만료 + 금액권 잔액 20% 이하 알림')),
       makeToggle(settings.remindersEnabled, async (next) => {
         const { permission } = await actions.toggleReminders(next);
         if (!next) showToast('만료 알림이 꺼졌어요');
