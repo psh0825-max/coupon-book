@@ -10,3 +10,6 @@ package-lock.json
 
 # Editor / session
 .claude/
+
+# TWA build (Android project + signing keystore — DO NOT COMMIT)
+twa-build/

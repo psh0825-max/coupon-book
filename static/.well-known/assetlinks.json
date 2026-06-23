@@ -3,8 +3,10 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "REPLACE_WITH_ANDROID_PACKAGE_NAME",
-      "sha256_cert_fingerprints": ["REPLACE_WITH_SHA256_FINGERPRINT"]
+      "package_name": "com.lightonpluslab.couponbook.twa",
+      "sha256_cert_fingerprints": [
+        "DF:6E:B0:9A:F2:17:C7:91:17:65:52:7E:FB:08:DC:B2:E8:36:92:8A:9C:ED:3A:EF:23:5E:52:49:16:AC:B8:65"
+      ]
     }
   }
 ]
