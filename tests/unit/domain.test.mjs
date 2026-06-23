@@ -4,7 +4,7 @@ import {
   daysUntil, isCompleted, isExpired, isExpiringSoon, remainingCount, progressPercent,
   couponStatus, formatExpiry, priorityShop, sortShops, filterShops, stats, dueReminders,
   isAmountKind, isCountKind, passTotal, passUsed, remainingValue,
-  remainingLabel, totalLabel, usedLabel
+  remainingLabel, totalLabel, usedLabel, lowBalancePasses
 } from '../../static/js/domain.js';
 
 // Local YYYY-MM-DD offset from today, matching domain's local-date parsing.
@@ -195,6 +195,19 @@ test('priorityShop: highest-priority non-completed or null', () => {
   assert.equal(priorityShop([completed, urgent]).name, 'u');
   assert.equal(priorityShop([completed]), null);
   assert.equal(priorityShop([]), null);
+});
+
+test('lowBalancePasses: amount pass at/under 20% remaining', () => {
+  // exactly 20% remaining (200,000 of 1,000,000) -> included
+  const at20 = amountShop({ usedAmount: 800000, name: 'at20' });
+  // 30% remaining -> excluded
+  const healthy = amountShop({ usedAmount: 700000, name: 'healthy' });
+  // depleted -> excluded (remaining 0)
+  const depleted = amountShop({ usedAmount: 1000000, name: 'depleted' });
+  // count pass -> excluded regardless of remaining
+  const count = shop({ usedCoupons: 9, name: 'count' });
+  const list = [at20, healthy, depleted, count];
+  assert.deepEqual(lowBalancePasses(list).map((s) => s.name), ['at20']);
 });
 
 test('dueReminders: shops crossing a threshold today', () => {

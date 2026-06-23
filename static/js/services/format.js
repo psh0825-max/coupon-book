@@ -36,3 +36,15 @@ export function formatWon(n) {
   if (!Number.isFinite(v)) return '0원';
   return `${Math.round(v).toLocaleString('en-US')}원`;
 }
+
+/** digits-only -> grouped, e.g. '1000000' -> '1,000,000', '' -> '' */
+export function groupDigits(value) {
+  const d = String(value == null ? '' : value).replace(/[^\d]/g, '');
+  return d ? Number(d).toLocaleString('en-US') : '';
+}
+
+/** strip non-digits -> integer, e.g. '1,000,000원' -> 1000000, '' -> 0 */
+export function parseNumber(value) {
+  const d = String(value == null ? '' : value).replace(/[^\d]/g, '');
+  return d ? parseInt(d, 10) : 0;
+}

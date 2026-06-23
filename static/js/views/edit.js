@@ -7,7 +7,7 @@ import { getCurrentPosition } from '../services/location.js';
 import { CATEGORIES, getDefaultSkin } from '../data/skins.js';
 import { showToast } from '../ui/toast.js';
 import { showConfirm } from '../ui/overlay.js';
-import { formatWon, formatDistance } from '../services/format.js';
+import { formatWon, formatDistance, groupDigits, parseNumber } from '../services/format.js';
 import { isConfigured as placesConfigured, searchPlaces } from '../services/places.js';
 
 export function render(ctx, params = {}) {
@@ -155,8 +155,8 @@ export function render(ctx, params = {}) {
   form.appendChild(countGroup);
 
   // ── AMOUNT fields: 총 금액 + 현재 사용 금액 + live 남은 금액 preview ──
-  const totalAmountInput = h('input', { id: 'f-total-amount', attrs: { type: 'number', name: 'totalAmount', inputmode: 'numeric', min: '0', max: '100000000', placeholder: '예: 1000000', value: hasInit && src.totalAmount ? String(src.totalAmount) : '' } });
-  const usedAmountInput = h('input', { id: 'f-used-amount', attrs: { type: 'number', name: 'usedAmount', inputmode: 'numeric', min: '0', max: '100000000', value: isEdit ? String(shop.usedAmount || 0) : '0' } });
+  const totalAmountInput = h('input', { id: 'f-total-amount', attrs: { type: 'text', name: 'totalAmount', inputmode: 'numeric', placeholder: '예: 1,000,000', value: hasInit && src.totalAmount ? groupDigits(src.totalAmount) : '' } });
+  const usedAmountInput = h('input', { id: 'f-used-amount', attrs: { type: 'text', name: 'usedAmount', inputmode: 'numeric', value: isEdit ? groupDigits(shop.usedAmount || 0) : '0' } });
   const amountPreview = h('p', { class: 'amount-preview', id: 'f-amount-preview' }, '남은 금액: 0원');
   const amountGroup = h('div', { id: 'amount-fields' },
     field('총 금액(원)', 'f-total-amount', totalAmountInput),
@@ -176,12 +176,17 @@ export function render(ctx, params = {}) {
   usedInput.addEventListener('input', renderPreview);
 
   function renderAmountPreview() {
-    const total = Math.max(0, parseInt(totalAmountInput.value) || 0);
-    const used = Math.max(0, Math.min(parseInt(usedAmountInput.value) || 0, total));
+    const total = parseNumber(totalAmountInput.value);
+    const used = Math.min(parseNumber(usedAmountInput.value), total);
     amountPreview.textContent = `남은 금액: ${formatWon(total - used)}`;
   }
-  totalAmountInput.addEventListener('input', renderAmountPreview);
-  usedAmountInput.addEventListener('input', renderAmountPreview);
+  // Reformat with thousands separators live; caret stays at end (acceptable for numeric entry).
+  const liveGroup = (input) => {
+    input.value = groupDigits(input.value);
+    renderAmountPreview();
+  };
+  totalAmountInput.addEventListener('input', () => liveGroup(totalAmountInput));
+  usedAmountInput.addEventListener('input', () => liveGroup(usedAmountInput));
 
   function applyKind() {
     segCount.classList.toggle('active', kind === 'count');
@@ -252,9 +257,9 @@ export function render(ctx, params = {}) {
   // coupon code (optional) — shown as scannable barcode/QR on the detail page
   const codeInput = h('input', { id: 'f-code', attrs: { type: 'text', name: 'code', placeholder: '예: 1234-5678-9012 (선택)', value: hasInit ? (src.code || '') : '' } });
   form.appendChild(h('div', { class: 'form-group' },
-    h('label', { attrs: { for: 'f-code' } }, '쿠폰 코드'),
+    h('label', { attrs: { for: 'f-code' } }, '쿠폰/멤버십 코드'),
     codeInput,
-    h('p', { class: 'field-hint' }, '입력하면 상세 화면에서 바코드·QR로 크게 보여줘요.')
+    h('p', { class: 'field-hint' }, '이용권·멤버십 코드를 입력하면 상세 화면에서 바코드·QR로 크게 보여줘요.')
   ));
 
   form.appendChild(h('div', { class: 'form-spacer' }));
@@ -293,8 +298,8 @@ export function render(ctx, params = {}) {
       if (!proceed) return;
     }
     const used = Math.min(usedRaw, total);
-    const totalAmount = Math.max(0, Math.min(100000000, parseInt(totalAmountInput.value) || 0));
-    const usedAmount = Math.min(Math.max(0, parseInt(usedAmountInput.value) || 0), totalAmount);
+    const totalAmount = Math.max(0, Math.min(100000000, parseNumber(totalAmountInput.value)));
+    const usedAmount = Math.min(Math.max(0, parseNumber(usedAmountInput.value)), totalAmount);
     // Always persist BOTH kinds' fields so toggling kind never loses data.
     const data = {
       name: nameInput.value.trim(),

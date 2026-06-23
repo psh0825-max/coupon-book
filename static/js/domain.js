@@ -196,6 +196,13 @@ export function stats(shops = [], logs = []) {
   return { totalShops, totalCoupons, usedCoupons, completionRate, expiringCount, completedCount, monthUses };
 }
 
+/** amount passes whose remaining balance has dropped to <= ratio of the total. */
+export function lowBalancePasses(shops, ratio = 0.2) {
+  return (shops || []).filter((s) =>
+    isAmountKind(s) && !isCompleted(s) && passTotal(s) > 0
+    && remainingValue(s) > 0 && remainingValue(s) <= passTotal(s) * ratio);
+}
+
 /** shops crossing a reminder threshold today (pure given Date.now). */
 export function dueReminders(shops, reminderDays = [7, 3, 1]) {
   const thresholds = new Set(reminderDays);
