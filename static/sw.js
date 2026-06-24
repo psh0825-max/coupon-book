@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coupon-book-v19';
+const CACHE_NAME = 'coupon-book-v20';
 const URLS_TO_CACHE = [
   './',
   './index.html',
