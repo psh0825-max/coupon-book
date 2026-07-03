@@ -17,3 +17,4 @@ twa-build/
 # Store assets (generated PNGs stay local)
 store-assets/raw/
 store-assets/final/
+store-assets/jpg/
