@@ -3,7 +3,7 @@
 
 import { h } from '../core/h.js';
 import { shopCard, summaryCard, adBanner, nearbyCard, emptyState } from '../ui/components.js';
-import { stats, priorityShop, sortShops, couponStatus, progressPercent, isAmountKind } from '../domain.js';
+import { stats, priorityShop, sortShops, couponStatus, progressPercent, isAmountKind, needsBackupNudge } from '../domain.js';
 import { getCurrentPosition, haversine } from '../services/location.js';
 import { showToast } from '../ui/toast.js';
 
@@ -42,6 +42,20 @@ export function render(ctx) {
     summaryCard(s.expiringCount, '만료 임박', 'var(--warning)'),
     summaryCard(s.completedCount, '완성', 'var(--success)')
   ));
+
+  // Backup nudge: shown once data is worth protecting and no recent backup exists.
+  if (needsBackupNudge(shops, settings)) {
+    root.appendChild(h('div', { class: 'nudge-banner', attrs: { role: 'status' } },
+      h('div', { class: 'nudge-text' },
+        h('strong', null, '백업한 지 오래됐어요'),
+        h('p', null, '쿠폰은 이 기기에만 저장돼요. 기기를 바꾸면 사라질 수 있어요.')
+      ),
+      h('div', { class: 'nudge-actions' },
+        h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => actions.exportData() } }, '지금 백업'),
+        h('button', { class: 'btn btn-ghost', attrs: { type: 'button', 'aria-label': '백업 안내 닫기' }, on: { click: () => actions.dismissBackupNudge() } }, '나중에')
+      )
+    ));
+  }
 
   root.appendChild(adBanner({ slotId: 'home-ad' }));
 

@@ -33,6 +33,26 @@ export function render(ctx, params = {}) {
   const root = h('div');
   root.appendChild(h('div', { class: 'page-header' }, h('h2', null, isEdit ? '이용권 편집' : '이용권 추가')));
 
+  // Quick-start templates: prefill the common pass shapes so a first entry takes
+  // seconds. Pristine add form only — hidden once a template/renew prefill is set.
+  if (!isEdit && !params.prefill) {
+    const TEMPLATES = [
+      { label: '☕ 카페 도장판 10칸', prefill: { category: '카페', kind: 'count', totalCoupons: 10 } },
+      { label: '💆 마사지 10회권', prefill: { category: '마사지', kind: 'count', totalCoupons: 10 } },
+      { label: '🧘 찜질방 회수권', prefill: { category: '찜질방', kind: 'count', totalCoupons: 10 } },
+      { label: '💳 금액권 10만원', prefill: { category: '기타', kind: 'amount', totalAmount: 100000 } }
+    ];
+    root.appendChild(h('div', { class: 'form-group' },
+      h('label', null, '빠른 시작'),
+      h('div', { class: 'use-chips', attrs: { role: 'group', 'aria-label': '빠른 시작 템플릿' } },
+        TEMPLATES.map((t) => h('button', {
+          class: 'chip', attrs: { type: 'button' },
+          on: { click: () => router.navigate('add', { prefill: t.prefill }) }
+        }, t.label))
+      )
+    ));
+  }
+
   const form = h('form', { id: 'shop-form' });
   root.appendChild(form);
 
@@ -233,7 +253,7 @@ export function render(ctx, params = {}) {
   ));
 
   // skin selector — default by category for new shops, by shop.skin for edit
-  let currentSkin = hasInit ? (src.skin || 'midnight') : getDefaultSkin(catSelect.value);
+  let currentSkin = hasInit ? (src.skin || getDefaultSkin(src.category)) : getDefaultSkin(catSelect.value);
   const skinContainer = h('div', { id: 'skin-selector' });
   const mountSkin = (selected) => {
     clear(skinContainer);
