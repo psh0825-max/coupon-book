@@ -1,4 +1,5 @@
-// ui/toast.js — single reusable, accessible toast.
+// ui/toast.js — single reusable, accessible toast. Optional inline action
+// button (e.g. one-tap undo after a quick use).
 
 import { h, icon, clear } from '../core/h.js';
 
@@ -10,8 +11,12 @@ const COLORS = {
 
 let dismissTimer = null;
 
-/** showToast(msg, type='success') — aria-live status region, auto-dismiss. */
-export function showToast(msg, type = 'success') {
+/**
+ * showToast(msg, type='success', opts?)
+ *   opts.actionLabel + opts.onAction — inline action button; the toast then
+ *   lingers longer so the action is reachable. aria-live status region.
+ */
+export function showToast(msg, type = 'success', opts = {}) {
   const color = COLORS[type] || COLORS.success;
   let el = document.getElementById('toast');
   if (!el) {
@@ -27,7 +32,20 @@ export function showToast(msg, type = 'success') {
   clear(el);
   el.appendChild(glyph);
   el.appendChild(h('span', null, msg));
+  if (opts.actionLabel && typeof opts.onAction === 'function') {
+    el.appendChild(h('button', {
+      class: 'toast-action',
+      attrs: { type: 'button' },
+      on: {
+        click: () => {
+          el.classList.remove('active');
+          if (dismissTimer) clearTimeout(dismissTimer);
+          opts.onAction();
+        }
+      }
+    }, opts.actionLabel));
+  }
   el.classList.add('active');
   if (dismissTimer) clearTimeout(dismissTimer);
-  dismissTimer = setTimeout(() => el.classList.remove('active'), 2200);
+  dismissTimer = setTimeout(() => el.classList.remove('active'), opts.actionLabel ? 4500 : 2200);
 }

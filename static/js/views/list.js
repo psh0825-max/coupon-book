@@ -108,7 +108,7 @@ export function render(ctx) {
     clear(grid);
     if (shops.length === 0) {
       grid.appendChild(emptyState({
-        icon: 'store',
+        art: 'ticket',
         title: '등록된 이용권이 없어요',
         desc: '하단 + 버튼을 눌러 처음 이용권을 등록해 보세요',
         actions: [
