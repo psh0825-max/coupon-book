@@ -1395,3 +1395,6 @@
   font-size: 0.82rem; font-weight: 700; cursor: pointer; white-space: nowrap;
 }
 .toast .toast-action:active { transform: scale(0.96); }
+
+.art-illust img { width: min(250px, 70vw); height: auto; border-radius: 18px; }
+.onboarding-hero .art-illust img { width: min(290px, 76vw); }
