@@ -328,7 +328,15 @@ const actions = {
 
   async exportData() {
     await backupExport();
+    await Settings.set('lastBackupAt', Date.now());
+    await refresh();
     showToast('백업 파일이 다운로드되었어요');
+  },
+
+  // Snooze the home backup banner (domain.needsBackupNudge honors the timestamp).
+  async dismissBackupNudge() {
+    await Settings.set('backupNudgeDismissedAt', Date.now());
+    await refresh();
   },
 
   async importData(file) {
