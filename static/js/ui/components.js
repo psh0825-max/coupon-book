@@ -8,6 +8,7 @@ import {
 } from '../domain.js';
 import { formatDate, formatRelative, formatWon } from '../services/format.js';
 import { SKINS, getCategoryIcon } from '../data/skins.js';
+import { svgArt } from './art.js';
 
 /** stampBoard(total, used) — depletion model: VALID tickets cluster at the start
  *  and disappear (become SPENT) as `used` grows. The next ticket to be torn off
@@ -178,11 +179,15 @@ export function skinSelector(currentSkin, onSelect) {
 }
 
 /** emptyState({ icon, title, desc, actions }) — placeholder with optional CTAs. */
-export function emptyState({ icon: iconName, title, desc, actions = [] } = {}) {
-  const iconEl = icon(iconName || 'gift', { size: 48 });
-  iconEl.classList.add('empty-icon');
+export function emptyState({ icon: iconName, art, title, desc, actions = [] } = {}) {
+  // Prefer a brand illustration when the caller names one; icon is the fallback.
+  let visual = art ? svgArt(art) : null;
+  if (!visual) {
+    visual = icon(iconName || 'gift', { size: 48 });
+    visual.classList.add('empty-icon');
+  }
   return h('div', { class: 'empty-state wide' },
-    iconEl,
+    visual,
     h('h3', null, title),
     desc ? h('p', null, desc) : null,
     actions.length
