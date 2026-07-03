@@ -88,3 +88,34 @@ export function svgArt(name) {
   wrap.innerHTML = markup;
   return wrap;
 }
+
+// Richer raster renditions (brand-styled, ~10KB WebP each). The inline SVG
+// above doubles as the fallback when the file fails to load (offline before
+// first precache, decode error, …).
+const RASTER = {
+  wallet: 'art/onb-wallet.webp',
+  stamps: 'art/onb-stamps.webp',
+  bell: 'art/onb-bell.webp',
+  ticket: 'art/empty-ticket.webp'
+};
+
+/** illust(name) -> div.art-illust with WebP art, SVG fallback on error. */
+export function illust(name) {
+  const src = RASTER[name];
+  if (!src) return svgArt(name);
+  const wrap = document.createElement('div');
+  wrap.className = 'art-illust';
+  wrap.setAttribute('aria-hidden', 'true');
+  const img = document.createElement('img');
+  img.src = src;
+  img.alt = '';
+  img.width = 840;
+  img.height = 627;
+  img.decoding = 'async';
+  img.addEventListener('error', () => {
+    const fallback = svgArt(name);
+    if (fallback) wrap.replaceChildren(...fallback.childNodes);
+  });
+  wrap.appendChild(img);
+  return wrap;
+}

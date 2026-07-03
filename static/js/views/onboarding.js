@@ -3,7 +3,7 @@
 
 import { h, clear } from '../core/h.js';
 import { showToast } from '../ui/toast.js';
-import { svgArt } from '../ui/art.js';
+import { illust } from '../ui/art.js';
 
 export function render(ctx) {
   const { router, actions } = ctx;
@@ -24,7 +24,7 @@ export function render(ctx) {
 
   const hero = (eyebrow, heading, body, level = 'h2', art = null) => h('div', { class: 'product-hero onboarding-hero' },
     h('div', null,
-      art ? svgArt(art) : null,
+      art ? illust(art) : null,
       h('div', { class: 'eyebrow' }, eyebrow),
       h(level, null, heading),
       h('p', null, body)
