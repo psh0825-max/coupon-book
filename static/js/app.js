@@ -22,7 +22,7 @@ import { haptic } from './services/fx.js';
 import { mountAds } from './services/ads.js';
 
 import { showToast } from './ui/toast.js';
-import { showSheet, showConfirm, closeOverlay } from './ui/overlay.js';
+import { showSheet, showConfirm, closeOverlay, closeOverlayFromPop } from './ui/overlay.js';
 
 import * as Home from './views/home.js';
 import * as List from './views/list.js';
@@ -370,7 +370,8 @@ const router = createRouter({
   outlet: document.getElementById('main'),
   routes,
   getCtx: () => ctx,
-  onChange: () => mountAds() // page-level Auto Ads; no-op while ads are off
+  onChange: () => mountAds(), // page-level Auto Ads; no-op while ads are off
+  closeOverlays: () => closeOverlay(true, { keepHistory: true })
 });
 ctx.router = router; // views read ctx.router at render time — must be set before any navigate
 
@@ -401,6 +402,13 @@ async function init() {
   // Chrome wiring (header back, bottom-nav, FAB).
   const backEl = document.querySelector('[data-back]');
   if (backEl) backEl.addEventListener('click', () => router.back());
+
+  // Hardware/browser back (TWA): close an open sheet first, then restore the
+  // popped route.
+  window.addEventListener('popstate', (e) => {
+    if (closeOverlayFromPop()) return;
+    router.restore(e.state);
+  });
 
   document.querySelectorAll('[data-nav]').forEach((el) => {
     el.addEventListener('click', () => { haptic('light'); router.navigate(el.dataset.nav); });

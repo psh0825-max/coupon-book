@@ -95,16 +95,21 @@ App state shape:
 }
 ```
 
-### core/router.js — view registry + back stack
+### core/router.js — view registry + browser-history-backed back stack
 ```js
-export function createRouter({ outlet, routes, onChange }) {
+export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays }) {
   // routes: { home: renderFn, detail: renderFn, ... } where renderFn(ctx, params)->Element
-  return { navigate(name, params), back(), current() };
+  return { navigate(name, params), back(), current(), reload(), restore(state) };
 }
 // Root pages (no back button, show bottom-nav): home, history, map, settings.
 // Sub pages (show back button): list, add(edit), detail, onboarding.
 // Manage: section visibility, nav active state, page title, back btn, FAB visibility,
 // scroll reset. FAB visible on: home, list.
+// History: navigate() mirrors the route into history state objects (URL unchanged) —
+// roots replaceState at depth 0, sub pages pushState one level deeper. app.js feeds
+// popstate into restore(), closing an open sheet first (ui/overlay.js pushes one
+// entry per open sheet). Net effect: the Android/TWA hardware back button navigates
+// in-app (sheet → sub page → root → exit) instead of exiting immediately.
 ```
 
 ### data/db.js — IndexedDB primitives (schema compatible)
