@@ -1,5 +1,8 @@
-// core/router.js — view registry + back stack. Owns section visibility, nav
-// active state, page title, back-button + FAB visibility, scroll reset.
+// core/router.js — view registry + browser-history-backed back stack. Owns
+// section visibility, nav active state, page title, back-button + FAB
+// visibility, scroll reset. Navigation pushes history state objects (URL never
+// changes) so the Android/TWA hardware back button navigates in-app instead of
+// exiting; app.js feeds popstate back in via restore().
 
 const ROOT_PAGES = ['home', 'history', 'map', 'settings'];
 const FAB_PAGES = ['home', 'list'];
@@ -16,35 +19,50 @@ const TITLES = {
 };
 
 /**
- * createRouter({ outlet, routes, onChange, getCtx })
+ * createRouter({ outlet, routes, onChange, getCtx, closeOverlays })
  *   routes: { name: render(ctx, params) -> Element }
  *   getCtx: () -> ctx supplied by app.js at navigate time
+ *   closeOverlays: () -> void — tears down an open sheet without popping
+ *     history (its entry is reused by the navigation below)
  */
-export function createRouter({ outlet, routes, onChange, getCtx } = {}) {
-  const stack = [];
+export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays } = {}) {
   let currentName = null;
   let currentParams = {};
+  let hasNavigated = false;
 
   function navigate(name, params = {}) {
     if (!routes || !routes[name]) return;
-    if (currentName !== null && currentName !== name) {
-      stack.push({ name: currentName, params: currentParams });
-    }
-    if (ROOT_PAGES.includes(name)) stack.length = 0; // roots reset history
+    const wasOverlay = !!(history.state && history.state.overlay);
+    if (wasOverlay) closeOverlays?.();
     currentName = name;
     currentParams = params || {};
     render();
+    // History sync: roots replace (depth 0, so back exits from a root); an open
+    // sheet's entry is reused in place; everything else pushes one level deeper.
+    if (!hasNavigated || ROOT_PAGES.includes(name)) {
+      history.replaceState({ name, params, depth: 0 }, '');
+      hasNavigated = true;
+    } else if (wasOverlay) {
+      history.replaceState({ name, params, depth: (history.state.depth || 0) }, '');
+    } else {
+      history.pushState({ name, params, depth: ((history.state && history.state.depth) || 0) + 1 }, '');
+    }
   }
 
   function back() {
-    const prev = stack.pop();
-    if (prev) {
-      currentName = prev.name;
-      currentParams = prev.params;
-    } else {
-      currentName = 'home';
-      currentParams = {};
-    }
+    if (history.state && history.state.depth > 0) history.back();
+    else navigate('home');
+  }
+
+  // Render a popped history entry without touching history. No-op when the
+  // entry matches the current view (e.g. the back() an overlay close issues)
+  // so scroll position survives.
+  function restore(state) {
+    const s = (state && state.name && routes[state.name]) ? state : { name: 'home', params: {} };
+    if (s.name === currentName
+      && JSON.stringify(s.params || {}) === JSON.stringify(currentParams || {})) return;
+    currentName = s.name;
+    currentParams = s.params || {};
     render();
   }
 
@@ -104,7 +122,7 @@ export function createRouter({ outlet, routes, onChange, getCtx } = {}) {
     }
   }
 
-  return { navigate, back, current, reload };
+  return { navigate, back, current, reload, restore };
 }
 
 function replaceChildren(parent, node) {

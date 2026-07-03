@@ -1,5 +1,7 @@
 // ui/overlay.js — accessible bottom-sheet / modal. No inline onclick.
-// Provides: showSheet, showConfirm, closeOverlay.
+// Provides: showSheet, showConfirm, closeOverlay, closeOverlayFromPop.
+// An open sheet pushes one history entry so the Android/TWA hardware back
+// button closes the sheet instead of leaving the page.
 
 import { h, icon, clear } from '../core/h.js';
 
@@ -37,7 +39,9 @@ function trapFocus(sheet, e) {
  *    each button runs onClick then closes unless close === false.
  */
 export function showSheet({ title, body, actions = [], onClose } = {}) {
-  closeOverlay(true); // tear down any previous overlay synchronously
+  // Tear down any previous overlay synchronously; keep its history entry —
+  // the replacement sheet takes it over.
+  closeOverlay(true, { keepHistory: true });
 
   const titleId = `sheet-title-${++titleSeq}`;
   const prevFocus = document.activeElement;
@@ -86,6 +90,16 @@ export function showSheet({ title, body, actions = [], onClose } = {}) {
   document.body.appendChild(overlay);
   document.body.classList.add('overlay-open');
 
+  // One history entry per open sheet (not per replacement) so hardware back
+  // closes it. closeOverlay() pops the entry again.
+  if (!(history.state && history.state.overlay)) {
+    history.pushState({
+      ...(history.state || {}),
+      overlay: true,
+      depth: (((history.state && history.state.depth) || 0) + 1)
+    }, '');
+  }
+
   const onKeydown = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); }
     else trapFocus(sheet, e);
@@ -125,8 +139,12 @@ export function showConfirm({ title, message, confirmLabel = '확인', danger = 
   });
 }
 
-/** closeOverlay(immediate?) — animate out, fire onClose, restore focus. */
-export function closeOverlay(immediate = false) {
+/**
+ * closeOverlay(immediate?, { keepHistory }) — animate out, fire onClose,
+ * restore focus. Pops the sheet's history entry unless keepHistory (used when
+ * replacing a sheet or when the pop itself triggered the close).
+ */
+export function closeOverlay(immediate = false, { keepHistory = false } = {}) {
   const state = activeState;
   if (!state) return;
   activeState = null;
@@ -148,4 +166,17 @@ export function closeOverlay(immediate = false) {
   } else {
     setTimeout(finish, 400);
   }
+
+  if (!keepHistory && history.state && history.state.overlay) history.back();
+}
+
+/**
+ * closeOverlayFromPop() — popstate handler entry point: the history entry is
+ * already gone, so close without popping again. Returns whether a sheet was
+ * open (i.e. the pop is fully handled).
+ */
+export function closeOverlayFromPop() {
+  if (!activeState) return false;
+  closeOverlay(false, { keepHistory: true });
+  return true;
 }
