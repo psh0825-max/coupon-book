@@ -4,7 +4,7 @@ import {
   daysUntil, isCompleted, isExpired, isExpiringSoon, remainingCount, progressPercent,
   couponStatus, formatExpiry, priorityShop, sortShops, filterShops, stats, dueReminders,
   isAmountKind, isCountKind, passTotal, passUsed, remainingValue,
-  remainingLabel, totalLabel, usedLabel, lowBalancePasses
+  remainingLabel, totalLabel, usedLabel, lowBalancePasses, needsBackupNudge
 } from '../../static/js/domain.js';
 
 // Local YYYY-MM-DD offset from today, matching domain's local-date parsing.
@@ -219,4 +219,33 @@ test('dueReminders: shops crossing a threshold today', () => {
     shop({ name: 'past', usedCoupons: 1, expiresAt: dateOffset(-3) })
   ];
   assert.deepEqual(dueReminders(list, days).map((s) => s.name), ['d3']);
+});
+
+// ── needsBackupNudge ─────────────────────────────────────────────────────────
+// Requirements: nudge only when (a) 3+ shops, (b) never backed up or backup
+// older than 30 days, (c) not dismissed within the last 14 days.
+const DAY = 86400000;
+const threeShops = [shop(), shop(), shop()];
+
+test('needsBackupNudge: under 3 shops never nudges', () => {
+  assert.equal(needsBackupNudge([shop(), shop()], {}, Date.now()), false);
+  assert.equal(needsBackupNudge([], {}, Date.now()), false);
+});
+
+test('needsBackupNudge: 3+ shops and no backup ever -> nudge', () => {
+  assert.equal(needsBackupNudge(threeShops, {}, Date.now()), true);
+  assert.equal(needsBackupNudge(threeShops, { lastBackupAt: null }, Date.now()), true);
+});
+
+test('needsBackupNudge: recent backup suppresses, stale backup re-nudges', () => {
+  const now = Date.now();
+  assert.equal(needsBackupNudge(threeShops, { lastBackupAt: now - 5 * DAY }, now), false);
+  assert.equal(needsBackupNudge(threeShops, { lastBackupAt: now - 31 * DAY }, now), true);
+});
+
+test('needsBackupNudge: dismissal snoozes for 14 days only', () => {
+  const now = Date.now();
+  const stale = { lastBackupAt: now - 40 * DAY };
+  assert.equal(needsBackupNudge(threeShops, { ...stale, backupNudgeDismissedAt: now - 2 * DAY }, now), false);
+  assert.equal(needsBackupNudge(threeShops, { ...stale, backupNudgeDismissedAt: now - 15 * DAY }, now), true);
 });

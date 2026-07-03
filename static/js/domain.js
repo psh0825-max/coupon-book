@@ -203,6 +203,23 @@ export function lowBalancePasses(shops, ratio = 0.2) {
     && remainingValue(s) > 0 && remainingValue(s) <= passTotal(s) * ratio);
 }
 
+// ── Backup nudge ─────────────────────────────────────────────────────────────
+const BACKUP_STALE_MS = 30 * DAY_MS;   // re-nudge when the last backup is this old
+const NUDGE_SNOOZE_MS = 14 * DAY_MS;   // respect a dismissal for this long
+
+/**
+ * Whether home should surface the backup banner: meaningful data (3+ shops)
+ * that has never been backed up or not in the last 30 days, unless the user
+ * dismissed the nudge within 14 days. Pure given `now`.
+ */
+export function needsBackupNudge(shops, settings = {}, now = Date.now()) {
+  if ((shops || []).length < 3) return false;
+  const dismissedAt = num(settings.backupNudgeDismissedAt);
+  if (dismissedAt && now - dismissedAt < NUDGE_SNOOZE_MS) return false;
+  const lastBackupAt = num(settings.lastBackupAt);
+  return !lastBackupAt || now - lastBackupAt > BACKUP_STALE_MS;
+}
+
 /** shops crossing a reminder threshold today (pure given Date.now). */
 export function dueReminders(shops, reminderDays = [7, 3, 1]) {
   const thresholds = new Set(reminderDays);

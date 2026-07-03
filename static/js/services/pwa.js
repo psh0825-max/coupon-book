@@ -6,9 +6,21 @@ let _updating = false, _reloaded = false;
 // Register the SW and detect when a new version is waiting. onUpdate(reg) fires
 // only when there is already a controller (i.e. this is an update, not first
 // install). controllerchange then reloads once, after applyUpdate() is called.
+// Best-effort daily background expiry check for installed apps (TWA/PWA).
+// Chrome grants the periodic-background-sync permission only to installed apps
+// with engagement, so failures are expected and silently ignored — the on-open
+// reminder path in services/reminders.js remains the baseline.
+async function registerPeriodicExpiryCheck(reg) {
+  if (!('periodicSync' in reg)) return;
+  try {
+    await reg.periodicSync.register('expiry-check', { minInterval: 12 * 60 * 60 * 1000 });
+  } catch (e) { /* not installed / permission denied */ }
+}
+
 export function registerSW(onUpdate) {
   if (!('serviceWorker' in navigator)) return;
   navigator.serviceWorker.register('sw.js').then((reg) => {
+    registerPeriodicExpiryCheck(reg);
     if (reg.waiting && navigator.serviceWorker.controller) onUpdate?.(reg);
     reg.addEventListener('updatefound', () => {
       const nw = reg.installing; if (!nw) return;

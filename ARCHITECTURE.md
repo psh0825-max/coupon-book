@@ -138,7 +138,8 @@ export async function clearAll();      // shops+logs only (keep settings)
 Settings DEFAULTS:
 ```js
 { notifyEnabled:false, notifyRadius:100, notifyDelay:5,
-  remindersEnabled:false, reminderDays:[7,3,1], onboarded:false }
+  remindersEnabled:false, reminderDays:[7,3,1], onboarded:false,
+  lastBackupAt:null, backupNudgeDismissedAt:null }  // backup nudge (domain.needsBackupNudge)
 ```
 
 ### domain.js — PURE business logic (heavily unit-tested)
@@ -308,6 +309,13 @@ location/reminder services as needed.
   precache app shell + all v3 modules; the cache name (currently `coupon-book-v7`) is
   bumped each release to evict the old shell; navigation
   fallback to `./index.html`; never cache cross-origin (leaflet tiles, fonts).
+- Background expiry check: `sw.js` handles `periodicsync` (tag `expiry-check`,
+  registered by services/pwa.js, minInterval 12h). Reads CouponBookDB directly
+  (self-contained copies of daysUntil/dueReminders — SW cannot import app
+  modules), fires at most once per calendar day (marker row in settings store),
+  shows expiry notifications; `notificationclick` focuses/opens the app.
+  Best-effort only: granted to installed apps (TWA/PWA) with engagement — the
+  on-open path in services/reminders.js remains the baseline.
 - `manifest.json`: keep; ensure relative `start_url`/`scope` (`.`/`./`), categories,
   lang `ko`, add `shortcuts` (홈 추가) optional.
 - Register SW + init install prompt in app bootstrap.

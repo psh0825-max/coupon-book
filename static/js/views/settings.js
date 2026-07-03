@@ -7,6 +7,7 @@ import * as pwa from '../services/pwa.js';
 import { isPersisted, storageEstimate, requestPersistentStorage } from '../services/storage.js';
 import { showToast } from '../ui/toast.js';
 import { showConfirm } from '../ui/overlay.js';
+import { formatDate } from '../services/format.js';
 
 export function render(ctx) {
   const { store, actions } = ctx;
@@ -94,7 +95,7 @@ export function render(ctx) {
   buildDayChips();
   root.appendChild(card(
     h('div', { class: 'toggle-row' },
-      h('div', { class: 'info' }, h('h4', null, '만료 임박 알림'), h('p', null, 'D-7 / D-3 / D-1 만료 + 금액권 잔액 20% 이하 알림')),
+      h('div', { class: 'info' }, h('h4', null, '만료 임박 알림'), h('p', null, 'D-7 / D-3 / D-1 만료 + 금액권 잔액 20% 이하 — 앱을 열 때 확인하고, 설치된 앱은 백그라운드에서도 주기적으로 확인해요')),
       makeToggle(settings.remindersEnabled, async (next) => {
         const { permission } = await actions.toggleReminders(next);
         if (!next) showToast('만료 알림이 꺼졌어요');
@@ -190,7 +191,10 @@ export function render(ctx) {
   root.appendChild(card(
     h('div', { class: 'form-group' },
       h('label', null, '백업 데이터'),
-      h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, on: { click: () => actions.exportData() } }, 'JSON 파일로 백업')
+      h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, on: { click: () => actions.exportData() } }, 'JSON 파일로 백업'),
+      h('p', { class: 'field-hint' }, settings.lastBackupAt
+        ? `마지막 백업: ${formatDate(settings.lastBackupAt)}`
+        : '아직 백업한 적이 없어요')
     ),
     h('div', { class: 'form-group' },
       h('label', { attrs: { for: 's-import' } }, '복원 데이터'),

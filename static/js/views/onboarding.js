@@ -61,7 +61,7 @@ export function render(ctx) {
       card.appendChild(h('div', { class: 'onboarding-choices' }, sampleBtn, addBtn));
     } else {
       card.appendChild(hero('STAY ON TRACK', '만료 알림을 받아보세요',
-        '쿠폰 만료가 다가오면 D-7 / D-3 / D-1 에 미리 알려드려요.'));
+        '쿠폰 만료가 다가오면 D-7 / D-3 / D-1 에 알려드려요. 앱을 열 때 확인하고, 설치된 앱은 백그라운드에서도 주기적으로 확인해요.'));
       const remindBtn = h('button', {
         class: 'btn btn-secondary btn-block',
         attrs: { type: 'button' }

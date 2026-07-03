@@ -13,7 +13,9 @@ export const DEFAULTS = {
   remindersEnabled: false,
   reminderDays: [7, 3, 1],
   onboarded: false,
-  backupHinted: false
+  backupHinted: false,
+  lastBackupAt: null,
+  backupNudgeDismissedAt: null
 };
 
 // ── Normalization (pure) ─────────────────────────────────────────────────────

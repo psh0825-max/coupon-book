@@ -1367,3 +1367,18 @@
 @media (min-width: 768px) {
   .shop-rail { grid-auto-columns: 48%; }
 }
+
+/* ── Backup nudge banner (home) ─────────────────────────────────────────── */
+.nudge-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 12px 0; padding: 14px 16px; border-radius: var(--radius-md, 14px);
+  background: #fff7ed; border: 1px solid #fed7aa;
+}
+.nudge-banner .nudge-text strong { display: block; font-size: 0.9rem; color: #9a3412; margin-bottom: 2px; }
+.nudge-banner .nudge-text p { margin: 0; font-size: 0.78rem; color: #b45309; line-height: 1.5; }
+.nudge-banner .nudge-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.nudge-banner .nudge-actions .btn { padding: 8px 12px; font-size: 0.8rem; }
+@media (max-width: 420px) {
+  .nudge-banner { flex-direction: column; align-items: stretch; }
+  .nudge-banner .nudge-actions .btn { flex: 1; }
+}

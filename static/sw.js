@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coupon-book-v21';
+const CACHE_NAME = 'coupon-book-v22';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -68,6 +68,108 @@ self.addEventListener('activate', (e) => {
     caches.keys().then((names) =>
       Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
     ).then(() => self.clients.claim())
+  );
+});
+
+// ── Background expiry check (Periodic Background Sync) ──────────────────────
+// Installed apps (TWA/PWA) may be woken by the browser without the page open.
+// The page keeps its own on-open reminder path (services/reminders.js); this is
+// the best-effort background complement. Runs at most once per calendar day,
+// tracked via a marker row in the settings store. Logic mirrors
+// domain.daysUntil/dueReminders but stays dependency-free: a SW script cannot
+// import the app's ES modules.
+const SW_MARKER_KEY = 'swReminderCheckedOn';
+
+function swOpenDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('CouponBookDB');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function swGetAll(db, store) {
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(store, 'readonly').objectStore(store).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function swPut(db, store, rec) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(rec);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function swDaysUntil(dateStr) {
+  if (!dateStr) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr));
+  const target = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(dateStr);
+  if (Number.isNaN(target.getTime())) return null;
+  const now = new Date();
+  const t = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const n = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((t.getTime() - n.getTime()) / 86400000);
+}
+
+function swTodayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+}
+
+async function checkExpiryInBackground() {
+  let db;
+  try {
+    db = await swOpenDb();
+    const settingsRows = await swGetAll(db, 'settings');
+    const settings = {};
+    for (const row of settingsRows) if (row && row.key != null) settings[row.key] = row.value;
+    if (!settings.remindersEnabled) return;
+    if (settings[SW_MARKER_KEY] === swTodayKey()) return; // once per day
+
+    const reminderDays = Array.isArray(settings.reminderDays) ? settings.reminderDays : [7, 3, 1];
+    const thresholds = new Set(reminderDays);
+    const shops = await swGetAll(db, 'shops');
+    const due = shops.filter((s) => {
+      const days = swDaysUntil(s.expiresAt);
+      return days !== null && days >= 0 && thresholds.has(days);
+    });
+
+    for (const shop of due.slice(0, 5)) {
+      const days = swDaysUntil(shop.expiresAt);
+      await self.registration.showNotification('쿠폰북', {
+        body: `${shop.name} · ${days === 0 ? '오늘 만료' : `D-${days}`} 만료 임박`,
+        icon: './icon-192.png',
+        badge: './icon-192.png',
+        tag: `expiry-${shop.id}-${swTodayKey()}`
+      });
+    }
+    await swPut(db, 'settings', { key: SW_MARKER_KEY, value: swTodayKey() });
+  } catch (e) {
+    // best-effort: background check must never throw out of the event
+  } finally {
+    try { db && db.close(); } catch (e) { /* noop */ }
+  }
+}
+
+self.addEventListener('periodicsync', (e) => {
+  if (e.tag === 'expiry-check') e.waitUntil(checkExpiryInBackground());
+});
+
+// Tapping a notification focuses the app (or opens it).
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ('focus' in c) return c.focus();
+      }
+      return self.clients.openWindow('./');
+    })
   );
 });
 
