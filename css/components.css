@@ -1219,38 +1219,17 @@
   background: var(--bg-hover);
 }
 
-/* ===== Responsive tablet ===== */
+/* ===== Large screens: keep the 480px phone shell (see layout.css), just
+   float the sheet nicely in the middle of the viewport. ===== */
 @media (min-width: 768px) {
-  #app {
-    max-width: 960px;
-    margin: 0 auto;
-    border-left: 1px solid var(--border);
-    border-right: 1px solid var(--border);
-  }
-  .main {
-    padding: 24px;
-    max-width: 860px;
-    margin: 0 auto;
-    width: 100%;
-  }
   .popup-sheet {
     border-radius: var(--radius-xl);
     margin-bottom: 24px;
     max-height: 75vh;
+    max-width: 480px;
   }
   .overlay {
     align-items: center;
-  }
-  .bottom-nav {
-    max-width: 460px;
-    margin: 0 auto 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-xl);
-    height: 60px;
-    padding: 8px;
-  }
-  .fab {
-    right: calc(50% - 430px);
   }
 }
 

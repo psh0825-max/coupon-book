@@ -5,7 +5,6 @@
 // exiting; app.js feeds popstate back in via restore().
 
 const ROOT_PAGES = ['home', 'history', 'map', 'settings'];
-const FAB_PAGES = ['home', 'list'];
 
 const TITLES = {
   home: 'Coupon Book',
@@ -111,9 +110,9 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays }
     // back button: hidden on root pages
     const backEl = doc.querySelector('[data-back]');
     if (backEl) backEl.hidden = ROOT_PAGES.includes(name);
-    // FAB: visible only on home + list
+    // Center add button lives in the nav bar (always visible); highlight on add.
     const fabEl = doc.querySelector('[data-fab]');
-    if (fabEl) fabEl.hidden = !FAB_PAGES.includes(name);
+    if (fabEl) fabEl.classList.toggle('active', name === 'add');
     // scroll reset — #main is the scroll container, not the window. reload()
     // skips this to preserve position across a data-driven re-render.
     if (!keepScroll) {
@@ -130,4 +129,4 @@ function replaceChildren(parent, node) {
   parent.appendChild(node);
 }
 
-export { ROOT_PAGES, FAB_PAGES, TITLES };
+export { ROOT_PAGES, TITLES };
