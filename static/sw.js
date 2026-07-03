@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coupon-book-v23';
+const CACHE_NAME = 'coupon-book-v24';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -39,6 +39,10 @@ const URLS_TO_CACHE = [
   './js/services/ads.js',
   './js/ui/toast.js',
   './js/ui/art.js',
+  './art/onb-wallet.webp',
+  './art/onb-stamps.webp',
+  './art/onb-bell.webp',
+  './art/empty-ticket.webp',
   './js/ui/overlay.js',
   './js/ui/reward.js',
   './js/ui/components.js',
