@@ -103,8 +103,9 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays }
 }
 // Root pages (no back button, show bottom-nav): home, history, map, settings.
 // Sub pages (show back button): list, add(edit), detail, onboarding.
-// Manage: section visibility, nav active state, page title, back btn, FAB visibility,
-// scroll reset. FAB visible on: home, list.
+// Manage: section visibility, nav active state, page title, back btn, scroll reset.
+// The add button is a permanent center slot in the bottom nav ([data-fab]),
+// highlighted while the add view is active.
 // History: navigate() mirrors the route into history state objects (URL unchanged) —
 // roots replaceState at depth 0, sub pages pushState one level deeper. app.js feeds
 // popstate into restore(), closing an open sheet first (ui/overlay.js pushes one
