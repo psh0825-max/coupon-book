@@ -142,12 +142,14 @@ const actions = {
     });
     await refresh();
     const depleted = remainingValue(updated) <= 0;
+    // One-tap undo on the toast: quick uses shouldn't need detail + confirm.
+    const undo = { actionLabel: '되돌리기', onAction: () => actions.undoLastCoupon(shopId, { confirm: false }) };
     if (depleted) {
       haptic('medium');
-      showToast('이용권을 모두 사용했어요');
+      showToast('이용권을 모두 사용했어요', 'success', undo);
     } else {
       haptic('light');
-      showToast(`사용 완료 · ${remainingLabel(updated)} 남음`);
+      showToast(`사용 완료 · ${remainingLabel(updated)} 남음`, 'success', undo);
     }
     resyncServices();
   },
@@ -222,13 +224,15 @@ const actions = {
     }
   },
 
-  async undoLastCoupon(shopId) {
-    const ok = await showConfirm({
-      title: '사용 기록 취소',
-      message: '마지막 이용권 사용 기록을 취소하고 사용량을 되돌릴까요?',
-      confirmLabel: '되돌리기'
-    });
-    if (!ok) return;
+  async undoLastCoupon(shopId, { confirm = true } = {}) {
+    if (confirm) {
+      const ok = await showConfirm({
+        title: '사용 기록 취소',
+        message: '마지막 이용권 사용 기록을 취소하고 사용량을 되돌릴까요?',
+        confirmLabel: '되돌리기'
+      });
+      if (!ok) return;
+    }
     const shop = store.getState().shops.find((s) => s.id === shopId);
     if (!shop) return;
     const logs = (store.getState().logs || [])
@@ -425,8 +429,18 @@ async function init() {
   const fabEl = document.querySelector('[data-fab]');
   if (fabEl) fabEl.addEventListener('click', () => router.navigate('add'));
 
+  // Manifest shortcut deep-links (long-press app icon → 이용권 추가 / 지도).
+  // Consume the query so history/bookmarks stay clean.
+  const shortcut = new URLSearchParams(window.location.search).get('action');
+  if (shortcut) window.history.replaceState(null, '', window.location.pathname);
+
   const onboarded = store.getState().settings.onboarded;
-  router.navigate(onboarded ? 'home' : 'onboarding');
+  if (onboarded && (shortcut === 'add' || shortcut === 'map')) {
+    router.navigate('home');       // sensible back target under the shortcut view
+    router.navigate(shortcut);
+  } else {
+    router.navigate(onboarded ? 'home' : 'onboarding');
+  }
 }
 
 if (document.readyState === 'loading') {

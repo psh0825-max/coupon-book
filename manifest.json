@@ -12,6 +12,20 @@
   "orientation": "portrait",
   "background_color": "#f7f9fb",
   "theme_color": "#f7f9fb",
+  "shortcuts": [
+    {
+      "name": "이용권 추가",
+      "short_name": "추가",
+      "url": "./?action=add",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "주변 지도",
+      "short_name": "지도",
+      "url": "./?action=map",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "icon.svg",

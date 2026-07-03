@@ -3,6 +3,7 @@
 
 import { h, clear } from '../core/h.js';
 import { showToast } from '../ui/toast.js';
+import { svgArt } from '../ui/art.js';
 
 export function render(ctx) {
   const { router, actions } = ctx;
@@ -21,8 +22,9 @@ export function render(ctx) {
   const card = h('div', { class: 'card onboarding-card' });
   root.appendChild(card);
 
-  const hero = (eyebrow, heading, body, level = 'h2') => h('div', { class: 'product-hero' },
+  const hero = (eyebrow, heading, body, level = 'h2', art = null) => h('div', { class: 'product-hero onboarding-hero' },
     h('div', null,
+      art ? svgArt(art) : null,
       h('div', { class: 'eyebrow' }, eyebrow),
       h(level, null, heading),
       h('p', null, body)
@@ -50,10 +52,10 @@ export function render(ctx) {
     clear(card);
     if (step === 0) {
       card.appendChild(hero('WELCOME', '쿠폰북에 오신 걸 환영해요',
-        '도장판과 쿠폰을 한곳에서 관리하세요. 모든 정보는 이 기기에만 저장돼요.', 'h1'));
+        '도장판과 쿠폰을 한곳에서 관리하세요. 모든 정보는 이 기기에만 저장돼요.', 'h1', 'wallet'));
     } else if (step === 1) {
       card.appendChild(hero('GET STARTED', '어떻게 시작할까요?',
-        '샘플 업체로 둘러보거나, 바로 내 쿠폰을 추가할 수 있어요.'));
+        '샘플 업체로 둘러보거나, 바로 내 쿠폰을 추가할 수 있어요.', 'h2', 'stamps'));
       const sampleBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' } }, '샘플 보기');
       sampleBtn.addEventListener('click', async () => { await actions.seedDemo(); step = 2; renderStep(); });
       const addBtn = h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'button' } }, '직접 추가');
@@ -61,7 +63,7 @@ export function render(ctx) {
       card.appendChild(h('div', { class: 'onboarding-choices' }, sampleBtn, addBtn));
     } else {
       card.appendChild(hero('STAY ON TRACK', '만료 알림을 받아보세요',
-        '쿠폰 만료가 다가오면 D-7 / D-3 / D-1 에 알려드려요. 앱을 열 때 확인하고, 설치된 앱은 백그라운드에서도 주기적으로 확인해요.'));
+        '쿠폰 만료가 다가오면 D-7 / D-3 / D-1 에 알려드려요. 앱을 열 때 확인하고, 설치된 앱은 백그라운드에서도 주기적으로 확인해요.', 'h2', 'bell'));
       const remindBtn = h('button', {
         class: 'btn btn-secondary btn-block',
         attrs: { type: 'button' }
