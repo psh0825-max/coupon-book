@@ -13,3 +13,7 @@ package-lock.json
 
 # TWA build (Android project + signing keystore — DO NOT COMMIT)
 twa-build/
+
+# Store assets (generated PNGs stay local)
+store-assets/raw/
+store-assets/final/
