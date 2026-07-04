@@ -1377,3 +1377,6 @@
 
 .art-illust img { width: min(250px, 70vw); height: auto; border-radius: 18px; }
 .onboarding-hero .art-illust img { width: min(290px, 76vw); }
+
+.art-illust video { width: min(250px, 70vw); height: auto; border-radius: 18px; background: var(--bg-primary); }
+.onboarding-hero .art-illust video { width: min(290px, 76vw); }
