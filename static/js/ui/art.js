@@ -99,15 +99,17 @@ const RASTER = {
   ticket: 'art/empty-ticket.webp'
 };
 
-/** illust(name) -> div.art-illust with WebP art, SVG fallback on error. */
-export function illust(name) {
-  const src = RASTER[name];
-  if (!src) return svgArt(name);
-  const wrap = document.createElement('div');
-  wrap.className = 'art-illust';
-  wrap.setAttribute('aria-hidden', 'true');
+// Ambient video renditions (Veo-generated, ping-pong seamless loops, ~260KB).
+// Motion is decoration only: reduced-motion users and any load failure fall
+// back to the raster (which itself falls back to the inline SVG).
+const VIDEO = {
+  wallet: 'art/welcome-loop.mp4',
+  ticket: 'art/welcome-loop.mp4'
+};
+
+function rasterInto(wrap, name) {
   const img = document.createElement('img');
-  img.src = src;
+  img.src = RASTER[name];
   img.alt = '';
   img.width = 840;
   img.height = 627;
@@ -116,6 +118,37 @@ export function illust(name) {
     const fallback = svgArt(name);
     if (fallback) wrap.replaceChildren(...fallback.childNodes);
   });
-  wrap.appendChild(img);
+  wrap.replaceChildren(img);
+}
+
+/** illust(name) -> div.art-illust: ambient video > WebP > inline SVG. */
+export function illust(name) {
+  if (!RASTER[name]) return svgArt(name);
+  const wrap = document.createElement('div');
+  wrap.className = 'art-illust';
+  wrap.setAttribute('aria-hidden', 'true');
+
+  const reduceMotion = typeof matchMedia === 'function'
+    && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const videoSrc = VIDEO[name];
+  if (videoSrc && !reduceMotion) {
+    const video = document.createElement('video');
+    video.src = videoSrc;
+    video.muted = true;
+    video.loop = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.poster = RASTER[name];
+    video.width = 640;
+    video.height = 480;
+    video.addEventListener('error', () => rasterInto(wrap, name));
+    // Some browsers block autoplay despite muted; fall back to the still.
+    video.play?.().catch(() => rasterInto(wrap, name));
+    wrap.appendChild(video);
+    return wrap;
+  }
+
+  rasterInto(wrap, name);
   return wrap;
 }
