@@ -1,0 +1,66 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.lightonpluslab.couponbook.twa'
+    compileSdk 36
+
+    defaultConfig {
+        // SAME applicationId as the TWA so this ships as an UPDATE to the existing
+        // Play listing (users never see the package id; the ".twa" suffix is cosmetic).
+        applicationId 'com.lightonpluslab.couponbook.twa'
+        minSdk 23
+        targetSdk 36
+        versionCode 5
+        versionName '2.0.0'
+
+        // AdMob application id. This is the Google-provided TEST app id — it serves
+        // test ads only. Swap for your real AdMob app id before production.
+        // Real id lives in your AdMob console (App settings). See README.
+        manifestPlaceholders = [admobAppId: 'ca-app-pub-3940256099942544~3347511713']
+    }
+
+    // Optional release signing. Ship as an UPDATE to the same listing by signing with
+    // the SAME upload key as the TWA. Provide credentials in webview-app/keystore.properties
+    // (git-ignored) — see README. If absent, the release AAB is left unsigned (jarsign it
+    // like the TWA flow).
+    signingConfigs {
+        release {
+            def kp = new File(rootDir, 'keystore.properties')
+            if (kp.exists()) {
+                def props = new Properties()
+                kp.withInputStream { props.load(it) }
+                // Resolve relative paths against the PROJECT ROOT (webview-app/),
+                // matching the README example (../twa-build/…), not the app/ module.
+                def sf = new File(props['storeFile'])
+                storeFile sf.isAbsolute() ? sf : new File(rootDir, props['storeFile'])
+                storePassword props['storePassword']
+                keyAlias props['keyAlias']
+                keyPassword props['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // Keep minify off for a first correct build; AdMob needs keep rules otherwise.
+            minifyEnabled false
+            def kp = new File(rootDir, 'keystore.properties')
+            if (kp.exists()) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.core:core:1.13.1'
+    // Google Mobile Ads (AdMob). This is the app-appropriate ad SDK (unlike AdSense,
+    // which is a website product and must not run inside the app).
+    implementation 'com.google.android.gms:play-services-ads:23.6.0'
+}
