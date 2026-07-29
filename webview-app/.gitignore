@@ -1,0 +1,23 @@
+# Build
+.gradle/
+build/
+app/build/
+local.properties
+
+# Signing (never commit)
+keystore.properties
+*.keystore
+*.jks
+
+# Gradle wrapper binary + launcher icons are copied from ../twa-build (see README);
+# not committed here to avoid duplicating binaries.
+gradle/wrapper/gradle-wrapper.jar
+gradlew
+gradlew.bat
+app/src/main/res/mipmap-*/
+
+# Misc
+.idea/
+*.iml
+.DS_Store
+*.aab
