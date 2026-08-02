@@ -34,9 +34,10 @@ public class MainActivity extends AppCompatActivity {
     private static final String APP_URL = "https://coupon.lightonpluslab.com/";
     private static final String APP_HOST = "coupon.lightonpluslab.com";
 
-    // Google-provided TEST banner unit id. Serves test ads only.
-    // Swap for your real AdMob banner unit id before production (see README).
-    private static final String BANNER_UNIT_ID = "ca-app-pub-3940256099942544/6300978111";
+    // Real AdMob banner unit id ("쿠폰북 하단 배너", issued 2026-07-31).
+    // Do NOT click live ads on your own device (invalid-traffic policy) —
+    // for testing swap back to the Google TEST id ca-app-pub-3940256099942544/6300978111.
+    private static final String BANNER_UNIT_ID = "ca-app-pub-7180935400084577/2526964676";
 
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_NOTIFY = 1002;

@@ -15,10 +15,10 @@ android {
         versionCode 5
         versionName '2.0.0'
 
-        // AdMob application id. This is the Google-provided TEST app id — it serves
-        // test ads only. Swap for your real AdMob app id before production.
-        // Real id lives in your AdMob console (App settings). See README.
-        manifestPlaceholders = [admobAppId: 'ca-app-pub-3940256099942544~3347511713']
+        // AdMob application id (real, issued 2026-07-31 — AdMob console > 쿠폰북 > 앱 설정).
+        // For local ad testing, temporarily swap back to the Google TEST id
+        // ca-app-pub-3940256099942544~3347511713 or register a test device in AdMob.
+        manifestPlaceholders = [admobAppId: 'ca-app-pub-7180935400084577~4176068203']
     }
 
     // Optional release signing. Ship as an UPDATE to the same listing by signing with
