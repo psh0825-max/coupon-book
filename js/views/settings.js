@@ -75,7 +75,7 @@ export function render(ctx) {
   });
   const buildDayChips = () => {
     clear(daysWrap);
-    [7, 3, 1].forEach((d) => {
+    [30, 7, 3, 1].forEach((d) => {
       const on = reminderDays.includes(d);
       daysWrap.appendChild(h('button', {
         class: `chip${on ? ' active' : ''}`,
@@ -95,7 +95,7 @@ export function render(ctx) {
   buildDayChips();
   root.appendChild(card(
     h('div', { class: 'toggle-row' },
-      h('div', { class: 'info' }, h('h4', null, '만료 임박 알림'), h('p', null, 'D-7 / D-3 / D-1 만료 + 금액권 잔액 20% 이하 — 앱을 열 때 확인하고, 설치된 앱은 백그라운드에서도 주기적으로 확인해요')),
+      h('div', { class: 'info' }, h('h4', null, '만료 임박 알림'), h('p', null, '선택한 날짜 안에 들어오면 알려줘요(만료 당일 포함). 금액권 잔액 20% 이하도 함께 — 앱을 열 때 확인하고, 설치된 앱은 백그라운드에서도 주기적으로 확인해요')),
       makeToggle(settings.remindersEnabled, async (next) => {
         const { permission } = await actions.toggleReminders(next);
         if (!next) showToast('만료 알림이 꺼졌어요');
