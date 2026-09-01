@@ -1254,11 +1254,20 @@
   .detail-actions #btn-use {
     grid-column: 1 / -1;
   }
+  /* Filters must stay one row each on a phone: stacking them pushed the actual
+     content below the fold behind four tiers of chrome. */
   .home-tools {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 104px;
+    gap: 8px;
   }
   .status-tabs {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(5, 1fr);
+    gap: 3px;
+    padding: 4px;
+  }
+  .status-tab {
+    font-size: 0.76rem;
+    padding: 0 2px;
   }
   .metric-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1420,5 +1429,7 @@
 /* Rail cards exist to be compared by swiping, so the whole card has to fit one
    viewport. The board is for scanning here (the detail view keeps the large,
    countable one), and equal-height rail items stop padding the shorter card. */
-.shop-rail .stamp-board { grid-template-columns: repeat(8, 1fr); gap: 5px; margin: 8px 0; }
-.shop-rail .stamp svg { width: 13px; height: 13px; stroke-width: 3.5; }
+.shop-rail .stamp-board,
+#shop-grid .stamp-board { grid-template-columns: repeat(8, 1fr); gap: 5px; margin: 8px 0; }
+.shop-rail .stamp svg,
+#shop-grid .stamp svg { width: 13px; height: 13px; stroke-width: 3.5; }
