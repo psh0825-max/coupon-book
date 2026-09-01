@@ -70,6 +70,7 @@ export function render(ctx, params = {}) {
     depleted ? h('div', { class: 'reward-hint done' }, '모두 사용했어요') : null
   ));
 
+  if (shop.image) root.appendChild(buildGifticonPanel(shop.image, shop.name));
   if (shop.code) root.appendChild(buildCodePanel(shop.code));
 
   // The header's 총/사용/남음 stats already carry every number on this screen, so
@@ -132,6 +133,54 @@ export function render(ctx, params = {}) {
 
 // Coupon code panel: scannable QR + Code128 barcode + copyable text. Each renderer
 // degrades to null when its vendored library is unavailable; text + copy always show.
+// The point of storing a gifticon is showing it at the counter, so the panel is a
+// tap target that opens the image full-screen — a thumbnail is never scannable.
+function buildGifticonPanel(image, name) {
+  const thumb = h('img', { class: 'gifticon-thumb', attrs: { src: image, alt: `${name} 기프티콘` } });
+  const open = h('button', {
+    class: 'gifticon-open',
+    attrs: { type: 'button', 'aria-label': '기프티콘 크게 보기' },
+    on: { click: () => openGifticonViewer(image, name) }
+  }, thumb, h('span', { class: 'gifticon-open-hint' }, '탭하면 크게 볼 수 있어요'));
+
+  return h('div', { class: 'gifticon-panel' }, h('h3', null, '기프티콘'), open);
+}
+
+// Full-screen, dark, focus-trapped viewer. Escape and the close button both exit;
+// the backdrop is deliberately not a dismiss target so a mis-tap while the
+// cashier scans does not close it.
+function openGifticonViewer(image, name) {
+  const prevFocus = document.activeElement;
+  const closeBtn = h('button', {
+    class: 'gifticon-viewer-close', attrs: { type: 'button', 'aria-label': '닫기' }
+  }, '닫기');
+  const viewer = h('div', {
+    class: 'gifticon-viewer',
+    attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-label': `${name} 기프티콘` }
+  },
+    h('img', { attrs: { src: image, alt: `${name} 기프티콘` } }),
+    h('p', { class: 'gifticon-viewer-hint' }, '화면 밝기를 최대로 올리면 더 잘 읽혀요'),
+    closeBtn
+  );
+
+  const onKeydown = (ev) => {
+    if (ev.key === 'Escape') { ev.preventDefault(); close(); }
+    if (ev.key === 'Tab') { ev.preventDefault(); closeBtn.focus(); }
+  };
+  let closed = false;
+  function close() {
+    if (closed) return;
+    closed = true;
+    document.removeEventListener('keydown', onKeydown, true);
+    viewer.remove();
+    if (prevFocus && typeof prevFocus.focus === 'function') prevFocus.focus();
+  }
+  closeBtn.addEventListener('click', close);
+  document.addEventListener('keydown', onKeydown, true);
+  document.body.appendChild(viewer);
+  closeBtn.focus();
+}
+
 function buildCodePanel(code) {
   const qr = renderQR(code, { size: 180 });
   const barcode = renderBarcode(code);
