@@ -10,7 +10,7 @@ const TITLES = {
   home: 'Coupon Book',
   list: '내 이용권',
   map: '주변 지도',
-  add: '이용권',
+  add: (p) => (p && p.id ? '이용권 편집' : '이용권 추가'),
   detail: '상세',
   settings: '설정',
   history: '사용 내역',
@@ -106,7 +106,8 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays }
     });
     // page title
     const titleEl = doc.querySelector('[data-page-title]');
-    if (titleEl) titleEl.textContent = TITLES[name] || TITLES.home;
+    const title = TITLES[name] || TITLES.home;
+    if (titleEl) titleEl.textContent = typeof title === 'function' ? title(currentParams) : title;
     // back button: hidden on root pages
     const backEl = doc.querySelector('[data-back]');
     if (backEl) backEl.hidden = ROOT_PAGES.includes(name);
