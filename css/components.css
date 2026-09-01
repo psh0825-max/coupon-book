@@ -1444,3 +1444,11 @@
   background: var(--grad-brand-soft);
   font-weight: 800;
 }
+
+/* ── Map toolbar: compact variant ─────────────────────────────────────────── */
+/* On the map screen the map is the content, so the toolbar is a single row and
+   the freed height goes to the map itself. */
+.map-toolbar.compact { flex-direction: row; align-items: center; padding: 10px 12px 10px 16px; }
+.map-toolbar.compact h2 { margin: 0; font-size: 1.16rem; font-weight: 850; }
+.map-toolbar.compact .btn { flex: 0 0 auto; width: auto; padding: 10px 18px; font-size: 0.88rem; }
+.map-page .map-toolbar.compact + .coupon-map-wrap .coupon-map { height: min(66vh, 620px); }

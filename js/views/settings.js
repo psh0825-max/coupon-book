@@ -41,10 +41,9 @@ export function render(ctx) {
   };
 
   const root = h('div');
-  root.appendChild(h('div', { class: 'page-header' }, h('h2', null, '설정')));
-
-  // ── stats panel ──
-  root.appendChild(h('section', { class: 'settings-panel' },
+  // ── stats panel ── (appended last: the home screen already carries these
+  // numbers, and someone opening settings came to change a setting.)
+  const statsPanel = h('section', { class: 'settings-panel' },
     h('div', { class: 'section-title' },
       h('h3', null, '운영 통계'),
       h('span', null, `이번 달 사용 ${s.monthUses}회`)
@@ -55,7 +54,7 @@ export function render(ctx) {
       metric(s.usedCoupons, '사용'),
       metric(s.completedCount, '완성')
     )
-  ));
+  );
 
   // ── (a) 위치 알림 ──
   root.appendChild(card(
@@ -238,6 +237,8 @@ export function render(ctx) {
     h('a', { attrs: { href: 'privacy.html', target: '_blank', rel: 'noopener' } }, '개인정보처리방침'),
     h('br'),
     '© LightOn Plus Lab'));
+
+  root.appendChild(statsPanel);
 
   return root;
 }
