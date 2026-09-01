@@ -1495,3 +1495,21 @@
   min-height: 48px; padding: 0 28px; border: 0; border-radius: var(--radius-lg);
   background: #ffffff; color: #0b1220; font-weight: 850; font-size: 0.95rem; cursor: pointer;
 }
+
+/* Depleted pass: two equal ends (재구매 / 삭제) — neither is a minor action. */
+.detail-actions.depleted-actions { grid-template-columns: 1fr 1fr; }
+
+/* ── Disabled buttons ─────────────────────────────────────────────────────── */
+/* There was no disabled styling anywhere, so a spent pass showed '사용하기' as a
+   full-strength primary sitting next to a live one — tapping it did nothing and
+   nothing said why. Keep the shape, drop the pull. */
+.btn:disabled,
+.btn[disabled],
+.card-quick-use:disabled {
+  opacity: 0.42;
+  box-shadow: none;
+  cursor: not-allowed;
+  filter: saturate(0.55);
+}
+.btn:disabled:active,
+.btn[disabled]:active { transform: none; }
