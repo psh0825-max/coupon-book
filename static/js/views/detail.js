@@ -10,6 +10,7 @@ import {
 import { mapViewUrl } from '../services/maps.js';
 import { renderQR, renderBarcode, copyCode } from '../services/codes.js';
 import { showToast } from '../ui/toast.js';
+import { showConfirm } from '../ui/overlay.js';
 
 export function render(ctx, params = {}) {
   const { store, router, actions } = ctx;
@@ -95,11 +96,34 @@ export function render(ctx, params = {}) {
     }, '사용 취소')
   ));
 
-  // Depleted pass → offer re-registration (재구매) carrying the setup but not usage/period.
+  // A depleted pass has exactly two sensible ends, and which one leads depends on
+  // what it is: a punch card gets re-bought at the same shop, a spent gifticon is
+  // rubbish. An attached image is the marker — you attach one *because* the item is
+  // a gifticon — so it decides the order. Until now only 재구매 was offered and
+  // deleting meant 편집 → scroll to the bottom → 이용권 삭제 → 확인.
   if (depleted) {
-    root.appendChild(h('div', { class: 'detail-actions', style: { 'grid-template-columns': '1fr' } },
-      h('button', {
-        class: 'btn btn-primary btn-block',
+    const isGifticon = !!shop.image;
+    const discard = h('button', {
+      class: `btn ${isGifticon ? 'btn-primary' : 'btn-secondary'} btn-block`,
+      attrs: { type: 'button' },
+      on: { click: async () => {
+        const ok = await showConfirm({
+          title: isGifticon ? '기프티콘 삭제' : '이용권 삭제',
+          message: isGifticon
+            ? '다 쓴 기프티콘과 첨부한 이미지를 삭제할까요? 이 작업은 되돌릴 수 없어요.'
+            : '이 이용권과 연결된 사용 내역을 모두 삭제할까요? 이 작업은 되돌릴 수 없어요.',
+          confirmLabel: '삭제',
+          danger: true
+        });
+        if (!ok) return;
+        await actions.deleteShop(shop.id);
+        showToast('삭제되었어요');
+        router.navigate('home');
+      } }
+    }, isGifticon ? '삭제' : '이용권 삭제');
+
+    const reRegister = h('button', {
+        class: `btn ${isGifticon ? 'btn-secondary' : 'btn-primary'} btn-block`,
         attrs: { type: 'button' },
         on: { click: () => router.navigate('add', { prefill: {
           name: shop.name,
@@ -114,8 +138,10 @@ export function render(ctx, params = {}) {
           totalCoupons: shop.totalCoupons,
           totalAmount: shop.totalAmount
         } }) }
-      }, '다시 등록 (재구매)')
-    ));
+      }, '다시 등록 (재구매)');
+
+    root.appendChild(h('div', { class: 'detail-actions depleted-actions' },
+      ...(isGifticon ? [discard, reRegister] : [reRegister, discard])));
   }
 
   root.appendChild(h('div', { class: 'page-header', style: { 'margin-top': '24px' } }, h('h2', null, '사용 내역')));
