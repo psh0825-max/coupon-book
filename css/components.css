@@ -1391,3 +1391,34 @@
 .settings-art { margin: -2px auto 10px; }
 .settings-art .art-illust { margin: 0; }
 .settings-art .art-illust img { width: min(190px, 52vw); border-radius: 0; }
+
+/* ── Home: compact head (shown once the wallet has passes) ────────────────── */
+/* The full .product-hero only earns its space on an empty wallet; with passes
+   present the head shrinks so the rail clears the fold. */
+.home-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 12px; margin: 2px 0 14px;
+}
+.home-head h1 {
+  font-size: 1.42rem; font-weight: 850; line-height: 1.2;
+  background: var(--grad-brand); background-size: 200% 200%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.home-head p { margin-top: 4px; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.45; }
+
+.btn-sm { padding: 9px 16px; font-size: 0.86rem; flex-shrink: 0; }
+
+/* Warning-context CTA: inside the amber backup nudge a brand-blue primary
+   competed with the banner's own semantics, so the action inherits that colour. */
+.btn-warning { background: #b45309; color: #ffffff; font-weight: 800; }
+.btn-warning:active { background: #92400e; }
+
+/* An expired pass is surfaced as something to check, not a recommendation. */
+.priority-panel.is-expired .eyebrow { color: var(--danger); }
+
+/* ── Rail card density ───────────────────────────────────────────────────── */
+/* Rail cards exist to be compared by swiping, so the whole card has to fit one
+   viewport. The board is for scanning here (the detail view keeps the large,
+   countable one), and equal-height rail items stop padding the shorter card. */
+.shop-rail .stamp-board { grid-template-columns: repeat(8, 1fr); gap: 5px; margin: 8px 0; }
+.shop-rail .stamp svg { width: 13px; height: 13px; stroke-width: 3.5; }
