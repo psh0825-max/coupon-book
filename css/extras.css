@@ -288,3 +288,17 @@ body.overlay-open .main {
   font-size: .85rem;
   color: var(--accent);
 }
+
+/* ── Global reduced-motion safety net ─────────────────────────────────────── */
+/* The always-on decorative animations (gradient-shift title, progress shimmer,
+   pulse rings) keep animating even for users who ask the OS for less motion.
+   This near-zeros every animation/transition without removing functionality;
+   component rules (confetti/reward) already tailor their own reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -20,7 +20,9 @@
   --accent-ripple: rgba(37, 99, 235, 0.16);
   --accent-blue: #2563eb;
   --accent-coral: #ef6b53;
-  --accent-gold: #d4af37;
+  /* Gold is only ever used as small caption text (eyebrows) on light surfaces;
+     #8a6300 clears WCAG AA (~5.1:1) where the old #d4af37 failed badly (~2:1). */
+  --accent-gold: #8a6300;
 
   --border: rgba(0, 0, 0, 0.06);
   --border-strong: rgba(0, 0, 0, 0.12);
