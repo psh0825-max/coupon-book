@@ -52,7 +52,7 @@ export function render(ctx) {
     clear(card);
     if (step === 0) {
       card.appendChild(hero('WELCOME', '쿠폰북에 오신 걸 환영해요',
-        '도장판과 쿠폰을 한곳에서 관리하세요. 모든 정보는 이 기기에만 저장돼요.', 'h1', 'wallet'));
+        '쿠폰과 이용권을 한곳에서 관리하세요. 모든 정보는 이 기기에만 저장돼요.', 'h1', 'wallet'));
     } else if (step === 1) {
       card.appendChild(hero('GET STARTED', '어떻게 시작할까요?',
         '샘플 업체로 둘러보거나, 바로 내 쿠폰을 추가할 수 있어요.', 'h2', 'stamps'));
