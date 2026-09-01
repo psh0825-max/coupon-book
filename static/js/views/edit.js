@@ -9,6 +9,7 @@ import { showToast } from '../ui/toast.js';
 import { showConfirm } from '../ui/overlay.js';
 import { formatWon, formatDistance, groupDigits, parseNumber } from '../services/format.js';
 import { isConfigured as placesConfigured, searchPlaces } from '../services/places.js';
+import { readGifticon, detectCode, supportsBarcodeScan } from '../services/gifticon.js';
 
 export function render(ctx, params = {}) {
   const { store, router, actions } = ctx;
@@ -273,6 +274,53 @@ export function render(ctx, params = {}) {
   const memoInput = h('textarea', { id: 'f-memo', attrs: { name: 'memo', rows: '3', placeholder: '예: 평일 오전 할인, 주차 가능' } }, isEdit ? (shop.memo || '') : '');
   form.appendChild(field('메모', 'f-memo', memoInput));
 
+  // ── gifticon image (optional) ──
+  // Event gifticons arrive as a screenshot; keeping it here means one place to
+  // look at the counter. Attaching also tries to read the barcode out of the
+  // image so the detail view can render a sharp one instead of the screenshot.
+  let imageData = hasInit ? (src.image || '') : '';
+  const imgPreview = h('img', { class: 'gifticon-thumb', attrs: { alt: '첨부한 기프티콘 미리보기' } });
+  const imgClear = h('button', { class: 'btn btn-ghost btn-sm', attrs: { type: 'button' } }, '이미지 제거');
+  const imgWrap = h('div', { class: 'gifticon-preview' }, imgPreview, imgClear);
+  const imgInput = h('input', { id: 'f-gifticon', attrs: { type: 'file', accept: 'image/*' } });
+  const imgHint = h('p', { class: 'field-hint' }, supportsBarcodeScan()
+    ? '카카오톡 등에서 받은 기프티콘 캡처를 넣어 두세요. 바코드를 읽어 코드도 자동으로 채웁니다.'
+    : '카카오톡 등에서 받은 기프티콘 캡처를 넣어 두세요. 상세 화면에서 크게 볼 수 있어요.');
+
+  const syncImage = () => {
+    const has = !!imageData;
+    imgWrap.hidden = !has;
+    if (has) imgPreview.src = imageData;
+  };
+  imgClear.addEventListener('click', () => { imageData = ''; imgInput.value = ''; syncImage(); });
+  imgInput.addEventListener('change', async (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    imgHint.textContent = '이미지를 처리하는 중...';
+    try {
+      const [data, found] = await Promise.all([readGifticon(file), detectCode(file)]);
+      imageData = data;
+      syncImage();
+      // Never overwrite a code the user typed — only fill an empty field.
+      if (found && !codeInput.value.trim()) {
+        codeInput.value = found;
+        showToast('바코드를 읽어 코드를 채웠어요');
+      }
+      imgHint.textContent = '첨부했어요. 상세 화면에서 크게 볼 수 있어요.';
+    } catch (err) {
+      imgInput.value = '';
+      imgHint.textContent = '이미지를 읽을 수 없어요. 다른 파일로 시도해 주세요.';
+    }
+  });
+  syncImage();
+
+  form.appendChild(h('div', { class: 'form-group' },
+    h('label', { attrs: { for: 'f-gifticon' } }, '기프티콘 이미지'),
+    imgInput,
+    imgWrap,
+    imgHint
+  ));
+
   // coupon code (optional) — shown as scannable barcode/QR on the detail page
   const codeInput = h('input', { id: 'f-code', attrs: { type: 'text', name: 'code', placeholder: '예: 1234-5678-9012 (선택)', value: hasInit ? (src.code || '') : '' } });
   form.appendChild(h('div', { class: 'form-group' },
@@ -335,7 +383,8 @@ export function render(ctx, params = {}) {
       code: codeInput.value.trim(),
       lat: parseFloat(latInput.value) || null,
       lng: parseFloat(lngInput.value) || null,
-      skin: currentSkin
+      skin: currentSkin,
+      image: imageData
     };
     await actions.saveShop(data, params.id);
     showToast(isEdit ? '저장되었어요' : '추가되었어요');

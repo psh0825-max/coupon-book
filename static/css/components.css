@@ -1452,3 +1452,46 @@
 .map-toolbar.compact h2 { margin: 0; font-size: 1.16rem; font-weight: 850; }
 .map-toolbar.compact .btn { flex: 0 0 auto; width: auto; padding: 10px 18px; font-size: 0.88rem; }
 .map-page .map-toolbar.compact + .coupon-map-wrap .coupon-map { height: min(66vh, 620px); }
+
+/* ── Gifticon: attach preview (edit) ──────────────────────────────────────── */
+.gifticon-preview { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.gifticon-preview[hidden] { display: none; }
+.gifticon-thumb {
+  width: 84px; height: 84px; object-fit: cover;
+  border-radius: var(--radius-md); border: 1px solid var(--border);
+  background: #ffffff;
+}
+
+/* ── Gifticon: detail panel ───────────────────────────────────────────────── */
+.gifticon-panel {
+  margin: 14px 0; padding: 14px;
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+.gifticon-panel h3 { font-size: 0.95rem; font-weight: 800; margin-bottom: 10px; }
+.gifticon-open {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 0; background: none; border: 0; text-align: left; cursor: pointer;
+}
+.gifticon-open .gifticon-thumb { width: 96px; height: 96px; flex-shrink: 0; }
+.gifticon-open-hint { color: var(--text-secondary); font-size: 0.85rem; }
+.gifticon-open:active { opacity: 0.7; }
+
+/* ── Gifticon: full-screen viewer ─────────────────────────────────────────── */
+/* Dark ground so the barcode's white field is the brightest thing on screen —
+   scanners key off that contrast. The backdrop is not a dismiss target: a
+   mis-tap while the cashier is scanning must not close it. */
+.gifticon-viewer {
+  position: fixed; inset: 0; z-index: 120;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 20px; background: #0b1220;
+}
+.gifticon-viewer img {
+  max-width: 100%; max-height: 74vh; object-fit: contain;
+  border-radius: var(--radius-md); background: #ffffff;
+}
+.gifticon-viewer-hint { color: rgba(255, 255, 255, 0.72); font-size: 0.85rem; text-align: center; }
+.gifticon-viewer-close {
+  min-height: 48px; padding: 0 28px; border: 0; border-radius: var(--radius-lg);
+  background: #ffffff; color: #0b1220; font-weight: 850; font-size: 0.95rem; cursor: pointer;
+}
