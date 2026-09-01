@@ -140,6 +140,15 @@ export function sortShops(shops, sortKey = 'smart') {
   const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ko');
   const comparators = {
     remaining: (a, b) => remainingCount(a) - remainingCount(b) || byName(a, b),
+    // 사용기한이 임박한 순. 기한 없는 항목은 재촉할 것이 없으므로 항상 뒤로.
+    expiry: (a, b) => {
+      const ea = a.expiresAt ? Date.parse(a.expiresAt) : NaN;
+      const eb = b.expiresAt ? Date.parse(b.expiresAt) : NaN;
+      const va = Number.isNaN(ea), vb = Number.isNaN(eb);
+      if (va !== vb) return va ? 1 : -1;
+      if (va && vb) return byName(a, b);
+      return ea - eb || byName(a, b);
+    },
     updated: (a, b) => num(b.updatedAt) - num(a.updatedAt) || byName(a, b),
     name: byName,
     smart: (a, b) =>

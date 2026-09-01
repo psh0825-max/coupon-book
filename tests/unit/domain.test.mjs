@@ -249,3 +249,25 @@ test('needsBackupNudge: dismissal snoozes for 14 days only', () => {
   assert.equal(needsBackupNudge(threeShops, { ...stale, backupNudgeDismissedAt: now - 2 * DAY }, now), false);
   assert.equal(needsBackupNudge(threeShops, { ...stale, backupNudgeDismissedAt: now - 15 * DAY }, now), true);
 });
+
+test('sortShops expiry: 기한이 가까운 순, 기한 없는 항목은 뒤로', () => {
+  const shops = [
+    { name: '기한없음', expiresAt: null },
+    { name: '늦음', expiresAt: '2026-12-31' },
+    { name: '빠름', expiresAt: '2026-09-10' }
+  ];
+  assert.deepEqual(sortShops(shops, 'expiry').map((s) => s.name), ['빠름', '늦음', '기한없음']);
+});
+
+test('sortShops expiry: 기한 없는 항목끼리는 이름순', () => {
+  const shops = [{ name: '나', expiresAt: null }, { name: '가', expiresAt: null }];
+  assert.deepEqual(sortShops(shops, 'expiry').map((s) => s.name), ['가', '나']);
+});
+
+test('sortShops expiry: 같은 기한이면 이름순', () => {
+  const shops = [
+    { name: '나', expiresAt: '2026-10-01' },
+    { name: '가', expiresAt: '2026-10-01' }
+  ];
+  assert.deepEqual(sortShops(shops, 'expiry').map((s) => s.name), ['가', '나']);
+});
