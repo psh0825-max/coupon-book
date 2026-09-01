@@ -230,11 +230,25 @@ export function needsBackupNudge(shops, settings = {}, now = Date.now()) {
 }
 
 /** shops crossing a reminder threshold today (pure given Date.now). */
+/**
+ * reminderThreshold(shop, reminderDays) -> number|null
+ * The tightest configured window the pass has entered: the smallest threshold
+ * that is still >= the days remaining. Returns null when none applies.
+ *
+ * This used to be an exact match (days === 7 / 3 / 1), which meant the reminder
+ * only ever fired if the user happened to open the app on that precise day —
+ * miss D-7 and that warning was gone for good. Matching the entered window
+ * instead delivers it on the next open, and D-0 (expires today) now lands in the
+ * D-1 window rather than falling through with no alert at all.
+ */
+export function reminderThreshold(shop, reminderDays = [7, 3, 1]) {
+  if (isCompleted(shop)) return null;
+  const days = daysUntil(shop.expiresAt);
+  if (days === null || days < 0) return null;
+  const reached = (reminderDays || []).filter((t) => days <= t);
+  return reached.length ? Math.min(...reached) : null;
+}
+
 export function dueReminders(shops, reminderDays = [7, 3, 1]) {
-  const thresholds = new Set(reminderDays);
-  return (shops || []).filter((shop) => {
-    if (isCompleted(shop)) return false;
-    const days = daysUntil(shop.expiresAt);
-    return days !== null && days >= 0 && thresholds.has(days);
-  });
+  return (shops || []).filter((shop) => reminderThreshold(shop, reminderDays) !== null);
 }

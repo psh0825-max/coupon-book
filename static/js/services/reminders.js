@@ -2,7 +2,7 @@
 // Notification API is unsupported or denied: always calls onDue so the app can
 // show an in-app badge/toast fallback.
 
-import { daysUntil, dueReminders, lowBalancePasses, remainingValue, isCompleted } from '../domain.js';
+import { daysUntil, dueReminders, reminderThreshold, lowBalancePasses, remainingValue, isCompleted } from '../domain.js';
 import { formatWon } from './format.js';
 
 // Latest inputs, kept in module scope so the visibilitychange listener re-runs
@@ -49,8 +49,11 @@ function todayKey() {
   return `${yyyy}${mm}${dd}`;
 }
 
-function markerKey(shopId, days) {
-  return `cb_reminder:${shopId}:${days}:${todayKey()}`;
+// Keyed by the reminder *window*, not the calendar day: a window fires once per
+// (pass, expiry date), so a late delivery does not then repeat every single day
+// until expiry. Including expiresAt means editing the date re-arms the reminders.
+function markerKey(shopId, expiresAt, threshold) {
+  return `cb_reminder:${shopId}:${expiresAt || 'none'}:t${threshold}`;
 }
 
 function balanceMarkerKey(shopId) {
@@ -84,8 +87,9 @@ export function checkDueNow(shops, settings, onDue) {
   const due = dueReminders(shops, settings.reminderDays);
   for (const shop of due) {
     const days = daysUntil(shop.expiresAt);
-    if (days === null) continue;
-    const key = markerKey(shop.id, days);
+    const threshold = reminderThreshold(shop, settings.reminderDays);
+    if (days === null || threshold === null) continue;
+    const key = markerKey(shop.id, shop.expiresAt, threshold);
     if (alreadyFired(key)) continue;
     markFired(key);
 
