@@ -10,6 +10,7 @@ function open() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error('IndexedDB open blocked (another tab may hold an older version open)'));
     req.onsuccess = () => { _db = req.result; resolve(_db); };
     req.onupgradeneeded = (e) => migrate(e.target.result, e.target.transaction);
   });

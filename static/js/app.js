@@ -3,7 +3,7 @@
 
 import { createStore } from './core/store.js';
 import { createRouter } from './core/router.js';
-import { h } from './core/h.js';
+import { h, clear } from './core/h.js';
 
 import { Shops, Logs, Settings, seedDemoData, clearAll } from './data/repo.js';
 import { remainingCount, remainingValue, remainingLabel, isAmountKind } from './domain.js';
@@ -397,6 +397,32 @@ store.select(
   }
 );
 
+// A hard boot failure (e.g. IndexedDB unavailable in a private window or blocked
+// storage) must never leave a blank screen. Replace the shell with an accessible,
+// retryable error card instead.
+function renderBootError(err) {
+  const app = document.getElementById('app');
+  if (!app) return;
+  const card = h('div', {
+    attrs: { role: 'alert' },
+    style: 'max-width:340px;margin:auto;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center'
+  },
+    h('h1', { style: 'font-size:1.3rem;font-weight:800' }, '앱을 시작할 수 없어요'),
+    h('p', { style: 'color:var(--text-secondary);line-height:1.6;font-size:0.95rem' },
+      '저장소(브라우저 데이터)를 열 수 없어요. 시크릿/프라이빗 모드이거나 브라우저 저장소가 차단되어 있으면 이용이 어려울 수 있어요.'),
+    h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => location.reload() } }, '다시 시도')
+  );
+  clear(app).appendChild(h('div', { style: 'height:100%;display:flex;padding:24px;overflow:auto' }, card));
+}
+
+function onBootError(err) {
+  console.error(err);
+  renderBootError(err);
+}
+
+// Surface otherwise-silent async failures to the console (debug aid; no UI).
+window.addEventListener('unhandledrejection', (e) => { console.error('unhandledrejection', e && e.reason); });
+
 // ── Boot ─────────────────────────────────────────────────────────────────────
 async function init() {
   document.body.dataset.theme = 'light';
@@ -444,7 +470,7 @@ async function init() {
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', () => { init().catch(onBootError); });
 } else {
-  init();
+  init().catch(onBootError);
 }

@@ -2,7 +2,7 @@
 // Notification API is unsupported or denied: always calls onDue so the app can
 // show an in-app badge/toast fallback.
 
-import { daysUntil, dueReminders, lowBalancePasses, remainingValue } from '../domain.js';
+import { daysUntil, dueReminders, lowBalancePasses, remainingValue, isCompleted } from '../domain.js';
 import { formatWon } from './format.js';
 
 // Latest inputs, kept in module scope so the visibilitychange listener re-runs
@@ -13,10 +13,32 @@ let _onDue = null;
 let _listenerAttached = false;
 
 export async function ensurePermission() {
+  // Native app shell: notification permission is an Android runtime grant; the
+  // WebView has no Notification API. Report the native state instead.
+  const bridge = typeof window !== 'undefined' ? window.AndroidBridge : null;
+  if (bridge && typeof bridge.canNotify === 'function') {
+    return bridge.canNotify() ? 'granted' : 'denied';
+  }
   if (typeof window !== 'undefined' && 'Notification' in window) {
     return await Notification.requestPermission();
   }
   return 'unsupported';
+}
+
+// Post a system notification: the native bridge in the app shell (a bare WebView
+// has no Notification API), else the web Notification API when granted. The in-app
+// onDue toast fires regardless, so this is purely the OS-level surface.
+function pushNotification(title, body, tag) {
+  const bridge = typeof window !== 'undefined' ? window.AndroidBridge : null;
+  if (bridge && typeof bridge.showNotification === 'function') {
+    bridge.showNotification(title, body);
+    return true;
+  }
+  if (typeof window !== 'undefined' && 'Notification' in window
+    && Notification.permission === 'granted') {
+    try { new Notification(title, { body, tag }); return true; } catch (e) { return false; }
+  }
+  return false;
 }
 
 function todayKey() {
@@ -59,9 +81,6 @@ function expiryLabel(days) {
 export function checkDueNow(shops, settings, onDue) {
   if (!settings || !settings.remindersEnabled) return;
 
-  const granted = typeof window !== 'undefined' && 'Notification' in window
-    && Notification.permission === 'granted';
-
   const due = dueReminders(shops, settings.reminderDays);
   for (const shop of due) {
     const days = daysUntil(shop.expiresAt);
@@ -70,17 +89,7 @@ export function checkDueNow(shops, settings, onDue) {
     if (alreadyFired(key)) continue;
     markFired(key);
 
-    if (granted) {
-      try {
-        new Notification('쿠폰 만료 임박', {
-          body: `${shop.name} · ${expiryLabel(days)}`,
-          tag: `cb_reminder:${shop.id}:${days}`
-        });
-      } catch (e) {
-        // construction can throw on some platforms — fall through to onDue
-      }
-    }
-
+    pushNotification('쿠폰 만료 임박', `${shop.name} · ${expiryLabel(days)}`, `cb_reminder:${shop.id}:${days}`);
     if (typeof onDue === 'function') onDue(shop, { type: 'expiry', days });
   }
 
@@ -91,18 +100,45 @@ export function checkDueNow(shops, settings, onDue) {
     markFired(key);
     const remaining = remainingValue(shop);
 
-    if (granted) {
-      try {
-        new Notification('잔액 임박', {
-          body: `${shop.name} · ${formatWon(remaining)} 남음`,
-          tag: `cb_balalert:${shop.id}`
-        });
-      } catch (e) {
-        // construction can throw on some platforms — fall through to onDue
-      }
-    }
-
+    pushNotification('잔액 임박', `${shop.name} · ${formatWon(remaining)} 남음`, `cb_balalert:${shop.id}`);
     if (typeof onDue === 'function') onDue(shop, { type: 'lowbalance', remaining });
+  }
+}
+
+function reminderId(shopId, d) {
+  let hsh = 0;
+  const s = String(shopId);
+  for (let i = 0; i < s.length; i++) hsh = (hsh * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(hsh % 1000000) * 10 + (d % 10);
+}
+
+// ms at 10:00 local, d days before the expiry date; null if no valid date.
+function triggerTimeFor(dateStr, d) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr || ''));
+  if (!m) return null;
+  const t = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  t.setDate(t.getDate() - d);
+  t.setHours(10, 0, 0, 0);
+  return t.getTime();
+}
+
+// Native app shell: hand upcoming expiry thresholds to Android (AlarmManager) so
+// reminders fire even when the app is closed — a bare WebView cannot run the
+// service-worker periodic sync the TWA relied on. Idempotent (same id updates).
+function scheduleNativeReminders(shops, settings) {
+  const bridge = typeof window !== 'undefined' ? window.AndroidBridge : null;
+  if (!bridge || typeof bridge.scheduleReminder !== 'function') return;
+  if (!settings || !settings.remindersEnabled) return;
+  const days = Array.isArray(settings.reminderDays) ? settings.reminderDays : [7, 3, 1];
+  const now = Date.now();
+  for (const shop of (shops || [])) {
+    if (!shop.expiresAt || isCompleted(shop)) continue;
+    for (const d of days) {
+      const when = triggerTimeFor(shop.expiresAt, d);
+      if (when == null || when <= now) continue;
+      bridge.scheduleReminder(reminderId(shop.id, d), '쿠폰 만료 임박',
+        `${shop.name} · ${expiryLabel(d)}`, when);
+    }
   }
 }
 
@@ -112,6 +148,7 @@ export function syncReminders(shops, settings, onDue) {
   _onDue = onDue;
 
   checkDueNow(_shops, _settings, _onDue);
+  scheduleNativeReminders(_shops, _settings);
 
   if (!_listenerAttached && typeof document !== 'undefined') {
     _listenerAttached = true;
