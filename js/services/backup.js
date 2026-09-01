@@ -17,12 +17,22 @@ export async function exportData() {
     Shops.all(), Logs.all(), Settings.entries()
   ]);
   const payload = { version: 3, shops, logs, settings, exportedAt: Date.now() };
+  const json = JSON.stringify(payload, null, 2);
+  const filename = `coupon-backup-${dateStamp()}.json`;
 
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  // Native app shell: a bare WebView cannot download blob: URLs, so hand the JSON
+  // to Android, which writes it to the Downloads folder.
+  const bridge = typeof window !== 'undefined' ? window.AndroidBridge : null;
+  if (bridge && typeof bridge.saveText === 'function') {
+    bridge.saveText(filename, json);
+    return;
+  }
+
+  const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `coupon-backup-${dateStamp()}.json`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
