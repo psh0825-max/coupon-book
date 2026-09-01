@@ -1380,3 +1380,14 @@
 
 .art-illust video { width: min(250px, 70vw); height: auto; border-radius: 18px; background: var(--bg-primary); }
 .onboarding-hero .art-illust video { width: min(290px, 76vw); }
+
+/* ── Illustration placements (reward modal / settings backup card) ────────── */
+/* Both use the brand raster art, which carries its own transparent margin, so
+   the shared .art-illust rounding is dropped and only the width is constrained. */
+.reward-art { margin: 0 auto 10px; }
+.reward-art .art-illust { margin: 0; }
+.reward-art .art-illust img { width: min(240px, 64vw); border-radius: 0; }
+
+.settings-art { margin: -2px auto 10px; }
+.settings-art .art-illust { margin: 0; }
+.settings-art .art-illust img { width: min(190px, 52vw); border-radius: 0; }

@@ -96,7 +96,11 @@ const RASTER = {
   wallet: 'art/onb-wallet.webp',
   stamps: 'art/onb-stamps.webp',
   bell: 'art/onb-bell.webp',
-  ticket: 'art/empty-ticket.webp'
+  ticket: 'art/empty-ticket.webp',
+  map: 'art/empty-map.webp',
+  search: 'art/empty-search.webp',
+  backup: 'art/backup-restore.webp',
+  reward: 'art/reward-complete.webp'
 };
 
 // Ambient video renditions (Veo-generated, ping-pong seamless loops, ~260KB).

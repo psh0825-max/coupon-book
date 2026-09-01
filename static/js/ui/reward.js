@@ -1,6 +1,7 @@
 // ui/reward.js — full-screen reward modal (reduced-motion aware, focus-managed).
 
-import { h, icon, frag } from '../core/h.js';
+import { h, frag } from '../core/h.js';
+import { illust } from './art.js';
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -16,7 +17,7 @@ export function showReward({ shopName, total } = {}) {
   }, '보상 받기');
 
   const card = h('div', { class: 'reward-card' },
-    h('div', { class: 'reward-badge' }, icon('trophy')),
+    h('div', { class: 'reward-art' }, illust('reward')),
     h('div', { class: 'reward-eyebrow' }, 'REWARD UNLOCKED'),
     h('h2', null, '완성! 🎉'),
     h('p', null, frag(

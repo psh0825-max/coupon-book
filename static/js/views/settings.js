@@ -8,6 +8,7 @@ import { isPersisted, storageEstimate, requestPersistentStorage } from '../servi
 import { showToast } from '../ui/toast.js';
 import { showConfirm } from '../ui/overlay.js';
 import { formatDate } from '../services/format.js';
+import { illust } from '../ui/art.js';
 
 export function render(ctx) {
   const { store, actions } = ctx;
@@ -189,6 +190,7 @@ export function render(ctx) {
     }
   });
   root.appendChild(card(
+    h('div', { class: 'settings-art' }, illust('backup')),
     h('div', { class: 'form-group' },
       h('label', null, '백업 데이터'),
       h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, on: { click: () => actions.exportData() } }, 'JSON 파일로 백업'),
