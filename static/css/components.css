@@ -1254,17 +1254,29 @@
   .detail-actions #btn-use {
     grid-column: 1 / -1;
   }
+  /* Filters must stay one row each on a phone: stacking them pushed the actual
+     content below the fold behind four tiers of chrome. */
   .home-tools {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 104px;
+    gap: 8px;
   }
   .status-tabs {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(5, 1fr);
+    gap: 3px;
+    padding: 4px;
+  }
+  .status-tab {
+    font-size: 0.76rem;
+    padding: 0 2px;
   }
   .metric-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  /* 전화 / 지도 / 만료일 are two-character labels; stacking them into three
+     full-width blocks cost ~300px of the first viewport for no gain. */
   .detail-meta-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
   }
   .nav-item {
     min-width: 0;
@@ -1391,3 +1403,52 @@
 .settings-art { margin: -2px auto 10px; }
 .settings-art .art-illust { margin: 0; }
 .settings-art .art-illust img { width: min(190px, 52vw); border-radius: 0; }
+
+/* ── Home: compact head (shown once the wallet has passes) ────────────────── */
+/* The full .product-hero only earns its space on an empty wallet; with passes
+   present the head shrinks so the rail clears the fold. */
+.home-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 12px; margin: 2px 0 14px;
+}
+.home-head h1 {
+  font-size: 1.42rem; font-weight: 850; line-height: 1.2;
+  background: var(--grad-brand); background-size: 200% 200%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.home-head p { margin-top: 4px; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.45; }
+
+.btn-sm { padding: 9px 16px; font-size: 0.86rem; flex-shrink: 0; }
+
+/* Warning-context CTA: inside the amber backup nudge a brand-blue primary
+   competed with the banner's own semantics, so the action inherits that colour. */
+.btn-warning { background: #b45309; color: #ffffff; font-weight: 800; }
+.btn-warning:active { background: #92400e; }
+
+/* An expired pass is surfaced as something to check, not a recommendation. */
+.priority-panel.is-expired .eyebrow { color: var(--danger); }
+
+/* ── Rail card density ───────────────────────────────────────────────────── */
+/* Rail cards exist to be compared by swiping, so the whole card has to fit one
+   viewport. The board is for scanning here (the detail view keeps the large,
+   countable one), and equal-height rail items stop padding the shorter card. */
+.shop-rail .stamp-board,
+#shop-grid .stamp-board { grid-template-columns: repeat(8, 1fr); gap: 5px; margin: 8px 0; }
+.shop-rail .stamp svg,
+#shop-grid .stamp svg { width: 13px; height: 13px; stroke-width: 3.5; }
+
+/* The expiry chip sits in the quick-action row but is information, not an action.
+   Dropping the button chrome stops it reading as a third tappable control. */
+.quick-action.readonly {
+  border-color: transparent;
+  background: var(--grad-brand-soft);
+  font-weight: 800;
+}
+
+/* ── Map toolbar: compact variant ─────────────────────────────────────────── */
+/* On the map screen the map is the content, so the toolbar is a single row and
+   the freed height goes to the map itself. */
+.map-toolbar.compact { flex-direction: row; align-items: center; padding: 10px 12px 10px 16px; }
+.map-toolbar.compact h2 { margin: 0; font-size: 1.16rem; font-weight: 850; }
+.map-toolbar.compact .btn { flex: 0 0 auto; width: auto; padding: 10px 18px; font-size: 0.88rem; }
+.map-page .map-toolbar.compact + .coupon-map-wrap .coupon-map { height: min(66vh, 620px); }
