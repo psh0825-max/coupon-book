@@ -37,12 +37,10 @@ export function render(ctx) {
   const root = h('div', { class: 'map-page' });
 
   const locateBtn = h('button', { class: 'btn btn-primary', attrs: { type: 'button' } }, '내 위치');
-  root.appendChild(h('div', { class: 'map-toolbar' },
-    h('div', null,
-      h('div', { class: 'eyebrow' }, 'NEARBY SHOPS'),
-      h('h2', null, '내 주변 업체 지도'),
-      h('p', null, '위치가 저장된 쿠폰 업체를 현재 위치 기준으로 보여줘요.')
-    ),
+  // The map is the content here, so the toolbar states the screen and gets out
+  // of the way — the eyebrow and description cost ~120px of map.
+  root.appendChild(h('div', { class: 'map-toolbar compact' },
+    h('h2', null, '내 주변 업체'),
     locateBtn
   ));
 
