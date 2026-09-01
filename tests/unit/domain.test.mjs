@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   daysUntil, isCompleted, isExpired, isExpiringSoon, remainingCount, progressPercent,
   couponStatus, formatExpiry, priorityShop, sortShops, filterShops, stats, dueReminders,
+  reminderThreshold,
   isAmountKind, isCountKind, passTotal, passUsed, remainingValue,
   remainingLabel, totalLabel, usedLabel, lowBalancePasses, needsBackupNudge
 } from '../../static/js/domain.js';
@@ -210,15 +211,47 @@ test('lowBalancePasses: amount pass at/under 20% remaining', () => {
   assert.deepEqual(lowBalancePasses(list).map((s) => s.name), ['at20']);
 });
 
-test('dueReminders: shops crossing a threshold today', () => {
+// 예전에는 정확히 그 날(days === 7/3/1)에 앱을 열어야만 알림이 잡혔다. 하루라도
+// 어긋나면 그 경고는 영영 오지 않았고, 만료 당일(D-0)은 아예 대상이 아니었다.
+// 이제는 '들어온 창'으로 판정한다.
+test('dueReminders: 창에 들어온 이용권 (완성·만료 지난 것 제외)', () => {
   const days = [7, 3, 1];
   const list = [
     shop({ name: 'd3', usedCoupons: 1, expiresAt: dateOffset(3) }),
     shop({ name: 'd5', usedCoupons: 1, expiresAt: dateOffset(5) }),
+    shop({ name: 'd0', usedCoupons: 1, expiresAt: dateOffset(0) }),
+    shop({ name: 'd9', usedCoupons: 1, expiresAt: dateOffset(9) }),
     shop({ name: 'd1done', usedCoupons: 10, expiresAt: dateOffset(1) }),
     shop({ name: 'past', usedCoupons: 1, expiresAt: dateOffset(-3) })
   ];
-  assert.deepEqual(dueReminders(list, days).map((s) => s.name), ['d3']);
+  assert.deepEqual(dueReminders(list, days).map((s) => s.name).sort(), ['d0', 'd3', 'd5']);
+});
+
+test('reminderThreshold: 들어온 창 중 가장 좁은 것을 고른다', () => {
+  const days = [7, 3, 1];
+  const at = (d) => shop({ usedCoupons: 1, expiresAt: dateOffset(d) });
+  assert.equal(reminderThreshold(at(5), days), 7);
+  assert.equal(reminderThreshold(at(3), days), 3);
+  assert.equal(reminderThreshold(at(2), days), 3);
+  assert.equal(reminderThreshold(at(1), days), 1);
+});
+
+test('reminderThreshold: 만료 당일은 D-1 창에 들어온다', () => {
+  assert.equal(reminderThreshold(shop({ usedCoupons: 1, expiresAt: dateOffset(0) }), [7, 3, 1]), 1);
+});
+
+test('reminderThreshold: 창 밖·만료 지남·완성·기한없음은 null', () => {
+  const days = [7, 3, 1];
+  assert.equal(reminderThreshold(shop({ usedCoupons: 1, expiresAt: dateOffset(9) }), days), null);
+  assert.equal(reminderThreshold(shop({ usedCoupons: 1, expiresAt: dateOffset(-1) }), days), null);
+  assert.equal(reminderThreshold(shop({ usedCoupons: 10, expiresAt: dateOffset(1) }), days), null);
+  assert.equal(reminderThreshold(shop({ usedCoupons: 1, expiresAt: null }), days), null);
+});
+
+test('reminderThreshold: D-30을 켜면 한 달 전부터 잡힌다', () => {
+  const at = (d) => shop({ usedCoupons: 1, expiresAt: dateOffset(d) });
+  assert.equal(reminderThreshold(at(25), [30, 7, 3, 1]), 30);
+  assert.equal(reminderThreshold(at(25), [7, 3, 1]), null);
 });
 
 // ── needsBackupNudge ─────────────────────────────────────────────────────────
