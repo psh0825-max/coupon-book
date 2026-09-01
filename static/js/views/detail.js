@@ -67,30 +67,15 @@ export function render(ctx, params = {}) {
     h('div', { class: 'progress-bar' },
       h('div', { class: `progress-fill${percent >= 100 ? ' success' : ''}`, style: { width: `${percent}%` } })
     ),
-    h('div', { class: `reward-hint${depleted ? ' done' : ''}` },
-      depleted ? '모두 사용했어요' : `${remainingLabel(shop)} 남아있어요`)
+    depleted ? h('div', { class: 'reward-hint done' }, '모두 사용했어요') : null
   ));
 
   if (shop.code) root.appendChild(buildCodePanel(shop.code));
 
-  if (amount) {
-    // Amount pass: a prominent balance block reads better than a stamp board.
-    root.appendChild(h('div', { class: 'pass-balance' },
-      h('div', { class: 'sub' }, '남은 금액'),
-      h('div', { class: 'amt' }, remainingLabel(shop)),
-      h('div', { class: 'sub' }, `총 ${totalLabel(shop)} · 사용 ${usedLabel(shop)}`)
-    ));
-  } else {
-    // Count pass: prominent remaining-count block, mirroring the amount balance.
-    root.appendChild(h('div', { class: 'pass-balance' },
-      h('div', { class: 'sub' }, '남은 횟수'),
-      h('div', { class: 'amt' }, `${remainingValue(shop)}회`),
-      h('div', { class: 'sub' }, `총 ${totalLabel(shop)} · 사용 ${usedLabel(shop)}`)
-    ));
-    root.appendChild(h('div', { class: 'stamp-head' },
-      h('span', null, '이용 현황'),
-      h('strong', null, `${usedLabel(shop)} `, h('em', null, `/ ${totalLabel(shop)}`))
-    ));
+  // The header's 총/사용/남음 stats already carry every number on this screen, so
+  // neither the balance block nor the board header restates them.
+  if (!amount) {
+    root.appendChild(h('div', { class: 'stamp-head' }, h('span', null, '이용 현황')));
     // Depleting ticket board only when small/countable; large passes show just the block.
     if (passTotal(shop) <= 30) root.appendChild(stampBoard(passTotal(shop), passUsed(shop)));
   }
