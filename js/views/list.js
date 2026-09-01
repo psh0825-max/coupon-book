@@ -13,7 +13,8 @@ const STATUS_TABS = [
   ['completed', '완성'], ['expired', '만료']
 ];
 const SORTS = [
-  ['smart', '추천순'], ['remaining', '완성 임박'], ['updated', '최근 수정'], ['name', '이름순']
+  ['smart', '추천순'], ['expiry', '사용기한순'], ['remaining', '완성 임박'],
+  ['updated', '최근 수정'], ['name', '이름순']
 ];
 const SR_ONLY = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
 
