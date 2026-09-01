@@ -1272,8 +1272,11 @@
   .metric-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  /* 전화 / 지도 / 만료일 are two-character labels; stacking them into three
+     full-width blocks cost ~300px of the first viewport for no gain. */
   .detail-meta-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
   }
   .nav-item {
     min-width: 0;
@@ -1433,3 +1436,11 @@
 #shop-grid .stamp-board { grid-template-columns: repeat(8, 1fr); gap: 5px; margin: 8px 0; }
 .shop-rail .stamp svg,
 #shop-grid .stamp svg { width: 13px; height: 13px; stroke-width: 3.5; }
+
+/* The expiry chip sits in the quick-action row but is information, not an action.
+   Dropping the button chrome stops it reading as a third tappable control. */
+.quick-action.readonly {
+  border-color: transparent;
+  background: var(--grad-brand-soft);
+  font-weight: 800;
+}
