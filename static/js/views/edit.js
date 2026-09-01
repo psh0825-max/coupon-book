@@ -31,7 +31,6 @@ export function render(ctx, params = {}) {
   );
 
   const root = h('div');
-  root.appendChild(h('div', { class: 'page-header' }, h('h2', null, isEdit ? '이용권 편집' : '이용권 추가')));
 
   // Quick-start templates: prefill the common pass shapes so a first entry takes
   // seconds. Pristine add form only — hidden once a template/renew prefill is set.
