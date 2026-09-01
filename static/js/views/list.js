@@ -124,7 +124,7 @@ export function render(ctx) {
     const filtered = sortShops(filterShops(shops, filter), filter.sort);
     if (filtered.length === 0) {
       grid.appendChild(emptyState({
-        icon: 'search',
+        art: 'search',
         title: '검색 결과가 없어요',
         desc: '다른 키워드나 카테고리를 선택해 보세요'
       }));

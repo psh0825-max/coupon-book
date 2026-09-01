@@ -58,7 +58,7 @@ export function render(ctx) {
   if (located.length === 0) {
     clear(mapEl);
     mapEl.appendChild(emptyState({
-      icon: 'map',
+      art: 'map',
       title: '지도에 표시할 업체가 없어요',
       desc: '업체 편집 화면에서 현재 위치를 저장하면 지도에 표시됩니다',
       actions: [{ label: '업체 추가', className: 'btn-primary', onClick: () => router.navigate('add') }]
