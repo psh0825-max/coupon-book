@@ -24,8 +24,6 @@ export function render(ctx) {
   const filter = { query: '', category: 'all', status: 'all', sort: 'smart', ...st.ui.filter };
 
   const root = h('div');
-  root.appendChild(h('div', { class: 'page-header' },
-    h('h2', null, '내 이용권'), h('p', null, '등록한 모든 이용권')));
 
   // ── status tabs ──
   const tabs = h('div', { class: 'status-tabs', attrs: { role: 'tablist' } });
