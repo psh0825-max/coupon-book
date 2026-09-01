@@ -30,6 +30,17 @@ function str(value, max) {
   return String(value).trim().slice(0, max);
 }
 
+// A gifticon image is stored as a WebP/JPEG/PNG data URL. Anything that is not a
+// plausible image data URL is dropped rather than persisted, and an oversized one
+// is refused here too so a hand-edited backup cannot blow past the storage quota.
+const IMAGE_MAX_CHARS = 700 * 1024; // ~525KB decoded — above services/gifticon MAX_BYTES
+function imageDataUrl(value) {
+  if (value == null) return '';
+  const s = String(value);
+  if (!/^data:image\/(webp|jpeg|png);base64,/.test(s)) return '';
+  return s.length > IMAGE_MAX_CHARS ? '' : s;
+}
+
 function numOrNull(value) {
   if (value == null || value === '') return null;
   const n = Number(value);
@@ -54,6 +65,7 @@ export function normalizeShop(raw = {}) {
     expiresAt: raw.expiresAt ? str(raw.expiresAt, 20) : null,
     memo: str(raw.memo, 500),
     code: str(raw.code, 120),
+    image: imageDataUrl(raw.image),
     lat: numOrNull(raw.lat),
     lng: numOrNull(raw.lng),
     kind,

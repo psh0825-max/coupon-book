@@ -79,3 +79,19 @@ test('normalizeShop: preserves and trims code', () => {
 test('normalizeShop: missing code -> empty string', () => {
   assert.equal(normalizeShop({}).code, '');
 });
+
+test('normalizeShop: 기프티콘 이미지 data URL 보존', () => {
+  const url = 'data:image/webp;base64,AAAA';
+  assert.equal(normalizeShop({ name: 'a', image: url }).image, url);
+});
+
+test('normalizeShop: 이미지가 아닌 값은 버림', () => {
+  assert.equal(normalizeShop({ name: 'a', image: 'https://example.com/x.png' }).image, '');
+  assert.equal(normalizeShop({ name: 'a', image: 'data:text/html;base64,AAAA' }).image, '');
+  assert.equal(normalizeShop({ name: 'a' }).image, '');
+});
+
+test('normalizeShop: 과대 이미지는 저장하지 않음', () => {
+  const huge = 'data:image/webp;base64,' + 'A'.repeat(800 * 1024);
+  assert.equal(normalizeShop({ name: 'a', image: huge }).image, '');
+});
