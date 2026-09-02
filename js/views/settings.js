@@ -95,7 +95,7 @@ export function render(ctx) {
   buildDayChips();
   root.appendChild(card(
     h('div', { class: 'toggle-row' },
-      h('div', { class: 'info' }, h('h4', null, '만료 임박 알림'), h('p', null, '선택한 날짜 안에 들어오면 알려줘요(만료 당일 포함). 금액권 잔액 20% 이하도 함께 — 앱을 열 때 확인하고, 설치된 앱은 백그라운드에서도 주기적으로 확인해요')),
+      h('div', { class: 'info' }, h('h4', null, '만료 임박 알림'), h('p', null, '선택한 날짜 안에 들어오면 알려줘요. 만료 당일도 포함해요.')),
       makeToggle(settings.remindersEnabled, async (next) => {
         const { permission } = await actions.toggleReminders(next);
         if (!next) showToast('만료 알림이 꺼졌어요');
