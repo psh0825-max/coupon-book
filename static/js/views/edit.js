@@ -282,7 +282,15 @@ export function render(ctx, params = {}) {
   const imgPreview = h('img', { class: 'gifticon-thumb', attrs: { alt: '첨부한 기프티콘 미리보기' } });
   const imgClear = h('button', { class: 'btn btn-ghost btn-sm', attrs: { type: 'button' } }, '이미지 제거');
   const imgWrap = h('div', { class: 'gifticon-preview' }, imgPreview, imgClear);
-  const imgInput = h('input', { id: 'f-gifticon', attrs: { type: 'file', accept: 'image/*' } });
+  const imgInput = h('input', {
+    id: 'f-gifticon', class: 'gifticon-input', attrs: { type: 'file', accept: 'image/*' }
+  });
+  // The native file control renders an OS widget with browser-locale text
+  // ('선택된 파일 없음' / 'No file chosen'), the only such widget in the form.
+  // A label styled as a button opens the same picker and keeps the app's language.
+  const imgPick = h('label', {
+    class: 'btn btn-secondary btn-block gifticon-pick', attrs: { for: 'f-gifticon' }
+  }, '이미지 선택');
   const imgHint = h('p', { class: 'field-hint' }, supportsBarcodeScan()
     ? '카카오톡 등에서 받은 기프티콘 캡처를 넣어 두세요. 바코드를 읽어 코드도 자동으로 채웁니다.'
     : '카카오톡 등에서 받은 기프티콘 캡처를 넣어 두세요. 상세 화면에서 크게 볼 수 있어요.');
@@ -317,6 +325,7 @@ export function render(ctx, params = {}) {
   form.appendChild(h('div', { class: 'form-group' },
     h('label', { attrs: { for: 'f-gifticon' } }, '기프티콘 이미지'),
     imgInput,
+    imgPick,
     imgWrap,
     imgHint
   ));
