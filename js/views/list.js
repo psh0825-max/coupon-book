@@ -4,7 +4,7 @@
 
 import { h, clear } from '../core/h.js';
 import { shopCard, emptyState } from '../ui/components.js';
-import { filterShops, sortShops, isAmountKind } from '../domain.js';
+import { filterShops, sortShops, isAmountKind, expiryBucket, EXPIRY_BUCKET_LABEL } from '../domain.js';
 import { CATEGORIES, getCategoryIcon } from '../data/skins.js';
 import { showToast } from '../ui/toast.js';
 
@@ -129,12 +129,25 @@ export function render(ctx) {
       }));
       return;
     }
-    filtered.forEach((shop) => grid.appendChild(shopCard(shop, {
-      onOpen: () => router.navigate('detail', { id: shop.id }),
-      onQuickUse: (s) => isAmountKind(s)
-        ? actions.promptUse(s)
-        : actions.usePass(s.id, { count: 1, note: '목록에서 빠른 사용' })
-    })));
+    // Grouping only makes sense when the order already follows expiry; under any
+    // other sort the headers would cut the list at arbitrary points.
+    const grouped = filter.sort === 'expiry';
+    let lastBucket = null;
+    filtered.forEach((shop) => {
+      if (grouped) {
+        const bucket = expiryBucket(shop);
+        if (bucket !== lastBucket) {
+          lastBucket = bucket;
+          grid.appendChild(h('h3', { class: 'group-head' }, EXPIRY_BUCKET_LABEL[bucket]));
+        }
+      }
+      grid.appendChild(shopCard(shop, {
+        onOpen: () => router.navigate('detail', { id: shop.id }),
+        onQuickUse: (s) => isAmountKind(s)
+          ? actions.promptUse(s)
+          : actions.usePass(s.id, { count: 1, note: '목록에서 빠른 사용' })
+      }));
+    });
   }
 
   renderGrid();

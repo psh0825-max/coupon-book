@@ -33,6 +33,10 @@ export function daysUntil(dateStr) {
 // Two kinds of paid pass: 'count' (횟수권, sessions) and 'amount' (금액권, KRW).
 // Records predating the concept have no `kind` and are treated as 'count'.
 export function isAmountKind(shop) { return shop && shop.kind === 'amount'; }
+// 'coupon' (모바일 쿠폰/기프티콘) is a count pass whose value is a stated benefit
+// ('10% 할인', '아메리카노 1잔') rather than a drawn-down balance, so it rides the
+// same count arithmetic and only differs in how it is presented.
+export function isCouponKind(shop) { return !!shop && shop.kind === 'coupon'; }
 export function isCountKind(shop) { return !isAmountKind(shop); }
 
 /** generic total (won for amount, sessions for count) */
@@ -59,6 +63,29 @@ export function isExpired(shop) {
   const days = daysUntil(shop.expiresAt);
   return days !== null && days < 0;
 }
+
+/**
+ * expiryBucket(shop) -> 'expired'|'week'|'month'|'later'|'none'
+ * Coarse validity band, used to group the list when sorted by expiry. The bands
+ * are cut where the user's decision changes: act now, use this week, plan this
+ * month, nothing to do.
+ */
+export function expiryBucket(shop) {
+  const d = daysUntil(shop && shop.expiresAt);
+  if (d === null) return 'none';
+  if (d < 0) return 'expired';
+  if (d <= 7) return 'week';
+  if (d <= 30) return 'month';
+  return 'later';
+}
+
+export const EXPIRY_BUCKET_LABEL = {
+  expired: '기한 지남',
+  week: '7일 이내 만료',
+  month: '30일 이내 만료',
+  later: '그 이후',
+  none: '기한 없음'
+};
 
 export function isExpiringSoon(shop, within = 30) {
   if (isCompleted(shop)) return false;
