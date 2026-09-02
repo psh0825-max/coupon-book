@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {
   daysUntil, isCompleted, isExpired, isExpiringSoon, remainingCount, progressPercent,
   couponStatus, formatExpiry, priorityShop, sortShops, filterShops, stats, dueReminders,
-  reminderThreshold,
-  isAmountKind, isCountKind, passTotal, passUsed, remainingValue,
+  reminderThreshold, expiryBucket,
+  isAmountKind, isCountKind, isCouponKind, passTotal, passUsed, remainingValue,
   remainingLabel, totalLabel, usedLabel, lowBalancePasses, needsBackupNudge
 } from '../../static/js/domain.js';
 
@@ -303,4 +303,29 @@ test('sortShops expiry: 같은 기한이면 이름순', () => {
     { name: '가', expiresAt: '2026-10-01' }
   ];
   assert.deepEqual(sortShops(shops, 'expiry').map((s) => s.name), ['가', '나']);
+});
+
+test('isCouponKind: coupon만 참, 나머지는 거짓', () => {
+  assert.equal(isCouponKind({ kind: 'coupon' }), true);
+  assert.equal(isCouponKind({ kind: 'count' }), false);
+  assert.equal(isCouponKind({ kind: 'amount' }), false);
+  assert.equal(isCouponKind({}), false);
+});
+
+test('coupon은 횟수 연산을 그대로 탄다', () => {
+  const c = { kind: 'coupon', totalCoupons: 1, usedCoupons: 0 };
+  assert.equal(isCountKind(c), true);
+  assert.equal(remainingValue(c), 1);
+  assert.equal(isCompleted({ ...c, usedCoupons: 1 }), true);
+});
+
+test('expiryBucket: 결정이 바뀌는 지점에서 구간이 갈린다', () => {
+  assert.equal(expiryBucket({ expiresAt: dateOffset(-1) }), 'expired');
+  assert.equal(expiryBucket({ expiresAt: dateOffset(0) }), 'week');
+  assert.equal(expiryBucket({ expiresAt: dateOffset(7) }), 'week');
+  assert.equal(expiryBucket({ expiresAt: dateOffset(8) }), 'month');
+  assert.equal(expiryBucket({ expiresAt: dateOffset(30) }), 'month');
+  assert.equal(expiryBucket({ expiresAt: dateOffset(31) }), 'later');
+  assert.equal(expiryBucket({ expiresAt: null }), 'none');
+  assert.equal(expiryBucket({}), 'none');
 });

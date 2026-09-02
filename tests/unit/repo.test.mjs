@@ -95,3 +95,14 @@ test('normalizeShop: 과대 이미지는 저장하지 않음', () => {
   const huge = 'data:image/webp;base64,' + 'A'.repeat(800 * 1024);
   assert.equal(normalizeShop({ name: 'a', image: huge }).image, '');
 });
+
+test('normalizeShop: coupon 종류와 benefit 보존', () => {
+  const s = normalizeShop({ name: 'a', kind: 'coupon', benefit: '10% 할인' });
+  assert.equal(s.kind, 'coupon');
+  assert.equal(s.benefit, '10% 할인');
+});
+
+test('normalizeShop: 알 수 없는 kind는 count로', () => {
+  assert.equal(normalizeShop({ name: 'a', kind: 'weird' }).kind, 'count');
+  assert.equal(normalizeShop({ name: 'a' }).kind, 'count');
+});

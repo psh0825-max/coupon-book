@@ -40,7 +40,10 @@ export function render(ctx, params = {}) {
       { label: '☕ 카페 도장판 10칸', prefill: { category: '카페', kind: 'count', totalCoupons: 10 } },
       { label: '💆 마사지 10회권', prefill: { category: '마사지', kind: 'count', totalCoupons: 10 } },
       { label: '🧘 찜질방 회수권', prefill: { category: '찜질방', kind: 'count', totalCoupons: 10 } },
-      { label: '💳 금액권 10만원', prefill: { category: '기타', kind: 'amount', totalAmount: 100000 } }
+      { label: '💳 금액권 10만원', prefill: { category: '기타', kind: 'amount', totalAmount: 100000 } },
+      // The app is named 쿠폰북 but had no one-tap path to a coupon: you had to pick
+      // 횟수권 and change the count to 1 every time.
+      { label: '🎟️ 모바일 쿠폰 · 기프티콘', prefill: { category: '기타', kind: 'coupon', totalCoupons: 1 } }
     ];
     root.appendChild(h('div', { class: 'form-group' },
       h('label', null, '빠른 시작'),
@@ -146,10 +149,11 @@ export function render(ctx, params = {}) {
   form.appendChild(field('카테고리', 'f-category', catSelect));
 
   // ── pass kind: 횟수권 (count) vs 금액권 (amount) ──
-  let kind = src && src.kind === 'amount' ? 'amount' : 'count';
+  let kind = src && (src.kind === 'amount' || src.kind === 'coupon') ? src.kind : 'count';
   const segCount = h('button', { class: kind === 'count' ? 'active' : '', attrs: { type: 'button', 'aria-pressed': kind === 'count' ? 'true' : 'false' } }, '횟수권');
   const segAmount = h('button', { class: kind === 'amount' ? 'active' : '', attrs: { type: 'button', 'aria-pressed': kind === 'amount' ? 'true' : 'false' } }, '금액권');
-  const seg = h('div', { class: 'seg', attrs: { role: 'group', 'aria-label': '이용권 종류' } }, segCount, segAmount);
+  const segCoupon = h('button', { class: kind === 'coupon' ? 'active' : '', attrs: { type: 'button', 'aria-pressed': kind === 'coupon' ? 'true' : 'false' } }, '쿠폰');
+  const seg = h('div', { class: 'seg', attrs: { role: 'group', 'aria-label': '이용권 종류' } }, segCount, segAmount, segCoupon);
   form.appendChild(h('div', { class: 'form-group' },
     h('label', null, '이용권 종류'),
     seg
@@ -185,6 +189,30 @@ export function render(ctx, params = {}) {
   );
   form.appendChild(amountGroup);
 
+  // ── COUPON fields: 혜택 문구 + 매수 ──
+  // A discount coupon's value is a stated benefit, not a balance, so the number
+  // that matters is how many of them you hold.
+  const benefitInput = h('input', {
+    id: 'f-benefit',
+    attrs: { type: 'text', name: 'benefit', maxlength: '60',
+             placeholder: '예: 10% 할인, 아메리카노 1잔, 3,000원 할인',
+             value: hasInit ? (src.benefit || '') : '' }
+  });
+  const couponTotalInput = h('input', {
+    id: 'f-coupon-total',
+    attrs: { type: 'number', name: 'couponTotal', min: '1', max: '100',
+             value: hasInit && src.totalCoupons != null ? String(src.totalCoupons) : '1' }
+  });
+  const couponGroup = h('div', { id: 'coupon-fields' },
+    h('div', { class: 'form-group' },
+      h('label', { attrs: { for: 'f-benefit' } }, '혜택'),
+      benefitInput,
+      h('p', { class: 'field-hint' }, '쿠폰을 쓰면 무엇을 받는지 적어 두세요. 목록과 상세에 그대로 표시돼요.')
+    ),
+    field('매수', 'f-coupon-total', couponTotalInput)
+  );
+  form.appendChild(couponGroup);
+
   function renderPreview() {
     const total = Math.max(1, Math.min(1000, parseInt(totalInput.value) || 0));
     const used = Math.max(0, Math.min(parseInt(usedInput.value) || 0, total));
@@ -209,16 +237,19 @@ export function render(ctx, params = {}) {
   usedAmountInput.addEventListener('input', () => liveGroup(usedAmountInput));
 
   function applyKind() {
-    segCount.classList.toggle('active', kind === 'count');
-    segAmount.classList.toggle('active', kind === 'amount');
-    segCount.setAttribute('aria-pressed', kind === 'count' ? 'true' : 'false');
-    segAmount.setAttribute('aria-pressed', kind === 'amount' ? 'true' : 'false');
+    [[segCount, 'count'], [segAmount, 'amount'], [segCoupon, 'coupon']].forEach(([el, k]) => {
+      el.classList.toggle('active', kind === k);
+      el.setAttribute('aria-pressed', kind === k ? 'true' : 'false');
+    });
     countGroup.hidden = kind !== 'count';
     amountGroup.hidden = kind !== 'amount';
-    if (kind === 'count') renderPreview(); else renderAmountPreview();
+    couponGroup.hidden = kind !== 'coupon';
+    if (kind === 'count') renderPreview();
+    else if (kind === 'amount') renderAmountPreview();
   }
   segCount.addEventListener('click', () => { kind = 'count'; applyKind(); });
   segAmount.addEventListener('click', () => { kind = 'amount'; applyKind(); });
+  segCoupon.addEventListener('click', () => { kind = 'coupon'; applyKind(); });
 
   // address
   const addressInput = h('input', { id: 'f-address', attrs: { type: 'text', name: 'address', placeholder: '주소를 입력하세요', value: hasInit ? (src.address || '') : '' } });
@@ -351,11 +382,13 @@ export function render(ctx, params = {}) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const total = Math.max(1, Math.min(1000, parseInt(totalInput.value) || 10));
+    const total = kind === 'coupon'
+      ? Math.max(1, Math.min(100, parseInt(couponTotalInput.value) || 1))
+      : Math.max(1, Math.min(1000, parseInt(totalInput.value) || 10));
     const usedRaw = Math.max(0, parseInt(usedInput.value) || 0);
     // Count mode only: if the entered total is below the current used count,
     // saving would clamp (and lose) sessions — confirm before proceeding.
-    if (kind === 'count' && usedRaw > total) {
+    if (kind !== 'amount' && usedRaw > total) {
       const proceed = await showConfirm({
         title: '사용 횟수 조정',
         message: `총 횟수(${total})가 현재 사용(${usedRaw})보다 적어 사용 횟수가 ${total}회로 줄어듭니다. 계속할까요?`,
@@ -384,6 +417,7 @@ export function render(ctx, params = {}) {
       lat: parseFloat(latInput.value) || null,
       lng: parseFloat(lngInput.value) || null,
       skin: currentSkin,
+      benefit: benefitInput.value.trim(),
       image: imageData
     };
     await actions.saveShop(data, params.id);
