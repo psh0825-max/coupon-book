@@ -1517,6 +1517,21 @@
 .btn:disabled:active,
 .btn[disabled]:active { transform: none; }
 
+/* Gifticon picker: the native file input is visually replaced by a labelled
+   button, but stays in the DOM (not display:none) so it remains focusable and
+   the label keeps its programmatic association. */
+.gifticon-input {
+  position: absolute; width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+}
+.gifticon-pick {
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 8px; cursor: pointer;
+}
+.form-group:focus-within .gifticon-pick {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
 /* Coupon benefit, stated under the name in the detail hero. */
 .detail-header .benefit-line {
   margin-top: 6px; font-size: 0.98rem; font-weight: 800;
