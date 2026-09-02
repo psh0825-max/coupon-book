@@ -4,8 +4,7 @@
 import { h, icon, frag } from '../core/h.js';
 import {
   couponStatus, remainingCount, remainingValue, progressPercent, formatExpiry, isCompleted,
-  isAmountKind, isCountKind, passTotal, passUsed, remainingLabel, totalLabel, usedLabel
-} from '../domain.js';
+  isAmountKind, isCountKind, passTotal, passUsed, remainingLabel, totalLabel, usedLabel, isCouponKind} from '../domain.js';
 import { formatDate, formatRelative, formatWon } from '../services/format.js';
 import { SKINS, getCategoryIcon } from '../data/skins.js';
 import { illust } from './art.js';
@@ -44,11 +43,15 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
     }
   }, '사용');
 
+  // A coupon's worth is the benefit it states; the remaining count already sits in
+  // the progress row right above, so repeating it here would waste the line.
   const hintText = complete
     ? '모두 사용했어요'
-    : isAmountKind(shop)
-      ? `${remainingLabel(shop)} 남아있어요`
-      : `${remainingValue(shop)}회 남았어요`;
+    : (isCouponKind(shop) && shop.benefit)
+      ? shop.benefit
+      : isAmountKind(shop)
+        ? `${remainingLabel(shop)} 남아있어요`
+        : `${remainingValue(shop)}회 남았어요`;
 
   // Stamp board only makes sense for a count pass with a small, countable total.
   const showStamps = isCountKind(shop) && passTotal(shop) <= 30;

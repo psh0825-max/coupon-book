@@ -49,7 +49,7 @@ function numOrNull(value) {
 
 export function normalizeShop(raw = {}) {
   // Records predating the pass-kind concept have no `kind`; treat them as 'count'.
-  const kind = raw.kind === 'amount' ? 'amount' : 'count';
+  const kind = (raw.kind === 'amount' || raw.kind === 'coupon') ? raw.kind : 'count';
   const total = clampInt(raw.totalCoupons, 1, 1000, 10);
   const used = clampInt(raw.usedCoupons, 0, total, 0);
   const totalAmount = clampInt(raw.totalAmount, 0, 100000000, 0); // up to 1억 KRW
@@ -65,6 +65,7 @@ export function normalizeShop(raw = {}) {
     expiresAt: raw.expiresAt ? str(raw.expiresAt, 20) : null,
     memo: str(raw.memo, 500),
     code: str(raw.code, 120),
+    benefit: str(raw.benefit, 60),
     image: imageDataUrl(raw.image),
     lat: numOrNull(raw.lat),
     lng: numOrNull(raw.lng),

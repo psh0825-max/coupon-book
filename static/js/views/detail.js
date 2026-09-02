@@ -36,6 +36,7 @@ export function render(ctx, params = {}) {
     h('div', { class: 'hero' },
       h('div', { class: `detail-status ${status.className}` }, status.label),
       h('h2', null, shop.name),
+      shop.benefit ? h('div', { class: 'benefit-line' }, shop.benefit) : null,
       h('div', { class: 'address' }, `${shop.address || '주소 없음'} · ${shop.category}`)
     ),
     h('div', { class: 'stats' },

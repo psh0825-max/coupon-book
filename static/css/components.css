@@ -1257,9 +1257,12 @@
   /* Filters must stay one row each on a phone: stacking them pushed the actual
      content below the fold behind four tiers of chrome. */
   .home-tools {
-    grid-template-columns: 1fr 104px;
+    /* '사용기한순' needs ~113px once the dropdown arrow's right padding is counted;
+       104px let the label run under the arrow. */
+    grid-template-columns: 1fr 118px;
     gap: 8px;
   }
+  .home-tools select { padding-right: 28px; }
   .status-tabs {
     grid-template-columns: repeat(5, 1fr);
     gap: 3px;
@@ -1528,3 +1531,18 @@
 .form-group:focus-within .gifticon-pick {
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
+
+/* Coupon benefit, stated under the name in the detail hero. */
+.detail-header .benefit-line {
+  margin-top: 6px; font-size: 0.98rem; font-weight: 800;
+  color: var(--accent);
+}
+
+/* Expiry group headers inside the list grid (사용기한순 정렬일 때만). */
+.grid .group-head {
+  grid-column: 1 / -1;
+  margin: 10px 0 2px;
+  font-size: 0.9rem; font-weight: 850;
+  color: var(--text-secondary);
+}
+.grid .group-head:first-child { margin-top: 0; }
