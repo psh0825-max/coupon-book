@@ -152,3 +152,21 @@ IPA 검증: `codesign -dv --entitlements` → Identifier `com.lightonpluslab.cou
 "App Store Connect request for store configuration failed (no provider)" 한 줄이 남는데, Xcode에 Apple 계정이
 없어서 나는 정보성 메시지이며 수동 서명 내보내기는 정상 완료된다.
 
+## 7. 재검증 (2026-09-14, 공통 브리프 체크리스트)
+
+| 항목 | 확인 |
+| --- | --- |
+| 1024 아이콘 RGB·알파 없음 | `AppIcon-1024.png` 1024×1024 8-bit RGB, `hasAlpha: no` |
+| 런치 스크린 | `Splash.imageset`(브랜드 블루 + 아이콘), 텍스트 없음 |
+| 세이프 에어리어 / 44pt / ≥12px / 호버 없음 / 라이트 고정 | §2.3·§4 (시뮬레이터 캡처로 확인, `UIUserInterfaceStyle=Light`) |
+| 죽은 링크·"준비 중"·TODO·console.log | `static/js`·`index.html`에 없음(vendor 제외) |
+| 릴리스에 디버그 플래그 없음 | `ios/debug.xcconfig`(`CAPACITOR_DEBUG=true`)는 Debug 구성에만 연결. `capacitor.config.json`의 `loggingBehavior: "debug"`는 Capacitor 기본값으로 "디버그 빌드에서만 로그, 프로덕션 빌드에서는 로그 없음"을 뜻함(`@capacitor/cli` declarations). `useTestAds: false`, `bannerId: ''` |
+| 권한 문구 ko+en | `NSLocationWhenInUseUsageDescription`, `NSUserTrackingUsageDescription` — IPA 안 Info.plist에서 재확인 |
+| 버전/빌드 | 2.0.0 / 1 (Android 2.0.0 versionCode 5 라인을 잇고 iOS 첫 빌드 = 1) |
+| 테스트 | `npm test` 65/65, `npm run test:e2e` 1/1 통과 |
+| IPA | `codesign`: `com.lightonpluslab.couponbook`, Team 237X7RZB63, Apple Distribution, `get-task-allow=false`, 임베디드 프로필 "Coupon Book App Store" (3f4a85b9-ed20-41bb-9cd4-a1c0b1281509); Info.plist 2.0.0/1/쿠폰북/`GADApplicationIdentifier ca-app-pub-7180935400084577~3984818286`/`ITSAppUsesNonExemptEncryption false`/SKAdNetwork 50개/iOS 15.0/Light; 번들 안 `public/js/config.js`가 `bannerId: ''`, `useTestAds: false` |
+| privacy.html | ko+en, 최종 업데이트 2026-09-13, 섹션: 기기 내 저장 · 위치(선택) · 알림 · 백업 파일 · 광고(AdMob + ATT) · 외부 통신 · 보관/삭제 · 아동 · 변경 · 문의 |
+| 광고 설정 파일 | `static/js/config.js` — `iosBannerId()`가 `''`이면 `services/ads.js`가 SDK 초기화·ATT·예약 공간 없이 반환 |
+| Android `webview-app` | 소스는 `main`과 동일(diff 없음). 이 Mac에서 `assembleDebug` + `bundleRelease` 성공(AGP 8.9.1, Gradle 8.14.3 wrapper 차용, Android Studio JBR 21, compileSdk 36). 단, 저장소 밖 `twa-build/`에서 복사하는 런처 아이콘(`mipmap-*`, git-ignore)이 없으면 AAPT 오류가 나므로 임시 아이콘으로 빌드한 뒤 제거함 — 배포 빌드는 문서대로 Windows PC의 `twa-build/` 아이콘을 사용 |
+| 시뮬레이터 | `CouponBook-iPhone` 삭제 완료, 부팅된 것 없음 |
+
