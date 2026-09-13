@@ -52,7 +52,7 @@ export function render(ctx) {
   if (needsBackupNudge(shops, settings)) {
     root.appendChild(h('div', { class: 'nudge-banner', attrs: { role: 'status' } },
       h('div', { class: 'nudge-text' },
-        h('strong', null, '백업한 지 오래됐어요'),
+        h('strong', null, settings.lastBackupAt ? '백업한 지 오래됐어요' : '아직 백업하지 않았어요'),
         h('p', null, '쿠폰은 이 기기에만 저장돼요. 파일로 백업해 두면 기기를 바꿔도 안전해요.')
       ),
       h('div', { class: 'nudge-actions' },

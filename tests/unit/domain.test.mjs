@@ -243,6 +243,14 @@ test('needsBackupNudge: recent backup suppresses, stale backup re-nudges', () =>
   assert.equal(needsBackupNudge(threeShops, { lastBackupAt: now - 31 * DAY }, now), true);
 });
 
+test('needsBackupNudge: data younger than a day (fresh install, samples) is not nudged yet', () => {
+  const now = Date.now();
+  const fresh = [shop({ createdAt: now - 60000 }), shop({ createdAt: now - 3600000 }), shop({ createdAt: now })];
+  assert.equal(needsBackupNudge(fresh, {}, now), false);
+  const settled = [shop({ createdAt: now - 2 * DAY }), shop({ createdAt: now - 3600000 }), shop({ createdAt: now })];
+  assert.equal(needsBackupNudge(settled, {}, now), true);
+});
+
 test('needsBackupNudge: dismissal snoozes for 14 days only', () => {
   const now = Date.now();
   const stale = { lastBackupAt: now - 40 * DAY };

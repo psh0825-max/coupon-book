@@ -235,6 +235,7 @@ export function lowBalancePasses(shops, ratio = 0.2) {
 // ── Backup nudge ─────────────────────────────────────────────────────────────
 const BACKUP_STALE_MS = 30 * DAY_MS;   // re-nudge when the last backup is this old
 const NUDGE_SNOOZE_MS = 14 * DAY_MS;   // respect a dismissal for this long
+const NUDGE_GRACE_MS = 1 * DAY_MS;     // let brand-new data (first day) settle before nudging
 
 /**
  * Whether home should surface the backup banner: meaningful data (3+ shops)
@@ -243,6 +244,10 @@ const NUDGE_SNOOZE_MS = 14 * DAY_MS;   // respect a dismissal for this long
  */
 export function needsBackupNudge(shops, settings = {}, now = Date.now()) {
   if ((shops || []).length < 3) return false;
+  // A wallet that is less than a day old (fresh install, samples just seeded) is
+  // not nudged yet — the first session should not open with a warning banner.
+  const oldest = Math.min(...shops.map((s) => num(s.createdAt) || 0));
+  if (oldest && now - oldest < NUDGE_GRACE_MS) return false;
   const dismissedAt = num(settings.backupNudgeDismissedAt);
   if (dismissedAt && now - dismissedAt < NUDGE_SNOOZE_MS) return false;
   const lastBackupAt = num(settings.lastBackupAt);
