@@ -1,30 +1,41 @@
-// services/maps.js — single maps provider (Google Maps) for both "지도" view and
-// "길찾기" directions. Prefer precise lat/lng, fall back to address then name.
+// services/maps.js — map links for a shop. The provider follows the runtime
+// (Apple Maps on iOS, Google Maps elsewhere — see platform.js) so "지도" and
+// "길찾기" always open the same app. Prefer precise lat/lng, fall back to the
+// address; a name alone is too ambiguous to be a destination.
 
-// Resolve a usable destination string, or '' when the shop has neither finite
-// coordinates nor a non-empty address. Name alone is not enough — too ambiguous
-// to map reliably, so it no longer counts as a destination.
+import { mapViewUrl as viewUrl, directionsUrl, openExternal } from '../platform.js';
+
 function hasCoord(v) {
   return v != null && v !== '' && Number.isFinite(Number(v));
 }
-function destination(shop) {
-  if (shop && hasCoord(shop.lat) && hasCoord(shop.lng)) {
-    return `${shop.lat},${shop.lng}`;
+
+function target(shop) {
+  if (!shop) return { lat: null, lng: null, label: '' };
+  const address = shop.address ? String(shop.address).trim() : '';
+  if (hasCoord(shop.lat) && hasCoord(shop.lng)) {
+    return { lat: Number(shop.lat), lng: Number(shop.lng), label: shop.name || address };
   }
-  const address = shop && shop.address ? String(shop.address).trim() : '';
-  return address || '';
+  return { lat: null, lng: null, label: address };
 }
 
-/** Open the shop location on the map. Returns '' when there is no destination. */
+/** URL to view the shop on the map, or '' when there is no destination. */
 export function mapViewUrl(shop) {
-  const query = destination(shop);
-  if (!query) return '';
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  const t = target(shop);
+  return viewUrl(t.lat, t.lng, t.label);
 }
 
-/** Open turn-by-turn directions to the shop. Returns '' when there is no destination. */
+/** URL for turn-by-turn directions to the shop, or '' when there is no destination. */
 export function mapsDirectionsUrl(shop) {
-  const dest = destination(shop);
-  if (!dest) return '';
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}`;
+  const t = target(shop);
+  return directionsUrl(t.lat, t.lng, t.label);
+}
+
+export function openShopMap(shop) {
+  const url = mapViewUrl(shop);
+  return url ? openExternal(url) : Promise.resolve(false);
+}
+
+export function openShopDirections(shop) {
+  const url = mapsDirectionsUrl(shop);
+  return url ? openExternal(url) : Promise.resolve(false);
 }

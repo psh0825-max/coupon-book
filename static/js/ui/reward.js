@@ -1,37 +1,43 @@
-// ui/reward.js — full-screen reward modal (reduced-motion aware, focus-managed).
+// ui/reward.js — full-screen reward modal for a completed stamp card
+// (reduced-motion aware, focus-managed).
 
 import { h, icon, frag } from '../core/h.js';
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
-/** showReward({ shopName, total }) — celebratory completion modal. */
-export function showReward({ shopName, total } = {}) {
+/** showReward({ shopName, total, onRenew }) — celebratory completion modal. */
+export function showReward({ shopName, total, onRenew } = {}) {
   const prevFocus = document.activeElement;
 
   const closeBtn = h('button', {
     class: 'btn btn-primary btn-block',
     id: 'reward-close',
     attrs: { type: 'button' }
-  }, '보상 받기');
+  }, '보상 받으러 가기');
+
+  const renewBtn = typeof onRenew === 'function'
+    ? h('button', { class: 'btn btn-ghost btn-block', attrs: { type: 'button' } }, '새 도장판으로 다시 시작')
+    : null;
 
   const card = h('div', { class: 'reward-card' },
-    h('div', { class: 'reward-badge' }, icon('trophy')),
-    h('div', { class: 'reward-eyebrow' }, 'REWARD UNLOCKED'),
-    h('h2', null, '완성! 🎉'),
+    h('div', { class: 'reward-badge', attrs: { 'aria-hidden': 'true' } }, icon('trophy')),
+    h('div', { class: 'reward-eyebrow' }, '도장판 완성'),
+    h('h2', null, '축하해요! 🎉'),
     h('p', null, frag(
       h('strong', null, shopName),
-      ` 쿠폰 ${total}개를`,
+      ` 도장 ${total}개를`,
       h('br'),
-      '모두 모았어요'
+      '모두 모았어요. 가게에서 보상을 받으세요.'
     )),
-    closeBtn
+    closeBtn,
+    renewBtn
   );
 
   const modal = h('div', {
     id: 'reward-modal',
     class: 'reward-modal',
-    attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-label': '보상 획득' }
+    attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-label': '도장판 완성' }
   }, card);
 
   const existing = document.getElementById('reward-modal');
@@ -73,6 +79,7 @@ export function showReward({ shopName, total } = {}) {
   document.addEventListener('keydown', onKeydown, true);
 
   closeBtn.addEventListener('click', close);
+  if (renewBtn) renewBtn.addEventListener('click', () => { close(); onRenew(); });
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
 
   requestAnimationFrame(() => {

@@ -1,22 +1,21 @@
-// services/reminders.js — expiry local reminders. Degrades gracefully when the
-// Notification API is unsupported or denied: always calls onDue so the app can
-// show an in-app badge/toast fallback.
+// services/reminders.js — expiry reminders on two tracks:
+//   1. on-open check (all runtimes): shops crossing a threshold today → onDue
+//      (in-app toast) and, where the runtime posts to a tray while the app is
+//      open (web Notification API / Android shell), a system notification.
+//   2. scheduled reminders (native only): every future D-n moment is registered
+//      with the OS (iOS UNUserNotificationCenter / Android AlarmManager) so the
+//      user is reminded even when the app is closed.
+// Degrades gracefully when notifications are unsupported or denied: onDue always
+// fires so the app can show the in-app fallback.
 
-import { daysUntil, dueReminders, lowBalancePasses, remainingValue } from '../domain.js';
+import { daysUntil, dueReminders, lowBalancePasses, remainingValue, reminderSchedule, reminderId } from '../domain.js';
 import { formatWon } from './format.js';
+import * as platform from '../platform.js';
 
-// Latest inputs, kept in module scope so the visibilitychange listener re-runs
-// checkDueNow with fresh data without re-binding.
-let _shops = [];
-let _settings = {};
-let _onDue = null;
-let _listenerAttached = false;
+let _scheduleTimer = null;
 
 export async function ensurePermission() {
-  if (typeof window !== 'undefined' && 'Notification' in window) {
-    return await Notification.requestPermission();
-  }
-  return 'unsupported';
+  return platform.requestNotifyPermission();
 }
 
 function todayKey() {
@@ -51,16 +50,22 @@ function markFired(key) {
   }
 }
 
-function expiryLabel(days) {
+export function expiryLabel(days) {
   if (days === 0) return '오늘 만료';
   return `D-${days}`;
 }
 
-export function checkDueNow(shops, settings, onDue) {
-  if (!settings || !settings.remindersEnabled) return;
+// iOS shows the in-app toast only: the scheduled D-n notification covers the
+// closed-app case and a tray banner while the app is open would just duplicate it.
+const postsWhileOpen = !platform.isIOS;
 
-  const granted = typeof window !== 'undefined' && 'Notification' in window
-    && Notification.permission === 'granted';
+/**
+ * checkDueNow(shops, settings, onDue) — fire each due reminder at most once per
+ * threshold per day. Async because native permission checks are.
+ */
+export async function checkDueNow(shops, settings, onDue) {
+  if (!settings || !settings.remindersEnabled) return;
+  const granted = postsWhileOpen ? await platform.canNotify() : false;
 
   const due = dueReminders(shops, settings.reminderDays);
   for (const shop of due) {
@@ -71,16 +76,10 @@ export function checkDueNow(shops, settings, onDue) {
     markFired(key);
 
     if (granted) {
-      try {
-        new Notification('쿠폰 만료 임박', {
-          body: `${shop.name} · ${expiryLabel(days)}`,
-          tag: `cb_reminder:${shop.id}:${days}`
-        });
-      } catch (e) {
-        // construction can throw on some platforms — fall through to onDue
-      }
+      platform.notify('쿠폰 만료 임박', `${shop.name} · ${expiryLabel(days)}`, {
+        id: reminderId(shop.id, days), tag: `cb_reminder:${shop.id}:${days}`
+      }).catch(() => {});
     }
-
     if (typeof onDue === 'function') onDue(shop, { type: 'expiry', days });
   }
 
@@ -92,33 +91,41 @@ export function checkDueNow(shops, settings, onDue) {
     const remaining = remainingValue(shop);
 
     if (granted) {
-      try {
-        new Notification('잔액 임박', {
-          body: `${shop.name} · ${formatWon(remaining)} 남음`,
-          tag: `cb_balalert:${shop.id}`
-        });
-      } catch (e) {
-        // construction can throw on some platforms — fall through to onDue
-      }
+      platform.notify('잔액 임박', `${shop.name} · ${formatWon(remaining)} 남음`, {
+        id: reminderId(shop.id, 'balance'), tag: `cb_balalert:${shop.id}`
+      }).catch(() => {});
     }
-
     if (typeof onDue === 'function') onDue(shop, { type: 'lowbalance', remaining });
   }
 }
 
+/**
+ * syncScheduledReminders(shops, settings) — replace the OS-level schedule with the
+ * full desired set (or clear it when reminders are off). Debounced: data changes
+ * arrive in bursts. No-op on the web (the service worker's periodic sync covers it).
+ */
+export function syncScheduledReminders(shops, settings) {
+  if (!platform.supportsScheduledReminders) return;
+  if (_scheduleTimer) clearTimeout(_scheduleTimer);
+  _scheduleTimer = setTimeout(async () => {
+    _scheduleTimer = null;
+    const enabled = !!(settings && settings.remindersEnabled);
+    const entries = enabled
+      ? reminderSchedule(shops, settings.reminderDays).map(({ shop, days, at }) => ({
+        id: reminderId(shop.id, days),
+        title: '쿠폰 만료 임박',
+        body: `${shop.name} · ${expiryLabel(days)} — 만료 전에 챙기세요`,
+        at
+      }))
+      : [];
+    try {
+      await platform.replaceScheduledReminders(entries);
+    } catch { /* best-effort */ }
+  }, 800);
+}
+
+/** syncReminders(shops, settings, onDue) — run the on-open check + refresh the schedule. */
 export function syncReminders(shops, settings, onDue) {
-  _shops = shops;
-  _settings = settings;
-  _onDue = onDue;
-
-  checkDueNow(_shops, _settings, _onDue);
-
-  if (!_listenerAttached && typeof document !== 'undefined') {
-    _listenerAttached = true;
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        checkDueNow(_shops, _settings, _onDue);
-      }
-    });
-  }
+  checkDueNow(shops, settings, onDue).catch(() => {});
+  syncScheduledReminders(shops, settings);
 }

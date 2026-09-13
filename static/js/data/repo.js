@@ -37,8 +37,9 @@ function numOrNull(value) {
 }
 
 export function normalizeShop(raw = {}) {
-  // Records predating the pass-kind concept have no `kind`; treat them as 'count'.
-  const kind = raw.kind === 'amount' ? 'amount' : 'count';
+  // 'stamp' | 'count' | 'amount'. Records predating the pass-kind concept have
+  // no `kind`; treat them as 'count'.
+  const kind = raw.kind === 'amount' || raw.kind === 'stamp' ? raw.kind : 'count';
   const total = clampInt(raw.totalCoupons, 1, 1000, 10);
   const used = clampInt(raw.usedCoupons, 0, total, 0);
   const totalAmount = clampInt(raw.totalAmount, 0, 100000000, 0); // up to 1억 KRW
@@ -150,16 +151,27 @@ export const Settings = {
 };
 
 // ── Demo / bulk ──────────────────────────────────────────────────────────────
-const DEMO_SHOPS = [
-  { name: '안양 스타 마사지', category: '마사지', address: '경기도 안양시 동안구 시민대로 1234', phone: '031-000-1200', expiresAt: '2026-12-31', memo: '100만원 충전권, 15만원 사용', lat: 37.4012, lng: 126.9523, kind: 'amount', totalAmount: 1000000, usedAmount: 150000, skin: 'sage' },
-  { name: '허브 커피 로스터스', category: '카페', address: '경기도 안양시 동안구 관악로 56', phone: '031-000-3400', expiresAt: '2026-09-30', memo: '원두 구매도 스탬프 적립 가능', lat: 37.4025, lng: 126.9530, totalCoupons: 12, skin: 'espresso' },
-  { name: '태양 찜질방', category: '찜질방', address: '경기도 안양시 만안구 성남대로 789', phone: '031-000-5600', expiresAt: '2026-08-31', memo: '주말 입장권은 쿠폰 제외 여부 확인', lat: 37.4000, lng: 126.9510, totalCoupons: 8, skin: 'sage' }
-];
+// Expiry dates are relative to "today" so the samples always look alive
+// (one imminent, one mid-term, one long-term) instead of already expired.
+function dateFromNow(days) {
+  const d = new Date(Date.now());
+  d.setDate(d.getDate() + days);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+export function demoShops() {
+  return [
+    { name: '허브 커피 로스터스', category: '카페', address: '경기도 안양시 동안구 관악로 56', phone: '031-000-3400', expiresAt: dateFromNow(45), memo: '도장 10개 모으면 아메리카노 1잔 무료. 원두 구매도 적립 가능', lat: 37.4025, lng: 126.9530, kind: 'stamp', totalCoupons: 10, usedCoupons: 7, code: 'HERB-2026-0917', skin: 'espresso' },
+    { name: '안양 스타 마사지', category: '마사지', address: '경기도 안양시 동안구 시민대로 1234', phone: '031-000-1200', expiresAt: dateFromNow(120), memo: '100만원 충전권, 15만원 사용', lat: 37.4012, lng: 126.9523, kind: 'amount', totalAmount: 1000000, usedAmount: 150000, skin: 'sage' },
+    { name: '태양 찜질방', category: '찜질방', address: '경기도 안양시 만안구 성남대로 789', phone: '031-000-5600', expiresAt: dateFromNow(12), memo: '주말 입장권은 쿠폰 제외 여부 확인', lat: 37.4000, lng: 126.9510, kind: 'count', totalCoupons: 8, usedCoupons: 2, skin: 'sage' }
+  ];
+}
 
 export async function seedDemoData() {
   const existing = await Shops.all();
   const names = new Set(existing.map((s) => s.name));
-  const missing = DEMO_SHOPS.filter((s) => !names.has(s.name));
+  const missing = demoShops().filter((s) => !names.has(s.name));
   for (const s of missing) await Shops.add(s);
   return missing.length;
 }

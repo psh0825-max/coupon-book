@@ -1,10 +1,10 @@
-/* ===== Header ===== */
+/* ===== Header (safe-area aware: status bar / Dynamic Island) ===== */
 .header {
-  height: var(--header-h);
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--tap) 1fr var(--tap);
   align-items: center;
-  justify-content: space-between;
-  padding: 0 max(16px, env(safe-area-inset-left)) 0 max(16px, env(safe-area-inset-right));
+  height: calc(var(--header-h) + var(--safe-top));
+  padding: var(--safe-top) max(12px, var(--safe-right)) 0 max(12px, var(--safe-left));
   background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -12,33 +12,52 @@
   z-index: 10;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  -webkit-user-select: none;
+  user-select: none;
 }
-.header-title {
-  font-size: 0.98rem;
-  font-weight: 800;
-  letter-spacing: 0;
-  background: var(--grad-brand);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.header-actions {
+.header-side {
+  width: var(--tap);
+  height: var(--tap);
   display: flex;
-  gap: 8px;
   align-items: center;
+  justify-content: center;
+}
+.header-btn {
+  width: var(--tap);
+  height: var(--tap);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--accent);
+  transition: background var(--transition-fast);
+}
+.header-btn:active { background: var(--bg-active); }
+.header-title {
+  font-size: 1.02rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* ===== Bottom Nav (5-slot, floating center add — 미영 스타일) ===== */
+/* ===== Bottom Nav (5-slot, floating center add) ===== */
 .bottom-nav {
   display: flex;
   align-items: stretch;
-  padding: 6px 8px calc(6px + var(--safe-bottom)) 8px;
-  background: color-mix(in srgb, var(--bg-surface) 92%, transparent);
+  min-height: calc(var(--nav-h) + var(--nav-safe));
+  padding: 6px max(8px, var(--safe-right)) calc(6px + var(--nav-safe)) max(8px, var(--safe-left));
+  background: color-mix(in srgb, var(--bg-surface) 94%, transparent);
   border-top: 1px solid var(--border);
   flex-shrink: 0;
   z-index: 10;
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+  -webkit-user-select: none;
+  user-select: none;
 }
 .nav-item {
   flex: 1;
@@ -47,9 +66,10 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 6px 0 4px;
+  min-height: 50px;
+  padding: 4px 0 2px;
   color: var(--text-muted);
-  font-size: 0.69rem;
+  font-size: 0.75rem;
   font-weight: 600;
   transition: color var(--transition-fast);
   border-radius: var(--radius-md);
@@ -64,8 +84,8 @@
   stroke-width: 2.4;
 }
 .nav-item svg {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   stroke-width: 2;
   fill: none;
   stroke: currentColor;
@@ -73,6 +93,7 @@
   stroke-linejoin: round;
   transition: stroke var(--transition-fast);
 }
+.nav-item:active { color: var(--accent); }
 
 /* Center add: circle floating above the bar, label tucked under. */
 .nav-add {
@@ -82,17 +103,17 @@
   align-items: center;
   justify-content: flex-end;
   gap: 2px;
-  padding: 0 0 4px;
+  padding: 0 0 2px;
   background: none;
   color: var(--text-muted);
-  font-size: 0.69rem;
+  font-size: 0.75rem;
   font-weight: 600;
   position: relative;
 }
 .nav-add-btn {
-  width: 50px;
-  height: 50px;
-  margin-top: -24px;
+  width: 54px;
+  height: 54px;
+  margin-top: -26px;
   border-radius: 50%;
   background: var(--grad-brand);
   display: flex;
@@ -106,8 +127,8 @@
 .nav-add.active .nav-add-btn { box-shadow: var(--shadow-float), 0 0 0 4px var(--accent-ripple); }
 .nav-add.active { color: var(--accent); font-weight: 800; }
 .nav-add-btn svg {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   stroke: #fff;
   fill: none;
   stroke-width: 2.6;
@@ -120,7 +141,8 @@
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding: 16px 16px 22px;
+  overscroll-behavior-y: contain;
+  padding: 14px max(16px, var(--safe-right)) 28px max(16px, var(--safe-left));
 }
 
 .section {
@@ -141,33 +163,51 @@
 }
 @media (min-width: 768px) {
   .grid-2 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (min-width: 1024px) {
-  .grid-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 /* ===== Page Layout Helpers ===== */
 .page-header {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 .page-header.compact {
-  margin-top: 18px;
-  margin-bottom: 12px;
+  margin-top: 22px;
+  margin-bottom: 10px;
 }
 .page-header h2 {
-  font-size: 1.28rem;
+  font-size: 1.35rem;
   font-weight: 800;
-  letter-spacing: 0;
-  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+  margin-bottom: 2px;
 }
 .page-header p {
   color: var(--text-muted);
   font-size: 0.9rem;
 }
+
+.section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 0 12px;
+}
+.section-head h2 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
+.section-head p { color: var(--text-muted); font-size: 0.85rem; margin-top: 2px; }
+.section-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: var(--tap);
+  padding: 8px 4px 8px 10px;
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  border-radius: var(--radius-md);
+}
+.section-action:active { background: var(--bg-active); }
 
 /* ===== Empty State ===== */
 .empty-state {
@@ -175,33 +215,42 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
+  padding: 36px 20px 40px;
   text-align: center;
   color: var(--text-muted);
 }
 .empty-state.wide {
   grid-column: 1 / -1;
 }
-.empty-state svg {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 16px;
+.empty-state svg.empty-icon {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 14px;
   opacity: 0.5;
   stroke: currentColor;
   fill: none;
   stroke-width: 1.5;
 }
 .empty-state h3 {
-  color: var(--text-secondary);
-  font-size: 1.1rem;
-  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: 6px;
 }
 .empty-state p {
-  font-size: 0.85rem;
-  max-width: 240px;
+  font-size: 0.9rem;
+  max-width: 280px;
+  line-height: 1.55;
+}
+.empty-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
-/* ===== App shell: phone-width column on large screens (미영 스타일) ===== */
+/* ===== App shell: phone-width column on large screens ===== */
 @media (min-width: 520px) {
   body {
     background:

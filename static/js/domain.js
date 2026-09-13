@@ -30,22 +30,37 @@ export function daysUntil(dateStr) {
 }
 
 // ── Pass kind ────────────────────────────────────────────────────────────────
-// Two kinds of paid pass: 'count' (횟수권, sessions) and 'amount' (금액권, KRW).
-// Records predating the concept have no `kind` and are treated as 'count'.
-export function isAmountKind(shop) { return shop && shop.kind === 'amount'; }
+// Three kinds: 'stamp' (도장판 — collect stamps, completion is a REWARD),
+// 'count' (횟수권 — prepaid sessions, completion is depletion) and 'amount'
+// (금액권 — prepaid KRW). Records predating the concept have no `kind` and are
+// treated as 'count'.
+export const PASS_KINDS = ['stamp', 'count', 'amount'];
+
+export function normalizeKind(kind) {
+  return kind === 'amount' || kind === 'stamp' ? kind : 'count';
+}
+
+export function kindLabel(kind) {
+  const k = normalizeKind(kind);
+  return k === 'stamp' ? '도장판' : k === 'amount' ? '금액권' : '횟수권';
+}
+
+export function isAmountKind(shop) { return !!shop && shop.kind === 'amount'; }
+export function isStampKind(shop) { return !!shop && shop.kind === 'stamp'; }
+/** count-like passes use totalCoupons/usedCoupons: 'count' (incl. legacy) and 'stamp'. */
 export function isCountKind(shop) { return !isAmountKind(shop); }
 
-/** generic total (won for amount, sessions for count) */
+/** generic total (won for amount, sessions/stamps otherwise) */
 export function passTotal(shop) {
   return isAmountKind(shop) ? num(shop.totalAmount) : num(shop.totalCoupons);
 }
 
-/** generic used (won for amount, sessions for count) */
+/** generic used (won for amount, sessions/stamps otherwise) */
 export function passUsed(shop) {
   return isAmountKind(shop) ? num(shop.usedAmount) : num(shop.usedCoupons);
 }
 
-/** generic numeric remaining (won or sessions), never negative */
+/** generic numeric remaining (won, sessions or stamps), never negative */
 export function remainingValue(shop) {
   return Math.max(0, passTotal(shop) - passUsed(shop));
 }
@@ -66,25 +81,29 @@ export function isExpiringSoon(shop, within = 30) {
   return days !== null && days >= 0 && days <= within;
 }
 
-/** Numeric remaining (won or sessions). Same as remainingValue for both kinds;
- *  kept as a named export so existing count callers keep working. */
+/** Numeric remaining. Same as remainingValue; kept as a named export. */
 export function remainingCount(shop) {
   return remainingValue(shop);
 }
 
-/** remaining as display text: amount -> '850,000원'; count -> '8회' */
+/** unit suffix for count-like passes: stamps '개', sessions '회' */
+export function unitLabel(shop) {
+  return isStampKind(shop) ? '개' : '회';
+}
+
+/** remaining as display text: amount '850,000원'; count '8회'; stamp '3개' */
 export function remainingLabel(shop) {
-  return isAmountKind(shop) ? formatWon(remainingValue(shop)) : `${remainingValue(shop)}회`;
+  return isAmountKind(shop) ? formatWon(remainingValue(shop)) : `${remainingValue(shop)}${unitLabel(shop)}`;
 }
 
-/** total as display text: amount -> '1,000,000원'; count -> '10회' */
+/** total as display text */
 export function totalLabel(shop) {
-  return isAmountKind(shop) ? formatWon(passTotal(shop)) : `${passTotal(shop)}회`;
+  return isAmountKind(shop) ? formatWon(passTotal(shop)) : `${passTotal(shop)}${unitLabel(shop)}`;
 }
 
-/** used as display text: amount -> '150,000원'; count -> '2회' */
+/** used as display text */
 export function usedLabel(shop) {
-  return isAmountKind(shop) ? formatWon(passUsed(shop)) : `${passUsed(shop)}회`;
+  return isAmountKind(shop) ? formatWon(passUsed(shop)) : `${passUsed(shop)}${unitLabel(shop)}`;
 }
 
 export function progressPercent(shop) {
@@ -95,8 +114,12 @@ export function progressPercent(shop) {
 
 /** { key, label, className, score } — lower score = higher priority. */
 export function couponStatus(shop) {
-  // A used-up paid pass is depleted ('소진'), not a prize to redeem.
-  if (isCompleted(shop)) return { key: 'done', label: '소진', className: 'success', score: 0 };
+  if (isCompleted(shop)) {
+    // A full stamp card is a prize to redeem; a used-up paid pass is just depleted.
+    return isStampKind(shop)
+      ? { key: 'done', label: '완성', className: 'success', score: 0 }
+      : { key: 'done', label: '소진', className: 'success', score: 0 };
+  }
   const days = daysUntil(shop.expiresAt);
   const remaining = remainingValue(shop);
   if (days !== null && days < 0) {
@@ -107,17 +130,23 @@ export function couponStatus(shop) {
     return { key: 'urgent', label, className: 'danger', score: 20 + days };
   }
   const total = passTotal(shop);
-  const lowBalance = isAmountKind(shop)
-    ? (total > 0 && remaining <= total * 0.2)
-    : remaining <= 2;
-  if (lowBalance) {
-    const label = isAmountKind(shop) ? `${formatWon(remaining)} 남음` : `${remaining}회 남음`;
-    return { key: 'low', label, className: 'warning', score: 40 + Math.min(remaining, 9) };
+  if (isStampKind(shop)) {
+    if (remaining <= 2) {
+      return { key: 'almost', label: `${remaining}개만 더`, className: 'accent', score: 40 + remaining };
+    }
+  } else {
+    const lowBalance = isAmountKind(shop)
+      ? (total > 0 && remaining <= total * 0.2)
+      : remaining <= 2;
+    if (lowBalance) {
+      const label = isAmountKind(shop) ? `${formatWon(remaining)} 남음` : `${remaining}회 남음`;
+      return { key: 'low', label, className: 'warning', score: 40 + Math.min(remaining, 9) };
+    }
   }
   if (days !== null && days <= 30) {
     return { key: 'soon', label: `만료 D-${days}`, className: 'warning', score: 60 + days };
   }
-  return { key: 'neutral', label: '이용 중', className: 'neutral', score: 100 + Math.min(remaining, 99) };
+  return { key: 'neutral', label: isStampKind(shop) ? '적립 중' : '이용 중', className: 'neutral', score: 100 + Math.min(remaining, 99) };
 }
 
 export function formatExpiry(dateStr) {
@@ -228,4 +257,40 @@ export function dueReminders(shops, reminderDays = [7, 3, 1]) {
     const days = daysUntil(shop.expiresAt);
     return days !== null && days >= 0 && thresholds.has(days);
   });
+}
+
+// ── Native reminder schedule ─────────────────────────────────────────────────
+export const REMINDER_HOUR = 9; // local time at which a D-n reminder fires
+
+/**
+ * Future reminder moments: for every non-completed shop with an expiry date and
+ * every threshold d, the calendar day (expiry − d) at REMINDER_HOUR local time,
+ * strictly after `now`. Sorted soonest first. Pure given `now`.
+ * -> [{ shopId, shop, days, at:number }]
+ */
+export function reminderSchedule(shops, reminderDays = [7, 3, 1], now = Date.now()) {
+  const out = [];
+  for (const shop of shops || []) {
+    if (isCompleted(shop)) continue;
+    const expiry = parseDate(shop.expiresAt);
+    if (!expiry) continue;
+    for (const d of reminderDays) {
+      const days = Number(d);
+      if (!Number.isFinite(days) || days < 0) continue;
+      const at = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate() - days, REMINDER_HOUR, 0, 0, 0).getTime();
+      if (at > now) out.push({ shopId: shop.id, shop, days, at });
+    }
+  }
+  return out.sort((a, b) => a.at - b.at);
+}
+
+/** Stable 31-bit positive integer id for a reminder (native ids must be int32). */
+export function reminderId(shopId, days) {
+  const s = `${shopId}:${days}`;
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) % 2147483647 || 1;
 }

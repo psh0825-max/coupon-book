@@ -1,18 +1,13 @@
 /* ===== Delight microinteractions ===== */
 
-const HAPTIC_PATTERNS = {
-  light: 10,
-  medium: 20,
-  heavy: [30, 40, 30]
-};
+import { haptic as platformHaptic } from '../platform.js';
 
-export function haptic(intensity = 'light') {
-  if (!navigator.vibrate) return;
-  try {
-    navigator.vibrate(HAPTIC_PATTERNS[intensity] || HAPTIC_PATTERNS.light);
-  } catch (e) {
-    // no-op if unsupported
-  }
+/**
+ * haptic(kind) — light | medium | heavy | success | warning | error | selection.
+ * Taptic Engine on iOS, vibration pattern elsewhere; silent when unsupported.
+ */
+export function haptic(kind = 'light') {
+  platformHaptic(kind);
 }
 
 const CONFETTI_COLORS = ['#34d399', '#22d3ee', '#818cf8', '#fbbf24', '#fb7185', '#a855f7'];

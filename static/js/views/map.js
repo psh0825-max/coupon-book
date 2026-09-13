@@ -1,18 +1,23 @@
 // views/map.js — Leaflet map of located shops: user marker + accuracy circle,
 // status-colored pins, floating selected-shop card, summary, nearby list.
+// Robust offline: tile failures show a friendly notice while pins and the list
+// keep working; tiles retry when the network returns.
 
 import * as Leaflet from '../../vendor/leaflet/leaflet-src.esm.js';
-import { h, clear } from '../core/h.js';
+import { h, clear, icon } from '../core/h.js';
 import { emptyState } from '../ui/components.js';
-import { couponStatus } from '../domain.js';
+import { couponStatus, remainingLabel } from '../domain.js';
 import { getCurrentPosition, haversine } from '../services/location.js';
-import { mapsDirectionsUrl } from '../services/maps.js';
+import { mapsDirectionsUrl, openShopDirections } from '../services/maps.js';
 import { formatDistance } from '../services/format.js';
 import { getCategoryIcon } from '../data/skins.js';
 import { showToast } from '../ui/toast.js';
+import { haptic } from '../services/fx.js';
 
 let _map = null;
 let _layer = null;
+let _tiles = null;
+let _onlineHandler = null;
 
 // A shop is plottable only when both coords are present (not null/'') AND finite.
 // Number(null) and Number('') are 0 (finite), so the null/'' checks must come
@@ -21,14 +26,23 @@ const hasCoords = (s) =>
   s.lat != null && s.lng != null && s.lat !== '' && s.lng !== '' &&
   Number.isFinite(Number(s.lat)) && Number.isFinite(Number(s.lng));
 
+function teardown() {
+  if (_map) {
+    try { _map.remove(); } catch { /* already detached */ }
+  }
+  _map = null;
+  _layer = null;
+  _tiles = null;
+  if (_onlineHandler) {
+    window.removeEventListener('online', _onlineHandler);
+    _onlineHandler = null;
+  }
+}
+
 export function render(ctx) {
   // Tear down any prior map instance so navigating away and back never leaks it
   // (including the no-located-shops early-return path below).
-  if (_map) {
-    try { _map.remove(); } catch { /* already detached */ }
-    _map = null;
-    _layer = null;
-  }
+  teardown();
 
   const { store, router } = ctx;
   const st = store.getState();
@@ -36,62 +50,82 @@ export function render(ctx) {
 
   const root = h('div', { class: 'map-page' });
 
-  const locateBtn = h('button', { class: 'btn btn-primary', attrs: { type: 'button' } }, '내 위치');
+  const locateBtn = h('button', { class: 'btn btn-primary', attrs: { type: 'button', 'aria-label': '내 위치로 이동' } }, icon('target', { size: 18 }), '내 위치');
   root.appendChild(h('div', { class: 'map-toolbar' },
     h('div', null,
-      h('div', { class: 'eyebrow' }, 'NEARBY SHOPS'),
-      h('h2', null, '내 주변 업체 지도'),
-      h('p', null, '위치가 저장된 쿠폰 업체를 현재 위치 기준으로 보여줘요.')
+      h('div', { class: 'eyebrow' }, '내 주변'),
+      h('h2', null, '가게 지도'),
+      h('p', null, located.length ? `위치가 저장된 가게 ${located.length}곳` : '위치를 저장한 가게가 여기에 표시돼요')
     ),
-    locateBtn
+    located.length ? locateBtn : null
   ));
 
-  const mapEl = h('div', { id: 'coupon-map', class: 'coupon-map' }, h('div', { class: 'map-loading' }, '지도를 준비하는 중...'));
+  const mapEl = h('div', { id: 'coupon-map', class: 'coupon-map', attrs: { role: 'region', 'aria-label': '지도' } }, h('div', { class: 'map-loading' }, '지도를 준비하는 중…'));
+  const offlineEl = h('div', { class: 'map-offline', attrs: { hidden: '', role: 'status' } },
+    icon('alert', { size: 20 }),
+    h('div', null,
+      h('strong', null, '지도 타일을 불러올 수 없어요'),
+      h('span', null, '오프라인이거나 연결이 불안정해요. 가게 목록과 길찾기는 계속 쓸 수 있어요.')
+    )
+  );
   const floatEl = h('div', { id: 'map-float', class: 'map-float', attrs: { hidden: '' } });
-  root.appendChild(h('div', { class: 'coupon-map-wrap' }, mapEl, floatEl));
+  root.appendChild(h('div', { class: 'coupon-map-wrap' }, mapEl, offlineEl, floatEl));
 
   const summaryEl = h('div', { class: 'map-summary', id: 'map-summary' });
-  const listEl = h('div', { class: 'nearby-shop-list', id: 'map-shop-list' });
+  const listEl = h('div', { class: 'nearby-shop-list', id: 'map-shop-list', attrs: { role: 'list' } });
   root.appendChild(summaryEl);
   root.appendChild(listEl);
 
   if (located.length === 0) {
     clear(mapEl);
+    mapEl.classList.add('is-empty');
     mapEl.appendChild(emptyState({
       icon: 'map',
-      title: '지도에 표시할 업체가 없어요',
-      desc: '업체 편집 화면에서 현재 위치를 저장하면 지도에 표시됩니다',
-      actions: [{ label: '업체 추가', className: 'btn-primary', onClick: () => router.navigate('add') }]
+      title: '지도에 표시할 가게가 없어요',
+      desc: '이용권을 추가하거나 편집할 때 "현재 위치로 저장"을 누르면 여기에 표시돼요',
+      actions: [{ label: '이용권 추가', className: 'btn-primary', onClick: () => router.navigate('add') }]
     }));
     return root;
   }
 
-  drawMap({ mapEl, floatEl, summaryEl, listEl, located, router });
-  locateBtn.addEventListener('click', () => drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, forceLocate: true }));
+  const args = { mapEl, offlineEl, floatEl, summaryEl, listEl, located, router };
+  drawMap(args);
+  locateBtn.addEventListener('click', () => { haptic('light'); drawMap({ ...args, forceLocate: true }); });
   return root;
 }
 
-async function drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, forceLocate = false }) {
+async function drawMap({ mapEl, offlineEl, floatEl, summaryEl, listEl, located, router, forceLocate = false }) {
   let userPos = null;
   let center = getShopsCenter(located);
-  let locationMessage = '등록 업체 중심으로 표시 중';
+  let locationMessage = '등록 가게 중심';
 
   try {
     userPos = await getCurrentPosition();
     center = [userPos.lat, userPos.lng];
     locationMessage = '현재 위치 기준';
   } catch (e) {
-    if (forceLocate) showToast('현재 위치를 가져올 수 없어요', 'danger');
+    if (forceLocate) showToast('현재 위치를 가져올 수 없어요. 위치 권한을 확인해 주세요.', 'danger');
   }
 
-  if (_map) { _map.remove(); _map = null; _layer = null; }
+  if (!mapEl.isConnected) return; // user navigated away while locating
+  teardown();
   clear(mapEl);
   _map = Leaflet.map(mapEl, { zoomControl: true, attributionControl: true }).setView(center, userPos ? 15 : 13);
-  Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  _tiles = Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(_map);
   _layer = Leaflet.layerGroup().addTo(_map);
+
+  // Offline-friendly: surface tile failures instead of a silent grey grid.
+  let tileErrors = 0;
+  let tileLoads = 0;
+  const showOffline = (on) => { offlineEl.hidden = !on; };
+  _tiles.on('tileerror', () => { tileErrors += 1; if (tileErrors >= 3 && tileLoads === 0) showOffline(true); });
+  _tiles.on('tileload', () => { tileLoads += 1; showOffline(false); });
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) showOffline(true);
+  _onlineHandler = () => { tileErrors = 0; showOffline(false); try { _tiles.redraw(); } catch { /* noop */ } };
+  window.addEventListener('online', _onlineHandler);
 
   let meMarker = null;
   if (userPos) {
@@ -109,27 +143,26 @@ async function drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, for
 
   function showFloat(shop, distance) {
     const dir = mapsDirectionsUrl(shop);
-    const remaining = shop.totalCoupons - (shop.usedCoupons || 0);
     floatEl.hidden = false;
     clear(floatEl);
     floatEl.appendChild(h('div', { class: 'map-float-info' },
-      h('div', { class: 'map-float-ico', dataset: { skin: shop.skin || 'midnight' } },
+      h('div', { class: 'map-float-ico', dataset: { skin: shop.skin || 'midnight' }, attrs: { 'aria-hidden': 'true' } },
         h('span', { class: 'category-icon' }, getCategoryIcon(shop.category))
       ),
       h('div', { class: 'map-float-text' },
         h('strong', null, shop.name),
-        h('span', null, `${distance !== null ? formatDistance(distance) + ' · ' : ''}${remaining}개 남음`)
+        h('span', null, `${distance !== null ? formatDistance(distance) + ' · ' : ''}${remainingLabel(shop)} 남음`)
       )
     ));
     floatEl.appendChild(h('div', { class: 'map-float-actions' },
       h('button', { class: 'btn btn-secondary', attrs: { type: 'button' }, on: { click: () => router.navigate('detail', { id: shop.id }) } }, '상세'),
-      dir ? h('a', { class: 'btn btn-primary', attrs: { href: dir, target: '_blank', rel: 'noopener' } }, '길찾기') : null
+      dir ? h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => openShopDirections(shop) } }, '길찾기') : null
     ));
   }
 
   nearby.forEach(({ shop, distance }) => {
-    Leaflet.marker([Number(shop.lat), Number(shop.lng)], { icon: createMapIcon(couponStatus(shop).className) })
-      .addTo(_layer).on('click', () => showFloat(shop, distance));
+    Leaflet.marker([Number(shop.lat), Number(shop.lng)], { icon: createMapIcon(couponStatus(shop).className), title: shop.name })
+      .addTo(_layer).on('click', () => { haptic('selection'); showFloat(shop, distance); });
   });
   if (nearby.length) showFloat(nearby[0].shop, nearby[0].distance);
 
@@ -139,27 +172,22 @@ async function drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, for
     if (!_map) return;
     _map.invalidateSize();
     if (forceLocate && userPos) {
-      // '내 위치' pressed with a known position: pan+zoom straight to the user
-      // and surface the popup so the pulsing dot is unmistakable.
       _map.setView([userPos.lat, userPos.lng], 16);
       meMarker?.openPopup();
     } else {
-      // Initial render (or locate-failed): frame every shop plus the user.
       const bounds = Leaflet.latLngBounds(located.map((shop) => [Number(shop.lat), Number(shop.lng)]));
       if (userPos) bounds.extend([userPos.lat, userPos.lng]);
       _map.fitBounds(bounds.pad(0.2), { maxZoom: 16 });
     }
   }
-  // Once now (no long blank), and again after layout flushes so the final fit
-  // uses real dimensions. Calling fitBounds/setView twice is harmless.
   applyView();
   setTimeout(applyView, 120);
 
   const visibleNearby = nearby.filter((item) => item.distance === null || item.distance <= 3000);
   clear(summaryEl);
-  summaryEl.appendChild(h('div', null, h('strong', null, String(nearby.length)), h('span', null, '지도 표시 업체')));
-  summaryEl.appendChild(h('div', null, h('strong', null, String(visibleNearby.length)), h('span', null, userPos ? '3km 이내' : '목록 표시')));
-  summaryEl.appendChild(h('div', null, h('strong', null, locationMessage), h('span', null, userPos ? '위치 권한 허용됨' : '위치 권한 필요')));
+  summaryEl.appendChild(h('div', null, h('strong', null, String(nearby.length)), h('span', null, '지도 표시')));
+  summaryEl.appendChild(h('div', null, h('strong', null, String(visibleNearby.length)), h('span', null, userPos ? '3km 이내' : '목록')));
+  summaryEl.appendChild(h('div', null, h('strong', null, locationMessage), h('span', null, userPos ? '위치 허용됨' : '위치 권한 필요')));
 
   renderNearbyList(listEl, nearby, router);
 }
@@ -171,7 +199,7 @@ function getShopsCenter(shops) {
 }
 
 function createMapIcon(type) {
-  const safe = ['me', 'success', 'warning', 'danger', 'neutral'].includes(type) ? type : 'neutral';
+  const safe = ['me', 'success', 'warning', 'danger', 'neutral', 'accent'].includes(type) ? type : 'neutral';
   return Leaflet.divIcon({
     className: `coupon-map-pin ${safe}`,
     html: '<span></span>',
@@ -194,9 +222,9 @@ function renderNearbyList(listEl, nearby, router) {
       h('div', null, h('strong', null, shop.name), h('span', null, shop.address || shop.category)),
       h('em', null, distance !== null ? formatDistance(distance) : status.label)
     );
-    listEl.appendChild(h('div', { class: 'nearby-shop-row' },
+    listEl.appendChild(h('div', { class: 'nearby-shop-row', attrs: { role: 'listitem' } },
       main,
-      dir ? h('a', { class: 'nearby-dir', attrs: { href: dir, target: '_blank', rel: 'noopener', 'aria-label': '길찾기' } }, '길찾기') : null
+      dir ? h('button', { class: 'nearby-dir', attrs: { type: 'button', 'aria-label': `${shop.name} 길찾기` }, on: { click: () => openShopDirections(shop) } }, icon('navigation', { size: 14 }), '길찾기') : null
     ));
   });
 }

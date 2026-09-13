@@ -1,109 +1,131 @@
 // ui/components.js — reusable presentational pieces. Return DOM Nodes built via h.
 // All status/expiry/progress math comes from domain.js (never recomputed here).
 
-import { h, icon, frag } from '../core/h.js';
+import { h, icon } from '../core/h.js';
 import {
-  couponStatus, remainingCount, remainingValue, progressPercent, formatExpiry, isCompleted,
-  isAmountKind, isCountKind, passTotal, passUsed, remainingLabel, totalLabel, usedLabel
+  couponStatus, remainingValue, progressPercent, formatExpiry, isCompleted,
+  isAmountKind, isStampKind, passTotal, passUsed, remainingLabel, totalLabel, usedLabel, kindLabel
 } from '../domain.js';
-import { formatDate, formatRelative, formatWon } from '../services/format.js';
+import { formatDate, formatRelative, formatWon, formatDistance } from '../services/format.js';
 import { SKINS, getCategoryIcon } from '../data/skins.js';
 import { illust } from './art.js';
 
-/** stampBoard(total, used) — depletion model: VALID tickets cluster at the start
- *  and disappear (become SPENT) as `used` grows. The next ticket to be torn off
- *  is highlighted. */
-export function stampBoard(total, used) {
-  const remaining = Math.max(0, total - used);
-  const stamps = [];
+/**
+ * stampBoard(total, used, { reward }) — collect model: filled cells are stamps
+ * already collected / sessions already used, empty cells are still to come, the
+ * next cell pulses. With `reward` the last cell shows a gift (도장판 완성 보상).
+ */
+export function stampBoard(total, used, { reward = false } = {}) {
+  const cells = [];
+  const cols = total <= 5 ? total : total % 6 === 0 && total <= 12 ? 6 : 5;
   for (let i = 0; i < total; i++) {
-    const valid = i < remaining;
-    const classes = ['stamp', valid ? 'valid' : 'spent'];
-    if (valid && i === remaining - 1) classes.push('next'); // next ticket to be used
-    stamps.push(h('div', { class: classes.join(' ') }, valid ? icon('check') : null));
+    const filled = i < used;
+    const isLast = i === total - 1;
+    const classes = ['stamp', filled ? 'filled' : 'empty'];
+    if (!filled && i === used) classes.push('next');
+    if (reward && isLast) classes.push('reward');
+    const content = filled
+      ? icon('check')
+      : (reward && isLast ? icon('gift') : h('span', { class: 'stamp-n' }, String(i + 1)));
+    cells.push(h('div', { class: classes.join(' '), attrs: { 'aria-hidden': 'true' } }, content));
   }
-  return h('div', { class: 'stamp-board' }, stamps);
+  return h('div', {
+    class: 'stamp-board',
+    style: { '--cols': String(cols) },
+    attrs: { role: 'img', 'aria-label': `${total}개 중 ${used}개 ${reward ? '적립' : '사용'}` }
+  }, cells);
+}
+
+/** Small progress bar (0..100) with success tint when full. */
+export function progressBar(percent) {
+  return h('div', { class: 'progress-bar', attrs: { 'aria-hidden': 'true' } },
+    h('div', { class: `progress-fill${percent >= 100 ? ' success' : ''}`, style: { width: `${percent}%` } })
+  );
 }
 
 /** shopCard(shop, { onOpen, onQuickUse }) — keyboard-activatable card. */
 export function shopCard(shop, { onOpen, onQuickUse } = {}) {
   const status = couponStatus(shop);
   const percent = progressPercent(shop);
-  const complete = isCompleted(shop) || remainingValue(shop) <= 0;
-  const categoryText = shop.category + (shop.expiresAt ? ` · ${formatExpiry(shop.expiresAt)}` : '');
+  const remaining = remainingValue(shop);
+  const complete = isCompleted(shop) || remaining <= 0;
+  const stamp = isStampKind(shop);
+  const amount = isAmountKind(shop);
+  const subParts = [shop.category, kindLabel(shop.kind)];
+  if (shop.expiresAt) subParts.push(formatExpiry(shop.expiresAt));
 
+  const quickLabel = stamp ? '도장' : '사용';
   const quickUse = h('button', {
     class: 'card-quick-use',
     attrs: {
       type: 'button', 'data-action': 'quick-use',
-      'aria-label': `${shop.name} 이용권 사용`,
+      'aria-label': `${shop.name} ${stamp ? '도장 찍기' : '이용권 사용'}`,
       disabled: complete ? '' : null
     },
-    on: {
-      click: () => { if (!complete) onQuickUse?.(shop); }
-    }
-  }, '사용');
+    on: { click: () => { if (!complete) onQuickUse?.(shop); } }
+  }, complete ? (stamp ? '완성' : '소진') : quickLabel);
 
-  const hintText = complete
-    ? '모두 사용했어요'
-    : isAmountKind(shop)
-      ? `${remainingLabel(shop)} 남아있어요`
-      : `${remainingValue(shop)}회 남았어요`;
-
-  // Stamp board only makes sense for a count pass with a small, countable total.
-  const showStamps = isCountKind(shop) && passTotal(shop) <= 30;
+  let body;
+  if (stamp) {
+    const hint = complete
+      ? '도장판 완성! 보상을 받으세요'
+      : `${remaining}개 더 모으면 보상`;
+    body = h('div', { class: 'card-body' },
+      stampBoard(passTotal(shop), passUsed(shop), { reward: true }),
+      h('div', { class: 'card-meta' },
+        h('span', { class: `reward-hint${complete ? ' done' : ''}` }, hint),
+        h('span', { class: 'card-count' }, `${passUsed(shop)} / ${passTotal(shop)}`)
+      )
+    );
+  } else {
+    body = h('div', { class: 'card-body' },
+      h('div', { class: 'card-balance' },
+        h('strong', null, complete ? (amount ? '0원' : '0회') : remainingLabel(shop)),
+        h('span', null, complete ? '모두 사용했어요' : '남음')
+      ),
+      progressBar(percent),
+      h('div', { class: 'card-meta' },
+        h('span', null, `총 ${totalLabel(shop)}`),
+        h('span', null, `사용 ${usedLabel(shop)}`)
+      )
+    );
+  }
 
   const cardMain = h('button', {
     class: 'card-main',
-    attrs: { type: 'button', 'aria-label': `${shop.name} ${status.label}, 상세 보기` },
+    attrs: { type: 'button', 'aria-label': `${shop.name}, ${status.label}, 상세 보기` },
     on: { click: () => onOpen?.(shop) }
   },
-    h('div', { class: 'card-header' },
-      h('div', { class: 'card-icon' },
+    h('div', { class: 'card-top' },
+      h('div', { class: 'card-icon', attrs: { 'aria-hidden': 'true' } },
         h('span', { class: 'category-icon' }, getCategoryIcon(shop.category))
       ),
       h('div', { class: 'card-info' },
         h('h3', null, shop.name),
-        h('div', { class: 'category' }, categoryText)
+        h('div', { class: 'card-sub' }, subParts.join(' · '))
       ),
-      h('div', { class: `badge badge-${status.className}` }, status.label)
+      h('span', { class: `badge badge-${status.className}` }, status.label)
     ),
-    h('div', { class: 'card-body' },
-      h('div', { class: 'card-progress-meta' },
-        h('span', null, `${percent}%`),
-        h('span', null, `${remainingLabel(shop)} 남음`)
-      ),
-      h('div', { class: 'progress-bar' },
-        h('div', {
-          class: `progress-fill${percent >= 100 ? ' success' : ''}`,
-          style: { width: `${percent}%` }
-        })
-      ),
-      h('div', { class: `reward-hint${complete ? ' done' : ''}` }, hintText),
-      showStamps ? stampBoard(passTotal(shop), passUsed(shop)) : null
-    )
+    body
   );
 
-  const card = h('div', {
+  const footerText = shop.memo ? shop.memo : (shop.address || shop.phone || '');
+  return h('div', {
     class: `card${complete ? ' is-complete' : ''}`,
-    dataset: { skin: shop.skin || 'midnight', id: shop.id }
+    dataset: { skin: shop.skin || 'midnight', id: shop.id, kind: shop.kind || 'count' }
   },
     cardMain,
     h('div', { class: 'card-footer' },
-      h('span', null, shop.phone ? shop.phone : `${usedLabel(shop)} / ${totalLabel(shop)} 사용`),
+      h('span', null, footerText),
       quickUse
     )
   );
-  return card;
 }
 
-/** summaryCard(value, label, accent) — stat tile. */
-export function summaryCard(value, label, accent) {
-  return h('div', {
-    class: 'summary-card',
-    style: accent ? { '--accent': accent } : null
-  },
-    h('div', { class: 'value', style: accent ? { color: accent } : null }, value),
+/** summaryCard(value, label, tone) — stat tile. tone: 'accent'|'warning'|'success'|'' */
+export function summaryCard(value, label, tone = '') {
+  return h('div', { class: `summary-card${tone ? ' tone-' + tone : ''}` },
+    h('div', { class: 'value' }, String(value)),
     h('div', { class: 'label' }, label)
   );
 }
@@ -112,9 +134,9 @@ export function summaryCard(value, label, accent) {
 export function timelineItem(log, shopName) {
   const deduct = log.amount != null
     ? `${formatWon(log.amount)} 사용`
-    : log.count != null ? `${log.count}회 사용` : null;
+    : log.count != null ? `${log.count}회` : null;
   return h('div', { class: 'timeline-item success' },
-    h('div', { class: 'timeline-dot' }),
+    h('div', { class: 'timeline-dot', attrs: { 'aria-hidden': 'true' } }),
     h('div', { class: 'timeline-time' }, `${formatDate(log.usedAt)} · ${formatRelative(log.usedAt)}`),
     h('div', { class: 'timeline-title' }, shopName),
     deduct ? h('div', { class: 'timeline-deduct' }, deduct) : null,
@@ -124,63 +146,50 @@ export function timelineItem(log, shopName) {
 
 /** nearbyCard(shop, distance, onClick) — geofence proximity entry. */
 export function nearbyCard(shop, distance, onClick) {
-  return h('div', {
+  return h('button', {
     class: 'nearby-card',
+    attrs: { type: 'button' },
     on: onClick ? { click: onClick } : null
   },
-    h('div', { class: 'icon', style: { background: 'var(--accent)' } }, icon('location')),
+    h('div', { class: 'icon', attrs: { 'aria-hidden': 'true' } }, icon('location')),
     h('div', { class: 'info' },
       h('h4', null, shop.name),
-      h('p', null, `${shop.address || ''} · ${Math.round(distance)}m`)
+      h('p', null, `${shop.address || shop.category} · ${formatDistance(distance)}`)
     ),
-    h('div', { class: 'badge badge-accent' }, `${remainingCount(shop)}개 남음`)
+    h('div', { class: 'badge badge-accent' }, `${remainingLabel(shop)} 남음`)
   );
 }
 
-/** adBanner({ slotId }) — free-tier ad placeholder slot. */
-export function adBanner({ slotId } = {}) {
-  return h('div', {
-    class: 'ad-banner',
-    id: slotId || null,
-    attrs: { role: 'complementary', 'aria-label': '광고' }
-  },
-    h('span', { class: 'ad-badge' }, 'AD'),
-    h('div', { class: 'ad-ico' }, icon('megaphone')),
-    h('div', { class: 'ad-body' },
-      h('h4', null, '광고 영역'),
-      h('p', null, '무료 버전을 지원하는 광고가 표시됩니다')
-    ),
-    icon('chevron-right', { class: 'ad-chevron' })
-  );
-}
-
-/** skinSelector(currentSkin, onSelect) — swatch grid; selecting updates highlight. */
+/** skinSelector(currentSkin, onSelect) — horizontal swatch row (role=radiogroup). */
 export function skinSelector(currentSkin, onSelect) {
-  const grid = h('div', { class: 'skin-grid' });
+  const row = h('div', { class: 'skin-row', attrs: { role: 'radiogroup', 'aria-label': '카드 색상' } });
   Object.entries(SKINS).forEach(([key, skin]) => {
-    const option = h('div', {
+    const option = h('button', {
       class: `skin-option${key === currentSkin ? ' selected' : ''}`,
       dataset: { skin: key },
+      attrs: { type: 'button', role: 'radio', 'aria-checked': key === currentSkin ? 'true' : 'false', 'aria-label': skin.name },
       on: {
         click: () => {
-          grid.querySelectorAll('.skin-option').forEach((el) => el.classList.remove('selected'));
+          row.querySelectorAll('.skin-option').forEach((el) => {
+            el.classList.remove('selected');
+            el.setAttribute('aria-checked', 'false');
+          });
           option.classList.add('selected');
+          option.setAttribute('aria-checked', 'true');
           onSelect?.(key);
         }
       }
     },
-      h('div', { class: 'swatch', style: { background: skin.color } }),
-      h('div', { class: 'name' }, skin.name),
-      h('div', { class: 'desc' }, skin.desc)
+      h('span', { class: 'swatch', attrs: { 'aria-hidden': 'true' } }),
+      h('span', { class: 'name' }, skin.name)
     );
-    grid.appendChild(option);
+    row.appendChild(option);
   });
-  return grid;
+  return row;
 }
 
-/** emptyState({ icon, title, desc, actions }) — placeholder with optional CTAs. */
+/** emptyState({ icon, art, title, desc, actions }) — placeholder with optional CTAs. */
 export function emptyState({ icon: iconName, art, title, desc, actions = [] } = {}) {
-  // Prefer a brand illustration when the caller names one; icon is the fallback.
   let visual = art ? illust(art) : null;
   if (!visual) {
     visual = icon(iconName || 'gift', { size: 48 });
@@ -199,5 +208,98 @@ export function emptyState({ icon: iconName, art, title, desc, actions = [] } = 
           }, a.label))
         )
       : null
+  );
+}
+
+/** sectionHeader(title, subtitle?, action?) — action: { label, onClick } */
+export function sectionHeader(title, subtitle, action) {
+  return h('div', { class: 'section-head' },
+    h('div', null,
+      h('h2', null, title),
+      subtitle ? h('p', null, subtitle) : null
+    ),
+    action ? h('button', {
+      class: 'section-action', attrs: { type: 'button' }, on: { click: action.onClick }
+    }, action.label, icon('chevron-right', { size: 16 })) : null
+  );
+}
+
+/**
+ * chipRow(items, { value, onChange, ariaLabel, multiple }) — single-select chip
+ * group (aria-pressed). items: [{ value, label }]. Returns the row element with a
+ * `.setValue(v)` helper for external updates.
+ */
+export function chipRow(items, { value, onChange, ariaLabel } = {}) {
+  let current = value;
+  const row = h('div', { class: 'chip-row', attrs: { role: 'group', 'aria-label': ariaLabel || '' } });
+  const buttons = items.map((it) => h('button', {
+    class: `chip${it.value === current ? ' active' : ''}`,
+    dataset: { value: String(it.value) },
+    attrs: { type: 'button', 'aria-pressed': it.value === current ? 'true' : 'false' },
+    on: { click: () => { row.setValue(it.value); onChange?.(it.value); } }
+  }, it.label));
+  buttons.forEach((b) => row.appendChild(b));
+  row.setValue = (v) => {
+    current = v;
+    buttons.forEach((b) => {
+      const on = b.dataset.value === String(v);
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  };
+  return row;
+}
+
+/** toggle(initial, onToggle) — accessible switch (role=switch). */
+export function toggle(initial, onToggle, { label } = {}) {
+  let state = !!initial;
+  const el = h('button', {
+    class: `toggle-switch${state ? ' active' : ''}`,
+    attrs: { type: 'button', role: 'switch', 'aria-checked': state ? 'true' : 'false', 'aria-label': label || null }
+  });
+  el.addEventListener('click', () => {
+    state = !state;
+    el.classList.toggle('active', state);
+    el.setAttribute('aria-checked', state ? 'true' : 'false');
+    onToggle?.(state);
+  });
+  el.setState = (next) => {
+    state = !!next;
+    el.classList.toggle('active', state);
+    el.setAttribute('aria-checked', state ? 'true' : 'false');
+  };
+  return el;
+}
+
+/**
+ * listRow({ title, subtitle, icon, trailing, onClick, danger, disabled }) — iOS-style
+ * grouped-list row. `trailing` is a Node (e.g. a toggle) or text; rows with onClick
+ * render as buttons with a chevron.
+ */
+export function listRow({ title, subtitle, icon: iconName, trailing, onClick, danger = false, disabled = false } = {}) {
+  const inner = [
+    iconName ? h('span', { class: 'row-icon', attrs: { 'aria-hidden': 'true' } }, icon(iconName, { size: 20 })) : null,
+    h('span', { class: 'row-text' },
+      h('span', { class: 'row-title' }, title),
+      subtitle ? h('span', { class: 'row-sub' }, subtitle) : null
+    ),
+    trailing instanceof Node ? trailing : (trailing ? h('span', { class: 'row-trailing' }, String(trailing)) : null),
+    onClick ? icon('chevron-right', { size: 18, class: 'row-chevron' }) : null
+  ];
+  if (onClick) {
+    return h('button', {
+      class: `list-row${danger ? ' danger' : ''}`,
+      attrs: { type: 'button', disabled: disabled ? '' : null },
+      on: { click: onClick }
+    }, inner);
+  }
+  return h('div', { class: `list-row${danger ? ' danger' : ''}` }, inner);
+}
+
+/** listGroup(title?, ...rows) — rounded container for listRow items. */
+export function listGroup(title, ...rows) {
+  return h('section', { class: 'list-group' },
+    title ? h('h3', { class: 'list-group-title' }, title) : null,
+    h('div', { class: 'list-group-body' }, rows)
   );
 }

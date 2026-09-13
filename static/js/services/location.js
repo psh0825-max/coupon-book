@@ -1,5 +1,8 @@
-// services/location.js — geolocation + dwell-based geofence. Self-contained;
-// ported verbatim in behavior from the original static/js/location.js.
+// services/location.js — geolocation + dwell-based geofence. Position access goes
+// through platform.js (Capacitor Geolocation on iOS, navigator.geolocation
+// elsewhere); the geofence math is runtime-independent.
+
+import * as platform from '../platform.js';
 
 export const EARTH_RADIUS = 6371000; // meters
 
@@ -12,22 +15,18 @@ export function haversine(lat1, lon1, lat2, lon2) {
   return EARTH_RADIUS * c;
 }
 
+/** getCurrentPosition() -> Promise<{lat,lng,accuracy}> (may prompt for permission) */
 export function getCurrentPosition() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Geolocation not supported'));
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
-      err => reject(err),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
-    );
-  });
+  return platform.getCurrentPosition();
+}
+
+/** hasPermission() -> Promise<boolean> — never prompts. */
+export function hasPermission() {
+  return platform.hasLocationPermission();
 }
 
 /* ===== Location Watch System ===== */
-export let _watchId = null;
+export let _watch = null;
 export let _checkInterval = null;
 export let _visited = new Map(); // shopId -> {enteredAt, lastSeen, confirmed}
 export let _callbacks = null;
@@ -47,19 +46,13 @@ export async function startLocationWatch(shops, onNotify) {
   // periodic check every 30s
   _checkInterval = setInterval(() => _checkLocation(shops), 30000);
 
-  // also use watchPosition for more responsive updates
-  if (navigator.geolocation) {
-    _watchId = navigator.geolocation.watchPosition(
-      () => _checkLocation(shops),
-      () => {},
-      { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
-    );
-  }
+  // also watch the position for more responsive updates
+  _watch = platform.watchPosition(() => _checkLocation(shops), () => {});
 }
 
 export function stopLocationWatch() {
   if (_checkInterval) { clearInterval(_checkInterval); _checkInterval = null; }
-  if (_watchId !== null) { navigator.geolocation.clearWatch(_watchId); _watchId = null; }
+  if (_watch) { _watch.stop(); _watch = null; }
   _visited.clear();
 }
 

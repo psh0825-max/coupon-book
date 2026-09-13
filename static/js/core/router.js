@@ -7,9 +7,9 @@
 const ROOT_PAGES = ['home', 'history', 'map', 'settings'];
 
 const TITLES = {
-  home: 'Coupon Book',
-  list: '내 쿠폰',
-  map: '주변 지도',
+  home: '쿠폰북',
+  list: '내 이용권',
+  map: '지도',
   add: '이용권',
   detail: '상세',
   settings: '설정',

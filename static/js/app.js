@@ -6,27 +6,33 @@ import { createRouter } from './core/router.js';
 import { h } from './core/h.js';
 
 import { Shops, Logs, Settings, seedDemoData, clearAll } from './data/repo.js';
-import { remainingCount, remainingValue, remainingLabel, isAmountKind } from './domain.js';
+import {
+  remainingValue, remainingLabel, isAmountKind, isStampKind, passTotal, isCompleted
+} from './domain.js';
 import { formatWon, groupDigits, parseNumber } from './services/format.js';
 
 import {
-  setNotifySettings, startLocationWatch, stopLocationWatch, getCurrentPosition
+  setNotifySettings, startLocationWatch, stopLocationWatch, getCurrentPosition, hasPermission as hasLocationPermission
 } from './services/location.js';
-import { syncReminders, ensurePermission } from './services/reminders.js';
+import { syncReminders, checkDueNow, ensurePermission, expiryLabel } from './services/reminders.js';
 import {
   registerSW, applyUpdate, initInstallPrompt, canInstall, promptInstall, isStandalone, isIos
 } from './services/pwa.js';
 import { exportData as backupExport, importData as backupImport } from './services/backup.js';
+import { scheduleSnapshot, flushSnapshot, restoreIfEmpty } from './services/snapshot.js';
 import { requestPersistentStorage } from './services/storage.js';
-import { haptic } from './services/fx.js';
-import { mountAds } from './services/ads.js';
+import { haptic, celebrate } from './services/fx.js';
+import { initAds, retryAds } from './services/ads.js';
+import * as platform from './platform.js';
 
 import { showToast } from './ui/toast.js';
 import { showSheet, showConfirm, closeOverlay, closeOverlayFromPop } from './ui/overlay.js';
+import { showReward } from './ui/reward.js';
 
 import * as Home from './views/home.js';
 import * as List from './views/list.js';
 import * as Detail from './views/detail.js';
+import { renewPrefill } from './views/detail.js';
 import * as Edit from './views/edit.js';
 import * as MapView from './views/map.js';
 import * as History from './views/history.js';
@@ -42,11 +48,15 @@ const store = createStore({
   ready: false
 });
 
+let booted = false;
+
 async function refresh() {
   const [shops, logs, settings] = await Promise.all([
     Shops.all(), Logs.all(), Settings.getAll()
   ]);
   store.setState({ shops, logs, settings });
+  // Every persisted change flows through here → keep the durability snapshot fresh.
+  if (booted) scheduleSnapshot();
 }
 
 // ── Service resync ───────────────────────────────────────────────────────────
@@ -78,17 +88,18 @@ function onGeofence(notifyList) {
         h('h4', null, shop.name),
         h('p', null, `${shop.address || ''}${distance != null ? ` · ${Math.round(distance)}m` : ''}`)
       ),
-      h('div', { class: 'badge badge-accent' }, `${remainingCount(shop)}개 남음`)
+      h('div', { class: 'badge badge-accent' }, `${remainingLabel(shop)} 남음`)
     ))
   );
-  showSheet({ title: '근처 가게 방문 감지', body: list });
+  haptic('medium');
+  showSheet({ title: '근처에 쿠폰이 있어요', body: list });
 }
 
 function onReminderDue(shop, info) {
   if (info.type === 'lowbalance') {
     showToast(`${shop.name} · 잔액 ${formatWon(info.remaining)} 남음`, 'danger');
   } else {
-    showToast(`${shop.name} · ${info.days === 0 ? '오늘 만료' : 'D-' + info.days} 만료 임박`, 'danger');
+    showToast(`${shop.name} · ${expiryLabel(info.days)} 만료 임박`, 'danger');
   }
 }
 
@@ -108,15 +119,30 @@ function onUpdateAvailable(reg) {
 // clamp to an integer range; NaN propagates so callers can guard with `if (!v)`.
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
+// Attach a position to a usage log only when location alerts are on AND the OS
+// permission is already granted — using a coupon must never trigger the prompt.
+async function optionalPosition() {
+  try {
+    if (!store.getState().settings.notifyEnabled) return null;
+    if (!(await hasLocationPermission())) return null;
+    const pos = await getCurrentPosition();
+    return { lat: pos.lat, lng: pos.lng };
+  } catch {
+    return null;
+  }
+}
+
 // ── Actions ──────────────────────────────────────────────────────────────────
 const actions = {
-  // Kind-aware "use": deduct won (amount pass) or sessions (count pass). A used-up
-  // paid pass is depleted, not a prize — no confetti/reward here.
+  // Kind-aware "use": add a stamp (stamp card), deduct sessions (count pass) or
+  // won (amount pass). Completing a stamp card is a reward moment; a used-up
+  // paid pass is just depleted.
   async usePass(shopId, opts = {}) {
     const shop = store.getState().shops.find((s) => s.id === shopId);
     if (!shop) return;
+    const stamp = isStampKind(shop);
     if (remainingValue(shop) <= 0) {
-      showToast('남은 이용권이 없어요', 'danger');
+      showToast(stamp ? '도장판이 이미 가득 찼어요' : '남은 이용권이 없어요', 'danger');
       return;
     }
     const updated = { ...shop };
@@ -131,22 +157,32 @@ const actions = {
       updated.usedCoupons = (shop.usedCoupons || 0) + n;
       logFields = { count: n };
     }
-    let pos = null;
-    try { pos = await getCurrentPosition(); } catch { /* location optional */ }
+    const location = await optionalPosition();
     await Shops.update(updated);
     await Logs.add({
       shopId,
       note: opts.note || undefined,
-      location: pos ? { lat: pos.lat, lng: pos.lng } : undefined,
+      location: location || undefined,
       ...logFields
     });
     await refresh();
     const depleted = remainingValue(updated) <= 0;
     // One-tap undo on the toast: quick uses shouldn't need detail + confirm.
     const undo = { actionLabel: '되돌리기', onAction: () => actions.undoLastCoupon(shopId, { confirm: false }) };
-    if (depleted) {
+    if (stamp && depleted) {
+      haptic('success');
+      celebrate();
+      showReward({
+        shopName: updated.name,
+        total: passTotal(updated),
+        onRenew: () => router.navigate('add', { prefill: renewPrefill(updated) })
+      });
+    } else if (depleted) {
       haptic('medium');
       showToast('이용권을 모두 사용했어요', 'success', undo);
+    } else if (stamp) {
+      haptic('light');
+      showToast(`도장 완료 · ${remainingValue(updated)}개 더 모으면 보상`, 'success', undo);
     } else {
       haptic('light');
       showToast(`사용 완료 · ${remainingLabel(updated)} 남음`, 'success', undo);
@@ -157,8 +193,9 @@ const actions = {
   // Opens an accessible use-entry sheet, then delegates to usePass.
   promptUse(shop) {
     if (!shop) return;
+    const stamp = isStampKind(shop);
     if (remainingValue(shop) <= 0) {
-      showToast('남은 이용권이 없어요', 'danger');
+      showToast(stamp ? '도장판이 이미 가득 찼어요' : '남은 이용권이 없어요', 'danger');
       return;
     }
     const remaining = remainingValue(shop);
@@ -170,18 +207,18 @@ const actions = {
     if (isAmountKind(shop)) {
       const amountInput = h('input', {
         id: 'use-amount',
-        attrs: { type: 'text', inputmode: 'numeric', placeholder: '예: 30,000' }
+        attrs: { type: 'text', inputmode: 'numeric', placeholder: '예: 30,000', enterkeyhint: 'done' }
       });
       amountInput.addEventListener('input', () => { amountInput.value = groupDigits(amountInput.value); });
       const chipValues = [10000, 30000, 50000, 100000];
-      const chips = h('div', { class: 'use-chips' },
+      const chips = h('div', { class: 'chip-row' },
         chipValues.map((v) => h('button', {
           class: 'chip', attrs: { type: 'button' },
-          on: { click: () => { amountInput.value = groupDigits(Math.min(v, remaining)); } }
+          on: { click: () => { amountInput.value = groupDigits(Math.min(v, remaining)); haptic('selection'); } }
         }, formatWon(v))),
         h('button', {
           class: 'chip', attrs: { type: 'button' },
-          on: { click: () => { amountInput.value = groupDigits(remaining); } }
+          on: { click: () => { amountInput.value = groupDigits(remaining); haptic('selection'); } }
         }, '전액')
       );
       showSheet({
@@ -204,19 +241,28 @@ const actions = {
     } else {
       const countInput = h('input', {
         id: 'use-count',
-        attrs: { type: 'number', inputmode: 'numeric', min: '1', max: String(remaining), value: '1' }
+        attrs: { type: 'number', inputmode: 'numeric', min: '1', max: String(remaining), value: '1', 'aria-label': stamp ? '도장 개수' : '사용 횟수' }
       });
+      const step = (delta) => {
+        countInput.value = String(clamp((parseInt(countInput.value) || 1) + delta, 1, remaining));
+        haptic('selection');
+      };
+      const stepper = h('div', { class: 'stepper' },
+        h('button', { class: 'stepper-btn', attrs: { type: 'button', 'aria-label': '하나 줄이기' }, on: { click: () => step(-1) } }, '−'),
+        countInput,
+        h('button', { class: 'stepper-btn', attrs: { type: 'button', 'aria-label': '하나 늘리기' }, on: { click: () => step(1) } }, '+')
+      );
       showSheet({
-        title: '횟수 사용',
+        title: stamp ? '도장 찍기' : '횟수 사용',
         body: h('div', null,
-          h('label', { class: 'field-label', attrs: { for: 'use-count' } }, '사용 횟수'),
-          countInput,
+          h('span', { class: 'field-label' }, stamp ? `도장 개수 (남은 칸 ${remaining}개)` : `사용 횟수 (남은 ${remaining}회)`),
+          stepper,
           memoInput
         ),
         actions: [
           { id: 'cancel', label: '취소', className: 'btn-secondary' },
           {
-            id: 'confirm', label: '사용', className: 'btn-primary',
+            id: 'confirm', label: stamp ? '도장 찍기' : '사용', className: 'btn-primary',
             onClick: () => actions.usePass(shop.id, { count: Number(countInput.value) || 1, note: memoInput.value.trim() })
           }
         ]
@@ -225,10 +271,12 @@ const actions = {
   },
 
   async undoLastCoupon(shopId, { confirm = true } = {}) {
+    const shopNow = store.getState().shops.find((s) => s.id === shopId);
+    const stamp = isStampKind(shopNow);
     if (confirm) {
       const ok = await showConfirm({
-        title: '사용 기록 취소',
-        message: '마지막 이용권 사용 기록을 취소하고 사용량을 되돌릴까요?',
+        title: stamp ? '도장 취소' : '사용 기록 취소',
+        message: stamp ? '마지막으로 찍은 도장을 취소할까요?' : '마지막 이용권 사용 기록을 취소하고 사용량을 되돌릴까요?',
         confirmLabel: '되돌리기'
       });
       if (!ok) return;
@@ -247,8 +295,10 @@ const actions = {
       : { ...shop, usedCoupons: Math.max(0, (shop.usedCoupons || 0) - (last.count || 1)) };
     await Shops.update(restored);
     await Logs.remove(last.id);
-    showToast('마지막 사용 기록을 취소했어요');
+    haptic('light');
+    showToast(stamp ? '마지막 도장을 취소했어요' : '마지막 사용 기록을 취소했어요');
     await refresh();
+    resyncServices();
   },
 
   async saveShop(data, id) {
@@ -269,7 +319,9 @@ const actions = {
         store.setState((s) => ({ settings: { ...s.settings, backupHinted: true } }));
         showSheet({
           title: '백업을 권장해요',
-          body: h('p', null, '쿠폰은 이 기기에만 저장돼요. 기기를 바꾸거나 앱을 지우면 사라질 수 있어요. JSON으로 백업해 두면 안전해요.'),
+          body: h('p', null, platform.isIOS
+            ? '쿠폰은 이 기기에만 저장되고 앱 안에 자동 보관돼요. 기기를 바꿀 때를 대비해 파일로도 백업해 두면 안전해요.'
+            : '쿠폰은 이 기기에만 저장돼요. 기기를 바꾸거나 앱을 지우면 사라질 수 있어요. 파일로 백업해 두면 안전해요.'),
           actions: [
             { id: 'later', label: '나중에', className: 'btn-secondary' },
             { id: 'backup', label: '지금 백업', className: 'btn-primary', onClick: () => actions.exportData() }
@@ -289,10 +341,18 @@ const actions = {
     store.setState((s) => ({ ui: { ...s.ui, filter: { ...s.ui.filter, ...patch } } }));
   },
 
+  // Location alerts need the OS permission: request it here (user gesture) and
+  // refuse to enable when it is denied so the switch never lies.
   async toggleNotify(on) {
+    let permission = 'granted';
+    if (on) {
+      try { await getCurrentPosition(); } catch { permission = 'denied'; }
+      if (permission === 'denied') return { enabled: false, permission };
+    }
     await Settings.set('notifyEnabled', on);
     await refresh();
     resyncServices();
+    return { enabled: on, permission };
   },
 
   async saveNotifySettings({ radius, delay }) {
@@ -302,6 +362,8 @@ const actions = {
     resyncServices();
   },
 
+  // Notification permission is requested only here — i.e. only when the user
+  // turns reminders on (onboarding step 3 or settings), never at launch.
   async toggleReminders(on) {
     let permission = 'granted';
     if (on) permission = await ensurePermission();
@@ -328,13 +390,27 @@ const actions = {
     await clearAll();
     await refresh();
     stopLocationWatch();
+    resyncServices();
+    // Write the (now empty) snapshot immediately so a deliberate wipe is never
+    // "restored" on the next launch.
+    await flushSnapshot();
   },
 
   async exportData() {
-    await backupExport();
-    await Settings.set('lastBackupAt', Date.now());
-    await refresh();
-    showToast('백업 파일이 다운로드되었어요');
+    try {
+      const r = await backupExport();
+      await Settings.set('lastBackupAt', Date.now());
+      await refresh();
+      haptic('success');
+      if (!r.toasted) {
+        showToast(r.where === 'documents'
+          ? (r.shared ? '백업 파일을 내보냈어요' : '백업 파일을 저장했어요 · 파일 앱 › 쿠폰북')
+          : '백업 파일이 다운로드되었어요');
+      }
+    } catch (e) {
+      haptic('error');
+      showToast('백업에 실패했어요: ' + (e?.message || e), 'danger');
+    }
   },
 
   // Snooze the home backup banner (domain.needsBackupNudge honors the timestamp).
@@ -350,9 +426,25 @@ const actions = {
     return sum;
   },
 
+  async importFromPicker() {
+    const file = await platform.pickTextFile();
+    if (!file) return null;
+    try {
+      const sum = await actions.importData(file);
+      haptic('success');
+      showToast(`복원 완료 · 업체 ${sum.shops}개, 내역 ${sum.logs}건`);
+      return sum;
+    } catch (err) {
+      haptic('error');
+      showToast('복원 실패: ' + (err?.message || err), 'danger');
+      return null;
+    }
+  },
+
   async completeOnboarding() {
     await Settings.set('onboarded', true);
     store.setState((s) => ({ settings: { ...s.settings, onboarded: true } }));
+    scheduleSnapshot();
   },
 
   async requestInstall() {
@@ -382,7 +474,6 @@ const router = createRouter({
   outlet: document.getElementById('main'),
   routes,
   getCtx: () => ctx,
-  onChange: () => mountAds(), // page-level Auto Ads; no-op while ads are off
   closeOverlays: () => closeOverlay(true, { keepHistory: true })
 });
 ctx.router = router; // views read ctx.router at render time — must be set before any navigate
@@ -397,13 +488,32 @@ store.select(
   }
 );
 
+// Space reserved for the native ad banner (iOS): content and the tab bar sit
+// above it, and the safe-area padding moves from the tab bar to the banner.
+function onBannerHeight(px) {
+  const height = Math.max(0, Math.round(Number(px) || 0));
+  document.documentElement.style.setProperty('--ad-h', `${height}px`);
+  document.body.classList.toggle('has-ad', height > 0);
+}
+
 // ── Boot ─────────────────────────────────────────────────────────────────────
 async function init() {
   document.body.dataset.theme = 'light';
+  document.body.dataset.platform = platform.platform;
+  platform.applyNativeChrome();
   registerSW(onUpdateAvailable);
   initInstallPrompt();
 
   await refresh();
+
+  // Durability: an empty database next to a non-empty snapshot means the
+  // WebView storage was evicted — bring everything back before the first paint.
+  let restored = null;
+  try {
+    restored = await restoreIfEmpty(store.getState());
+    if (restored) await refresh();
+  } catch { restored = null; }
+
   store.setState({ ready: true });
   resyncServices();
 
@@ -413,9 +523,9 @@ async function init() {
 
   // Chrome wiring (header back, bottom-nav, FAB).
   const backEl = document.querySelector('[data-back]');
-  if (backEl) backEl.addEventListener('click', () => router.back());
+  if (backEl) backEl.addEventListener('click', () => { haptic('selection'); router.back(); });
 
-  // Hardware/browser back (TWA): close an open sheet first, then restore the
+  // Hardware/browser back (Android): close an open sheet first, then restore the
   // popped route.
   window.addEventListener('popstate', (e) => {
     if (closeOverlayFromPop()) return;
@@ -423,11 +533,11 @@ async function init() {
   });
 
   document.querySelectorAll('[data-nav]').forEach((el) => {
-    el.addEventListener('click', () => { haptic('light'); router.navigate(el.dataset.nav); });
+    el.addEventListener('click', () => { haptic('selection'); router.navigate(el.dataset.nav); });
   });
 
   const fabEl = document.querySelector('[data-fab]');
-  if (fabEl) fabEl.addEventListener('click', () => router.navigate('add'));
+  if (fabEl) fabEl.addEventListener('click', () => { haptic('light'); router.navigate('add'); });
 
   // Manifest shortcut deep-links (long-press app icon → 이용권 추가 / 지도).
   // Consume the query so history/bookmarks stay clean.
@@ -441,6 +551,27 @@ async function init() {
   } else {
     router.navigate(onboarded ? 'home' : 'onboarding');
   }
+
+  booted = true;
+  platform.hideSplash();
+  if (restored) {
+    setTimeout(() => showToast(`저장된 백업에서 복원했어요 · 업체 ${restored.shops}개`), 400);
+  }
+
+  // Lifecycle: re-check reminders and ads on foreground, persist on background.
+  platform.onAppState({
+    onResume: () => {
+      const { shops, settings } = store.getState();
+      checkDueNow(shops, settings, onReminderDue).catch(() => {});
+      retryAds();
+    },
+    onPause: () => { flushSnapshot().catch(() => {}); }
+  });
+  window.addEventListener('pagehide', () => { flushSnapshot().catch(() => {}); });
+  window.addEventListener('online', () => retryAds());
+
+  // Ads last: the first view is on screen and the app is active (ATT prompt needs it).
+  setTimeout(() => { initAds({ onBannerHeight }).catch(() => {}); }, 700);
 }
 
 if (document.readyState === 'loading') {

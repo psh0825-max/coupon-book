@@ -1,12 +1,13 @@
 // services/pwa.js — service worker registration + install prompt handling.
+// Website only: inside the native shells (iOS Capacitor / Android WebView) the
+// service worker is never registered and no install prompt is offered.
+
+import { supportsPWA, isAppContext } from '../platform.js';
 
 let _deferredPrompt = null;
 let _updating = false, _reloaded = false;
 
-// Register the SW and detect when a new version is waiting. onUpdate(reg) fires
-// only when there is already a controller (i.e. this is an update, not first
-// install). controllerchange then reloads once, after applyUpdate() is called.
-// Best-effort daily background expiry check for installed apps (TWA/PWA).
+// Best-effort daily background expiry check for installed apps (PWA).
 // Chrome grants the periodic-background-sync permission only to installed apps
 // with engagement, so failures are expected and silently ignored — the on-open
 // reminder path in services/reminders.js remains the baseline.
@@ -17,8 +18,11 @@ async function registerPeriodicExpiryCheck(reg) {
   } catch (e) { /* not installed / permission denied */ }
 }
 
+// Register the SW and detect when a new version is waiting. onUpdate(reg) fires
+// only when there is already a controller (i.e. this is an update, not first
+// install). controllerchange then reloads once, after applyUpdate() is called.
 export function registerSW(onUpdate) {
-  if (!('serviceWorker' in navigator)) return;
+  if (!supportsPWA || isAppContext()) return;
   navigator.serviceWorker.register('sw.js').then((reg) => {
     registerPeriodicExpiryCheck(reg);
     if (reg.waiting && navigator.serviceWorker.controller) onUpdate?.(reg);
@@ -40,6 +44,7 @@ export function applyUpdate(reg) {
 }
 
 export function initInstallPrompt() {
+  if (isAppContext()) return;
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     _deferredPrompt = e;
@@ -62,7 +67,8 @@ export async function promptInstall() {
 }
 
 export function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches
+  return isAppContext()
+    || window.matchMedia('(display-mode: standalone)').matches
     || navigator.standalone === true;
 }
 

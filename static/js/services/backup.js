@@ -1,8 +1,12 @@
 // services/backup.js — JSON export/import. Import upserts via repo normalizers and
-// PRESERVES original ids (does not regenerate via Shops.add).
+// PRESERVES original ids (does not regenerate via Shops.add). The same payload
+// format backs the automatic durability snapshot (services/snapshot.js).
 
 import { generateId, put } from '../data/db.js';
 import { Shops, Logs, Settings, normalizeShop, normalizeLog, DEFAULTS } from '../data/repo.js';
+import { saveTextFile } from '../platform.js';
+
+export const BACKUP_VERSION = 3;
 
 function dateStamp() {
   const d = new Date(Date.now());
@@ -12,21 +16,22 @@ function dateStamp() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-export async function exportData() {
+/** Full database as a plain object: { version, app, shops, logs, settings, exportedAt } */
+export async function buildPayload() {
   const [shops, logs, settings] = await Promise.all([
     Shops.all(), Logs.all(), Settings.entries()
   ]);
-  const payload = { version: 3, shops, logs, settings, exportedAt: Date.now() };
+  return { version: BACKUP_VERSION, app: 'coupon-book', shops, logs, settings, exportedAt: Date.now() };
+}
 
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `coupon-backup-${dateStamp()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+/**
+ * exportData() -> Promise<{ ok, where, shared?, toasted? }> — hands the JSON to the
+ * platform (share sheet on iOS, Downloads on Android, browser download on the web).
+ */
+export async function exportData() {
+  const payload = await buildPayload();
+  const json = JSON.stringify(payload, null, 2);
+  return saveTextFile(`coupon-backup-${dateStamp()}.json`, json, { mime: 'application/json' });
 }
 
 // Validate an imported setting value against the type of its repo default.
@@ -37,20 +42,29 @@ function isValidSettingValue(key, value) {
   }
   if (typeof def === 'boolean') return typeof value === 'boolean';
   if (typeof def === 'number') return typeof value === 'number' && Number.isFinite(value);
+  if (def === null) return value === null || typeof value === 'number' || typeof value === 'boolean';
   return typeof value === typeof def;
 }
 
-export async function importData(file) {
-  const text = await file.text();
-  const data = JSON.parse(text);
-
-  if (!Array.isArray(data.shops) || !Array.isArray(data.logs)) {
+/** parsePayload(text) -> validated payload; throws a user-facing Error otherwise. */
+export function parsePayload(text) {
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error('올바른 백업 파일이 아니에요');
+  }
+  if (!data || !Array.isArray(data.shops) || !Array.isArray(data.logs)) {
     throw new Error('올바른 백업 파일이 아니에요');
   }
   if (data.shops.length > 5000 || data.logs.length > 20000) {
     throw new Error('백업 파일이 너무 큽니다');
   }
+  return data;
+}
 
+/** importPayload(data) -> { shops, logs } — upsert everything, keeping ids. */
+export async function importPayload(data) {
   const now = Date.now();
   for (const s of data.shops) {
     const norm = normalizeShop(s);
@@ -77,4 +91,10 @@ export async function importData(file) {
   }
 
   return { shops: data.shops.length, logs: data.logs.length };
+}
+
+/** importData(File|string) -> { shops, logs } */
+export async function importData(fileOrText) {
+  const text = typeof fileOrText === 'string' ? fileOrText : await fileOrText.text();
+  return importPayload(parsePayload(text));
 }

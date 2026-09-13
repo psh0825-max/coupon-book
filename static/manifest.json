@@ -1,7 +1,7 @@
 {
-  "name": "Coupon Book",
+  "name": "쿠폰북 — 내 쿠폰·도장·이용권 지갑",
   "short_name": "쿠폰북",
-  "description": "로컬에 저장되는 개인 쿠폰/스탬프 관리 앱 — LightOn Plus Lab",
+  "description": "카페 도장판, 마사지 회수권, 금액권을 한곳에 — 계정 없이 내 기기에만 저장되는 개인 쿠폰 지갑",
   "lang": "ko",
   "dir": "ltr",
   "categories": ["lifestyle", "productivity"],
@@ -10,8 +10,8 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#f7f9fb",
-  "theme_color": "#f7f9fb",
+  "background_color": "#f5f7fa",
+  "theme_color": "#f5f7fa",
   "shortcuts": [
     {
       "name": "이용권 추가",

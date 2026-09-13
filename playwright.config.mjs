@@ -14,6 +14,13 @@ export default defineConfig({
     headless: true,
     viewport: { width: 414, height: 896 }, // mobile-ish, matches PWA layout
   },
+  // Dependency-free static server (same layout GitHub Pages serves).
+  webServer: {
+    command: `node scripts/serve.mjs ${PORT}`,
+    url: `${BASE_URL}/healthz`,
+    reuseExistingServer: true,
+    timeout: 20000,
+  },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
   ],

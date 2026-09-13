@@ -1,13 +1,20 @@
 // services/places.js — Kakao Maps keyword place search for add/edit auto-fill.
 // The SDK is loaded dynamically on first use (no <script> tag in index.html) and
-// is intentionally NOT precached (cross-origin). Results are returned domain-side
-// only on registered origins (coupon.lightonpluslab.com + localhost); elsewhere
-// search rejects and callers must degrade gracefully.
+// is intentionally NOT precached (cross-origin). Kakao only answers on origins
+// registered for the JavaScript key, so `isAvailable()` gates the UI: elsewhere
+// (e.g. a native shell served from a custom scheme) manual entry is the path.
 
-export const KAKAO_CONFIG = { jsKey: 'a96a80050b4933a9409ca5a797ec765b' };
+import { KAKAO } from '../config.js';
 
 export function isConfigured() {
-  return !!KAKAO_CONFIG.jsKey && !KAKAO_CONFIG.jsKey.includes('XXXX');
+  return !!KAKAO.jsKey && !KAKAO.jsKey.includes('XXXX');
+}
+
+/** true when search can work here: configured key + registered http(s) origin. */
+export function isAvailable() {
+  if (!isConfigured() || typeof location === 'undefined') return false;
+  if (!/^https?:$/.test(location.protocol)) return false;
+  return KAKAO.allowedHosts.includes(location.hostname);
 }
 
 let _loadPromise = null;
@@ -18,10 +25,10 @@ export function loadKakao() {
   _loadPromise = new Promise((resolve, reject) => {
     if (window.kakao && window.kakao.maps && window.kakao.maps.services) { resolve(); return; }
     const s = document.createElement('script');
-    s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_CONFIG.jsKey}&libraries=services&autoload=false`;
+    s.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO.jsKey}&libraries=services&autoload=false`;
     s.async = true;
     s.onload = () => window.kakao.maps.load(() => resolve());
-    s.onerror = () => reject(new Error('kakao sdk load failed'));
+    s.onerror = () => { _loadPromise = null; reject(new Error('kakao sdk load failed')); };
     document.head.appendChild(s);
   });
   return _loadPromise;
