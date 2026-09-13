@@ -19,3 +19,15 @@ store-assets/raw/
 store-assets/final/
 store-assets/jpg/
 store-assets/ai/
+
+# Capacitor iOS (ios/.gitignore covers the template; these are SPM/Xcode outputs)
+ios/App/CapApp-SPM/.build/
+ios/App/CapApp-SPM/.swiftpm/
+ios/App/build/
+ios/build/
+ios/DerivedData/
+*.xcuserstate
+
+# Release artifacts are written to ~/Projects/_releases, never here
+*.ipa
+*.xcarchive

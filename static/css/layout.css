@@ -135,6 +135,10 @@
   stroke-linecap: round;
 }
 
+/* First-run flow: no tab bar (the flow has its own buttons); keep the home-indicator inset. */
+body[data-route="onboarding"] .bottom-nav { display: none; }
+body[data-route="onboarding"] .main { padding-bottom: calc(28px + var(--safe-bottom)); }
+
 /* ===== Main Content ===== */
 .main {
   flex: 1;

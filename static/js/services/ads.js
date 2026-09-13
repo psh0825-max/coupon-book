@@ -8,7 +8,7 @@
 // Everything is gated by ADS_ENABLED in config.js and degrades to "no ads, no
 // reserved space" when disabled, offline or failing.
 
-import { ADS_ENABLED, ADS } from '../config.js';
+import { ADS_ENABLED, ADS, iosBannerId } from '../config.js';
 import * as platform from '../platform.js';
 
 const RETRY_MIN_MS = 60 * 1000;
@@ -53,11 +53,11 @@ async function showBanner() {
   _lastAttempt = now;
   try {
     await _admob.showBanner({
-      adId: ADS.ios.bannerId,
+      adId: iosBannerId(),          // exact unit from config.js (test or real)
       adSize: 'ADAPTIVE_BANNER',
       position: 'BOTTOM_CENTER',
       margin: 0,
-      isTesting: !!ADS.ios.testing,
+      isTesting: false,             // never let the plugin substitute its own id
       npa: !_personalized
     });
     _bannerShown = true;
@@ -68,25 +68,28 @@ async function showBanner() {
 
 let _personalized = false;
 
-async function initAdMob() {
-  const AdMob = await platform.plugin('AdMob');
-  _admob = AdMob;
-  _personalized = await requestTracking(AdMob);
-  await AdMob.initialize({
-    initializeForTesting: !!ADS.ios.testing,
-    tagForChildDirectedTreatment: false,
-    tagForUnderAgeOfConsent: false,
-    maxAdContentRating: 'General'
+function initAdMob() {
+  // The plugin proxy is used only inside this callback — never resolved through a
+  // promise (see platform.withPlugin).
+  return platform.withPlugin('AdMob', async (AdMob) => {
+    _admob = AdMob;
+    _personalized = await requestTracking(AdMob);
+    await AdMob.initialize({
+      initializeForTesting: !!ADS.ios.useTestAds,
+      tagForChildDirectedTreatment: false,
+      tagForUnderAgeOfConsent: false,
+      maxAdContentRating: 'General'
+    });
+    AdMob.addListener('bannerAdSizeChanged', ({ height }) => _onHeight(Number(height) || 0));
+    AdMob.addListener('bannerAdLoaded', () => { /* height arrives via SizeChanged */ });
+    AdMob.addListener('bannerAdFailedToLoad', async () => {
+      // Offline or no fill: give the space back and retry on the next foreground.
+      _bannerShown = false;
+      _onHeight(0);
+      try { await AdMob.removeBanner(); } catch { /* noop */ }
+    });
+    await showBanner();
   });
-  AdMob.addListener('bannerAdSizeChanged', ({ height }) => _onHeight(Number(height) || 0));
-  AdMob.addListener('bannerAdLoaded', () => { /* height arrives via SizeChanged */ });
-  AdMob.addListener('bannerAdFailedToLoad', async () => {
-    // Offline or no fill: give the space back and retry on the next foreground.
-    _bannerShown = false;
-    _onHeight(0);
-    try { await AdMob.removeBanner(); } catch { /* noop */ }
-  });
-  await showBanner();
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
@@ -99,6 +102,8 @@ export async function initAds({ onBannerHeight } = {}) {
   _onHeight = typeof onBannerHeight === 'function' ? onBannerHeight : () => {};
   if (!ADS_ENABLED) return;
   if (platform.isIOS) {
+    // No banner unit configured → ads stay off entirely (no SDK init, no ATT prompt).
+    if (!iosBannerId()) return;
     try { await initAdMob(); } catch { _onHeight(0); }
     return;
   }
@@ -112,4 +117,4 @@ export function retryAds() {
   showBanner().catch(() => {});
 }
 
-export const adsEnabled = ADS_ENABLED;
+export const adsEnabled = ADS_ENABLED && (!platform.isIOS || !!iosBannerId());

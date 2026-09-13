@@ -1,11 +1,16 @@
 // config.js — the ONE place for per-deployment values (ad ids, URLs, version).
 // Swap ids here without touching any other module.
 //
-// AdMob iOS ids below are Google's OFFICIAL TEST ids (safe to click, no revenue).
-// Before the App Store release replace them with the real ids issued in the
-// AdMob console (app "쿠폰북" iOS → 앱 ID / 배너 광고단위 ID) and set
-// `ios.testing` to false. The native side also needs the app id in
-// ios/App/App/Info.plist (GADApplicationIdentifier) — see store/ios/listing.md.
+// AdMob (iOS) — how the ids are resolved (services/ads.js):
+//   ios.useTestAds = true   → Google's official iOS TEST banner is requested
+//                             (ADMOB_TEST_BANNER_ID_IOS; safe to tap, no revenue).
+//                             Development builds only.
+//   ios.useTestAds = false  → ios.bannerId is requested. When it is EMPTY, ads stay
+//                             completely off: no SDK init, no ATT prompt, no reserved
+//                             banner space. This is the state of the release archive
+//                             until the real banner unit exists in the AdMob console.
+// The iOS app id must ALSO be present natively in ios/App/App/Info.plist
+// (GADApplicationIdentifier) — keep both in sync.
 
 export const APP_VERSION = '2.0.0';
 
@@ -18,6 +23,9 @@ export const URLS = {
 
 export const ADS_ENABLED = true;
 
+/** Google's official iOS banner test unit (https://developers.google.com/admob/ios/test-ads). */
+export const ADMOB_TEST_BANNER_ID_IOS = 'ca-app-pub-3940256099942544/2934735716';
+
 export const ADS = {
   // Web (browser visitors): Google AdSense Auto Ads. Never loaded inside the
   // native shells (Android WebView / iOS) — those use AdMob.
@@ -26,13 +34,19 @@ export const ADS = {
   },
   // iOS: AdMob adaptive banner via @capacitor-community/admob.
   ios: {
-    appId: 'ca-app-pub-3940256099942544~1458002511',        // TEST app id
-    bannerId: 'ca-app-pub-3940256099942544/2934735716',     // TEST banner unit
-    testing: true                                             // false with real ids
+    appId: 'ca-app-pub-7180935400084577~3984818286',   // AdMob app "쿠폰북 iOS"
+    bannerId: '',                                       // banner ad unit id — '' = ads off
+    useTestAds: false                                   // true only while developing
   }
   // Android: the WebView shell owns its own AdMob banner natively
   // (webview-app/app/build.gradle + MainActivity.java); nothing to configure here.
 };
+
+/** The banner unit the iOS app should request right now ('' → ads disabled). */
+export function iosBannerId() {
+  if (ADS.ios.useTestAds) return ADMOB_TEST_BANNER_ID_IOS;
+  return (ADS.ios.bannerId || '').trim();
+}
 
 // Kakao Maps keyword search (add/edit auto-fill). Works only on origins
 // registered for this JavaScript key.

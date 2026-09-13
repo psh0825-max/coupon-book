@@ -41,14 +41,22 @@ function loadCore() {
   return _corePromise;
 }
 
-/** plugin(name) -> Promise<proxy> (native only; rejects on web/android). */
-export async function plugin(name) {
-  if (!capNative) throw new Error(`Capacitor plugin ${name} unavailable on ${platform}`);
-  if (!_plugins.has(name)) {
-    const core = await loadCore();
-    _plugins.set(name, core.registerPlugin(name));
-  }
-  return _plugins.get(name);
+/**
+ * withPlugin(name, fn) -> Promise — run fn(proxy) once the core is loaded. The
+ * proxy is handed to the callback and NEVER resolved through a promise: awaiting a
+ * Capacitor plugin proxy invokes proxy.then() as a (non-existent) native method.
+ * Rejects on web/android so callers can chain their fallbacks.
+ */
+export function withPlugin(name, fn) {
+  if (!capNative) return Promise.reject(new Error(`Capacitor plugin ${name} unavailable on ${platform}`));
+  return loadCore().then((core) => {
+    let proxy = _plugins.get(name);
+    if (!proxy) {
+      proxy = core.registerPlugin(name);
+      _plugins.set(name, proxy);
+    }
+    return fn(proxy);
+  });
 }
 
 // Warm the core module early so the first plugin call has no import latency.
@@ -83,14 +91,12 @@ function downloadBlob(filename, content, mime) {
  */
 export async function saveTextFile(filename, content, { mime = 'application/json' } = {}) {
   if (capNative) {
-    const Filesystem = await plugin('Filesystem');
-    const { uri } = await Filesystem.writeFile({
+    const { uri } = await withPlugin('Filesystem', (Filesystem) => Filesystem.writeFile({
       path: filename, data: content, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true
-    });
+    }));
     let shared = false;
     try {
-      const Share = await plugin('Share');
-      await Share.share({ title: filename, files: [uri], dialogTitle: '백업 파일 저장' });
+      await withPlugin('Share', (Share) => Share.share({ title: filename, files: [uri], dialogTitle: '백업 파일 저장' }));
       shared = true;
     } catch { /* share sheet dismissed — the file is still in Documents */ }
     return { ok: true, where: 'documents', shared };
@@ -128,16 +134,19 @@ export function pickTextFile({ accept = '.json,application/json' } = {}) {
 
 // ── Durable snapshot (auto-backup of the whole database) ─────────────────────
 const SNAPSHOT_PATH = 'coupon-book/snapshot.json';
+// Library/ on iOS: app-private (never listed in the Files app next to the user's own
+// backups, unlike Documents/ which Capacitor's DATA maps to), yet included in device
+// backups and never purged like Caches/.
+const SNAPSHOT_DIR = 'LIBRARY';
 const SNAPSHOT_LS_KEY = 'cb_snapshot';
 
 /** writeSnapshot(json) -> Promise<boolean> */
 export async function writeSnapshot(json) {
   if (capNative) {
     try {
-      const Filesystem = await plugin('Filesystem');
-      await Filesystem.writeFile({
-        path: SNAPSHOT_PATH, data: json, directory: 'DATA', encoding: 'utf8', recursive: true
-      });
+      await withPlugin('Filesystem', (Filesystem) => Filesystem.writeFile({
+        path: SNAPSHOT_PATH, data: json, directory: SNAPSHOT_DIR, encoding: 'utf8', recursive: true
+      }));
       return true;
     } catch { return false; }
   }
@@ -149,8 +158,8 @@ export async function writeSnapshot(json) {
 export async function readSnapshot() {
   if (capNative) {
     try {
-      const Filesystem = await plugin('Filesystem');
-      const { data } = await Filesystem.readFile({ path: SNAPSHOT_PATH, directory: 'DATA', encoding: 'utf8' });
+      const { data } = await withPlugin('Filesystem', (Filesystem) =>
+        Filesystem.readFile({ path: SNAPSHOT_PATH, directory: SNAPSHOT_DIR, encoding: 'utf8' }));
       return typeof data === 'string' ? data : null;
     } catch { return null; }
   }
@@ -161,8 +170,7 @@ export async function readSnapshot() {
 export async function prefGet(key) {
   if (capNative) {
     try {
-      const Preferences = await plugin('Preferences');
-      const { value } = await Preferences.get({ key });
+      const { value } = await withPlugin('Preferences', (Preferences) => Preferences.get({ key }));
       return value == null ? null : value;
     } catch { return null; }
   }
@@ -172,8 +180,7 @@ export async function prefGet(key) {
 export async function prefSet(key, value) {
   if (capNative) {
     try {
-      const Preferences = await plugin('Preferences');
-      await Preferences.set({ key, value: String(value) });
+      await withPlugin('Preferences', (Preferences) => Preferences.set({ key, value: String(value) }));
       return true;
     } catch { return false; }
   }
@@ -185,8 +192,7 @@ export async function prefSet(key, value) {
 export async function canNotify() {
   if (capNative) {
     try {
-      const LocalNotifications = await plugin('LocalNotifications');
-      const { display } = await LocalNotifications.checkPermissions();
+      const { display } = await withPlugin('LocalNotifications', (LN) => LN.checkPermissions());
       return display === 'granted';
     } catch { return false; }
   }
@@ -201,8 +207,7 @@ export async function canNotify() {
 export async function requestNotifyPermission() {
   if (capNative) {
     try {
-      const LocalNotifications = await plugin('LocalNotifications');
-      const { display } = await LocalNotifications.requestPermissions();
+      const { display } = await withPlugin('LocalNotifications', (LN) => LN.requestPermissions());
       return display === 'granted' ? 'granted' : 'denied';
     } catch { return 'unsupported'; }
   }
@@ -220,11 +225,10 @@ export async function requestNotifyPermission() {
 export async function notify(title, body, { id, tag } = {}) {
   if (capNative) {
     try {
-      const LocalNotifications = await plugin('LocalNotifications');
-      await LocalNotifications.schedule({ notifications: [{
+      await withPlugin('LocalNotifications', (LN) => LN.schedule({ notifications: [{
         id: id || (Date.now() % 2000000000), title, body,
         schedule: { at: new Date(Date.now() + 500) }
-      }] });
+      }] }));
       return true;
     } catch { return false; }
   }
@@ -249,16 +253,17 @@ export async function replaceScheduledReminders(entries) {
   const list = (entries || []).map((e) => ({ ...e, at: new Date(e.at) })).filter((e) => e.at.getTime() > Date.now());
   if (capNative) {
     try {
-      const LocalNotifications = await plugin('LocalNotifications');
-      const { notifications: pending } = await LocalNotifications.getPending();
-      if (pending && pending.length) await LocalNotifications.cancel({ notifications: pending.map((n) => ({ id: n.id })) });
-      if (!list.length) return 0;
-      // iOS keeps at most 64 pending local notifications — schedule the soonest.
-      const batch = list.sort((a, b) => a.at - b.at).slice(0, 60);
-      await LocalNotifications.schedule({ notifications: batch.map((e) => ({
-        id: e.id, title: e.title, body: e.body, schedule: { at: e.at, allowWhileIdle: true }
-      })) });
-      return batch.length;
+      return await withPlugin('LocalNotifications', async (LN) => {
+        const { notifications: pending } = await LN.getPending();
+        if (pending && pending.length) await LN.cancel({ notifications: pending.map((n) => ({ id: n.id })) });
+        if (!list.length) return 0;
+        // iOS keeps at most 64 pending local notifications — schedule the soonest.
+        const batch = list.sort((a, b) => a.at - b.at).slice(0, 60);
+        await LN.schedule({ notifications: batch.map((e) => ({
+          id: e.id, title: e.title, body: e.body, schedule: { at: e.at, allowWhileIdle: true }
+        })) });
+        return batch.length;
+      });
     } catch { return 0; }
   }
   if (bridge && typeof bridge.scheduleReminder === 'function') {
@@ -279,8 +284,7 @@ export async function scheduleReminder(id, title, body, whenMillis) {
 export async function cancelReminder(id) {
   if (capNative) {
     try {
-      const LocalNotifications = await plugin('LocalNotifications');
-      await LocalNotifications.cancel({ notifications: [{ id }] });
+      await withPlugin('LocalNotifications', (LN) => LN.cancel({ notifications: [{ id }] }));
       return true;
     } catch { return false; }
   }
@@ -302,8 +306,7 @@ function toPos(pos) {
 export async function hasLocationPermission() {
   if (capNative) {
     try {
-      const Geolocation = await plugin('Geolocation');
-      const { location } = await Geolocation.checkPermissions();
+      const { location } = await withPlugin('Geolocation', (Geolocation) => Geolocation.checkPermissions());
       return location === 'granted';
     } catch { return false; }
   }
@@ -320,8 +323,7 @@ export async function hasLocationPermission() {
 export async function getCurrentPosition(opts = {}) {
   const options = { ...GEO_OPTS, ...opts };
   if (capNative) {
-    const Geolocation = await plugin('Geolocation');
-    return toPos(await Geolocation.getCurrentPosition(options));
+    return toPos(await withPlugin('Geolocation', (Geolocation) => Geolocation.getCurrentPosition(options)));
   }
   return new Promise((resolve, reject) => {
     if (!nav.geolocation) { reject(new Error('Geolocation not supported')); return; }
@@ -334,7 +336,7 @@ export function watchPosition(onPos, onErr, opts = {}) {
   const options = { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000, ...opts };
   let stopped = false;
   if (capNative) {
-    let idPromise = plugin('Geolocation').then((Geolocation) =>
+    const idPromise = withPlugin('Geolocation', (Geolocation) =>
       Geolocation.watchPosition(options, (pos, err) => {
         if (stopped) return;
         if (err) onErr?.(err);
@@ -344,9 +346,9 @@ export function watchPosition(onPos, onErr, opts = {}) {
     return {
       stop() {
         stopped = true;
-        idPromise.then(async (id) => {
+        idPromise.then((id) => {
           if (!id) return;
-          try { (await plugin('Geolocation')).clearWatch({ id }); } catch { /* noop */ }
+          withPlugin('Geolocation', (Geolocation) => Geolocation.clearWatch({ id })).catch(() => {});
         });
       }
     };
@@ -362,7 +364,7 @@ const VIBRATE = { light: 10, medium: 20, heavy: [30, 40, 30], success: [12, 60, 
 /** haptic(kind) — light|medium|heavy|success|warning|error|selection. Fire-and-forget. */
 export function haptic(kind = 'light') {
   if (capNative) {
-    plugin('Haptics').then((Haptics) => {
+    withPlugin('Haptics', (Haptics) => {
       if (kind === 'success' || kind === 'warning' || kind === 'error') {
         return Haptics.notification({ type: kind.toUpperCase() });
       }
@@ -389,8 +391,7 @@ export async function openExternal(url, { inApp = false } = {}) {
   if (capNative) {
     if (isHttp && inApp) {
       try {
-        const Browser = await plugin('Browser');
-        await Browser.open({ url, presentationStyle: 'popover' });
+        await withPlugin('Browser', (Browser) => Browser.open({ url, presentationStyle: 'popover' }));
         return true;
       } catch { /* fall through to system open */ }
     }
@@ -453,12 +454,12 @@ export function openDirections(lat, lng, name) {
 /** Dark status-bar text over our light UI; hide the splash once the first view is up. */
 export async function applyNativeChrome() {
   if (!capNative) return;
-  try { (await plugin('StatusBar')).setStyle({ style: 'LIGHT' }); } catch { /* noop */ }
+  try { await withPlugin('StatusBar', (StatusBar) => StatusBar.setStyle({ style: 'LIGHT' })); } catch { /* noop */ }
 }
 
 export async function hideSplash() {
   if (!capNative) return;
-  try { await (await plugin('SplashScreen')).hide({ fadeOutDuration: 250 }); } catch { /* noop */ }
+  try { await withPlugin('SplashScreen', (SplashScreen) => SplashScreen.hide({ fadeOutDuration: 250 })); } catch { /* noop */ }
 }
 
 /**
@@ -467,9 +468,9 @@ export async function hideSplash() {
  */
 export function onAppState({ onResume, onPause } = {}) {
   if (capNative) {
-    plugin('App').then((App) => {
-      App.addListener('appStateChange', ({ isActive }) => { if (isActive) onResume?.(); else onPause?.(); });
-    }).catch(() => {});
+    withPlugin('App', (App) =>
+      App.addListener('appStateChange', ({ isActive }) => { if (isActive) onResume?.(); else onPause?.(); })
+    ).catch(() => {});
     return;
   }
   if (typeof document === 'undefined') return;

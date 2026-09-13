@@ -81,16 +81,19 @@ coupon-book/
 │   │   │   ├── db.js        #   IndexedDB 원시 CRUD (CouponBookDB)
 │   │   │   ├── repo.js      #   Shops/Logs/Settings 리포지토리 + 시드/초기화
 │   │   │   └── skins.js     #   스킨/카테고리 데이터
-│   │   ├── domain.js        # 순수 로직(남은 개수, 통계, 정렬, 상태, 우선순위)
+│   │   ├── domain.js        # 순수 로직(남은 개수, 통계, 정렬, 상태, 우선순위, 도장판/알림 스케줄)
+│   │   ├── platform.js      # OS 추상화 1개 API: iOS(Capacitor) / Android(WebView 브리지) / 웹
+│   │   ├── config.js        # 배포별 값 한곳: 광고 ID(AdSense/AdMob), URL, 버전
 │   │   ├── services/        # 부수효과/외부 연동
 │   │   │   ├── format.js    #   날짜/숫자 포맷
 │   │   │   ├── maps.js      #   Leaflet 지도/길찾기
 │   │   │   ├── location.js  #   Geolocation + Haversine + 체류 알림
 │   │   │   ├── reminders.js #   만료 임박 알림(D-7/3/1)
 │   │   │   ├── pwa.js       #   서비스워커 등록 + 설치 프롬프트
-│   │   │   ├── backup.js    #   JSON 백업/복원
+│   │   │   ├── backup.js    #   JSON 백업/복원 (iOS: Documents + 공유 시트)
+│   │   │   ├── snapshot.js  #   자동 보관본(IndexedDB 소실 대비 스냅샷 + 실행 시 복구)
 │   │   │   ├── fx.js        #   햅틱 + 컨페티 마이크로인터랙션
-│   │   │   └── ads.js       #   광고(AdSense Auto Ads) 연동
+│   │   │   └── ads.js       #   광고: 웹 AdSense / iOS AdMob 배너(ATT 포함) — config.js 로 제어
 │   │   ├── ui/              # 프레젠테이션 컴포넌트
 │   │   │   ├── components.js#   카드, 요약, 스탬프, 광고배너, 빈상태 등
 │   │   │   ├── toast.js     #   토스트
@@ -99,29 +102,47 @@ coupon-book/
 │   │   ├── views/           # 라우트별 화면(home/list/detail/edit/map/history/settings/onboarding)
 │   │   └── app.js           # 부트스트랩: store + router + actions 배선
 │   ├── vendor/leaflet/      # Leaflet (로컬 번들)
+│   ├── vendor/capacitor/    # @capacitor/core 런타임 (iOS 셸에서만 지연 로드)
 │   ├── sw.js                # 서비스워커(프리캐시 + SWR)
 │   ├── ads.txt              # AdSense 퍼블리셔 검증
 │   └── manifest.json        # PWA
+├── ios/                     # iOS 앱 (Capacitor 8, SPM) — ios/App/App.xcodeproj
+├── webview-app/             # Android WebView 셸 (AdMob 배너·알림·파일 저장 네이티브)
+├── capacitor.config.json    # appId com.lightonpluslab.couponbook, webDir static
+├── scripts/                 # serve.mjs(개발 서버), ios-archive.sh, make-ios-icon.mjs, make-ios-store-assets.py
+├── store/ios/               # App Store 등록 문안(listing.md) + 스크린샷
 ├── Start-CouponBook.bat     # Windows 더블클릭 실행
 └── README.md
 ```
 
 빌드 도구·번들러·npm 런타임 의존성이 없습니다. 브라우저가 ES Modules를 그대로 로드하며, 단위 테스트(Node)와 e2e(Playwright)만 devDependency로 사용합니다.
 
-## 실제 광고 켜기
+## 광고 설정 (`static/js/config.js` 한 곳)
 
-`static/js/services/ads.js`에서 (AdSense **Auto Ads** — 페이지 레벨, 슬롯 배선 불필요):
+| 런타임 | 방식 | 설정 위치 |
+| --- | --- | --- |
+| 웹(브라우저) | Google AdSense Auto Ads | `ADS.web.client` (+ `static/ads.txt`) |
+| iOS 앱 | AdMob 적응형 배너 (`@capacitor-community/admob`, ATT 프롬프트 포함) | `ADS.ios.appId` / `ADS.ios.bannerId` / `ADS.ios.useTestAds` + `ios/App/App/Info.plist`의 `GADApplicationIdentifier` |
+| Android 앱 | WebView 셸이 네이티브 배너를 직접 표시 | `webview-app/app/build.gradle`, `MainActivity.java` |
 
-```js
-export const AD_CONFIG = {
-  enabled: true,                       // 활성화
-  client: 'ca-pub-XXXXXXXXXXXXXXXX'    // AdSense 퍼블리셔 ID
-};
+- `ADS_ENABLED = false` 면 모든 런타임에서 광고·예약 공간이 사라집니다.
+- iOS: `useTestAds: true` 면 Google 공식 테스트 배너(개발용). `false` 이고 `bannerId` 가 비어 있으면
+  광고가 완전히 꺼집니다(SDK 초기화·ATT 프롬프트 없음) — 실 배너 단위 ID를 넣으면 켜집니다.
+- 앱 셸(iOS/Android WebView)에서는 AdSense 를 절대 불러오지 않습니다(`platform.isAppContext()`).
+
+## iOS 앱 (Capacitor)
+
+```bash
+npm install                      # @capacitor/* 는 ios/ 의 SPM 패키지가 node_modules 경로로 참조
+npx cap copy ios                 # static/ → ios/App/App/public (커밋하지 않음)
+open ios/App/App.xcodeproj       # 또는 xcodebuild -scheme App
+./scripts/ios-archive.sh         # App Store 아카이브 + IPA (~/Projects/_releases/쿠폰북/)
+node scripts/make-ios-icon.mjs   # static/icon.svg → 1024 앱 아이콘 (RGB, 알파 없음)
+python3 scripts/make-ios-store-assets.py <시뮬레이터_캡처_폴더>   # 6.9" 스토어 스크린샷 (ko/en)
 ```
 
-1. AdSense에 사이트(`psh0825-max.github.io`) 등록 후 퍼블리셔 ID 발급
-2. 위처럼 `enabled: true` + 실제 `ca-pub-…` ID 입력
-3. 재배포 후 AdSense 대시보드에서 **Auto ads** 켜기
-4. 사이트 루트의 `static/ads.txt` 를 같은 퍼블리셔 ID로 갱신
-
-비활성 상태(또는 ID 미입력)에서는 중립 플레이스홀더 배너가 그대로 표시됩니다.
+- 번들 ID `com.lightonpluslab.couponbook`, iPhone 전용, 세로 고정, 라이트 테마 고정, iOS 15+.
+- 서명은 프로젝트 안(Release: Manual, 팀 237X7RZB63, 프로필 "Coupon Book App Store")에 있습니다.
+- 데이터는 IndexedDB 에만 있고, 변경 때마다 앱 데이터 폴더에 스냅샷을 남겨 WKWebView 저장소가
+  비워져도 다음 실행 때 자동 복구합니다(`services/snapshot.js`). 백업 파일은 파일 앱 › 쿠폰북 에 저장됩니다.
+- 출시 문안·심사 메모·App Privacy 답변: `store/ios/listing.md`.

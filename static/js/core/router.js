@@ -107,9 +107,11 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays }
     // page title
     const titleEl = doc.querySelector('[data-page-title]');
     if (titleEl) titleEl.textContent = TITLES[name] || TITLES.home;
-    // back button: hidden on root pages
+    // back button: hidden on root pages and on the first-run flow (nothing behind it)
     const backEl = doc.querySelector('[data-back]');
-    if (backEl) backEl.hidden = ROOT_PAGES.includes(name);
+    if (backEl) backEl.hidden = ROOT_PAGES.includes(name) || name === 'onboarding';
+    // current route on <body> so CSS can adapt the chrome (e.g. no tab bar while onboarding)
+    if (doc.body) doc.body.dataset.route = name;
     // Center add button lives in the nav bar (always visible); highlight on add.
     const fabEl = doc.querySelector('[data-fab]');
     if (fabEl) fabEl.classList.toggle('active', name === 'add');

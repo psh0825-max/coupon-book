@@ -69,6 +69,25 @@
   </nav>
 </div>
 
+<script>
+// Boot guard: if the app has not rendered its first view within 6 s (a module
+// failed to load, storage is broken, …) show what went wrong and a retry button
+// instead of a silent blank screen. app.js marks data-booted once it navigates.
+(function () {
+  var errors = [];
+  window.addEventListener('error', function (e) { errors.push((e.message || 'error') + (e.filename ? ' @ ' + e.filename.split('/').slice(-2).join('/') + ':' + e.lineno : '')); });
+  window.addEventListener('unhandledrejection', function (e) { errors.push('promise: ' + (e.reason && (e.reason.message || e.reason))); });
+  window.__bootErrors = errors;
+  setTimeout(function () {
+    if (document.body.dataset.booted === '1') return;
+    var main = document.getElementById('home');
+    if (!main) return;
+    main.innerHTML = '<div class="empty-state wide"><h3>앱을 불러오지 못했어요</h3><p>' +
+      (errors.length ? errors.slice(0, 3).map(function (m) { return String(m).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }).join('<br>') : '저장소를 준비하는 데 시간이 걸리고 있어요.') +
+      '</p><div class="empty-actions"><button class="btn btn-primary" type="button" onclick="location.reload()">다시 시도</button></div></div>';
+  }, 6000);
+})();
+</script>
 <script src="vendor/qr/qrcode.js"></script>
 <script src="vendor/barcode/JsBarcode.all.min.js"></script>
 <script type="module" src="js/app.js"></script>

@@ -1,0 +1,30 @@
+{
+  "appId": "com.lightonpluslab.couponbook",
+  "appName": "쿠폰북",
+  "webDir": "static",
+  "ios": {
+    "contentInset": "never",
+    "appendUserAgent": "CouponBookApp/2.0 iOS",
+    "backgroundColor": "#f5f7fa",
+    "allowsLinkPreview": false,
+    "scrollEnabled": true,
+    "loggingBehavior": "debug"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2500,
+      "launchAutoHide": true,
+      "launchFadeOutDuration": 250,
+      "backgroundColor": "#2563eb",
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "LocalNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert"
+      ]
+    }
+  }
+}

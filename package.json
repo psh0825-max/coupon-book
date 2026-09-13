@@ -3,7 +3,12 @@
   "type": "module",
   "scripts": {
     "test": "node --test \"tests/unit/**/*.test.mjs\"",
-    "test:e2e": "playwright test tests/e2e"
+    "test:e2e": "playwright test tests/e2e",
+    "serve": "node scripts/serve.mjs",
+    "ios:copy": "cap copy ios",
+    "ios:icon": "node scripts/make-ios-icon.mjs",
+    "ios:archive": "./scripts/ios-archive.sh",
+    "ios:shots": "python3 scripts/make-ios-store-assets.py"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",

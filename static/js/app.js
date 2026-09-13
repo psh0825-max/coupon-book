@@ -445,6 +445,7 @@ const actions = {
     await Settings.set('onboarded', true);
     store.setState((s) => ({ settings: { ...s.settings, onboarded: true } }));
     scheduleSnapshot();
+    startAds();
   },
 
   async requestInstall() {
@@ -494,6 +495,16 @@ function onBannerHeight(px) {
   const height = Math.max(0, Math.round(Number(px) || 0));
   document.documentElement.style.setProperty('--ad-h', `${height}px`);
   document.body.classList.toggle('has-ad', height > 0);
+}
+
+// Ads (and, on iOS, the App Tracking Transparency prompt that precedes the first
+// ad request) start only once onboarding is behind the user and a real view is
+// on screen — never over the welcome flow. Idempotent.
+let adsStarted = false;
+function startAds() {
+  if (adsStarted) return;
+  adsStarted = true;
+  setTimeout(() => { initAds({ onBannerHeight }).catch(() => {}); }, 700);
 }
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
@@ -553,6 +564,7 @@ async function init() {
   }
 
   booted = true;
+  document.body.dataset.booted = '1';
   platform.hideSplash();
   if (restored) {
     setTimeout(() => showToast(`저장된 백업에서 복원했어요 · 업체 ${restored.shops}개`), 400);
@@ -570,8 +582,7 @@ async function init() {
   window.addEventListener('pagehide', () => { flushSnapshot().catch(() => {}); });
   window.addEventListener('online', () => retryAds());
 
-  // Ads last: the first view is on screen and the app is active (ATT prompt needs it).
-  setTimeout(() => { initAds({ onBannerHeight }).catch(() => {}); }, 700);
+  if (onboarded) startAds();   // otherwise completeOnboarding() starts them
 }
 
 if (document.readyState === 'loading') {
