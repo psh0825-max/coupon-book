@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>개인정보처리방침 — 쿠폰북(Coupon Book)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>개인정보처리방침 · Privacy Policy — 쿠폰북 (Coupon Book)</title>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
@@ -19,23 +19,11 @@
   main {
     max-width: 720px;
     margin: 0 auto;
-    padding: 32px 20px 64px;
+    padding: calc(32px + env(safe-area-inset-top, 0px)) 20px calc(64px + env(safe-area-inset-bottom, 0px));
   }
-  h1 {
-    font-size: 1.5rem;
-    line-height: 1.4;
-    margin: 0 0 8px;
-  }
-  .updated {
-    color: #6b7785;
-    font-size: 0.9rem;
-    margin: 0 0 24px;
-  }
-  h2 {
-    font-size: 1.1rem;
-    margin: 32px 0 8px;
-    padding-top: 8px;
-  }
+  h1 { font-size: 1.5rem; line-height: 1.4; margin: 0 0 8px; }
+  .updated { color: #6b7785; font-size: 0.9rem; margin: 0 0 8px; }
+  h2 { font-size: 1.1rem; margin: 32px 0 8px; padding-top: 8px; }
   p { margin: 8px 0; }
   .summary {
     background: #eaf4ff;
@@ -48,12 +36,27 @@
   ul { padding-left: 20px; margin: 8px 0; }
   li { margin: 6px 0; }
   a { color: #2563eb; }
-  .back {
-    display: inline-block;
-    margin-top: 40px;
-    font-weight: 600;
-    text-decoration: none;
+  .lang {
+    display: flex;
+    gap: 8px;
+    margin: 0 0 20px;
+    font-size: 0.9rem;
   }
+  .lang a {
+    display: inline-block;
+    min-height: 44px;
+    line-height: 44px;
+    padding: 0 14px;
+    border: 1px solid #cfe4fb;
+    border-radius: 999px;
+    background: #fff;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; margin: 8px 0; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+  th { color: #6b7785; font-weight: 600; white-space: nowrap; }
+  .back { display: inline-block; margin-top: 40px; font-weight: 600; text-decoration: none; min-height: 44px; line-height: 44px; }
   footer {
     margin-top: 48px;
     padding-top: 16px;
@@ -61,12 +64,19 @@
     color: #6b7785;
     font-size: 0.85rem;
   }
+  hr.split { border: 0; border-top: 2px solid #cfe4fb; margin: 56px 0 40px; }
 </style>
 </head>
 <body>
 <main>
-  <h1>개인정보처리방침 — 쿠폰북(Coupon Book)</h1>
-  <p class="updated">최종 업데이트: 2026-07-03</p>
+  <nav class="lang" aria-label="언어 / Language">
+    <a href="#ko">한국어</a>
+    <a href="#en">English</a>
+  </nav>
+
+  <section id="ko" lang="ko">
+  <h1>개인정보처리방침 — 쿠폰북 (Coupon Book)</h1>
+  <p class="updated">최종 업데이트: 2026-09-13 · 적용 대상: 웹(coupon.lightonpluslab.com), iOS 앱, Android 앱</p>
   <p class="updated">
     운영자: 라이트온플러스랩(LightOn Plus Lab) · 1인 사업자 ·
     <a href="https://lightonpluslab.com" target="_blank" rel="noopener">https://lightonpluslab.com</a> ·
@@ -75,97 +85,212 @@
 
   <div class="summary">
     <strong>핵심 요약</strong>
-    이 앱은 계정이 없고, 입력한 모든 정보(업체, 쿠폰, 메모, 기프티콘 이미지,
-    위치 좌표)는
-    사용자의 기기 내부(브라우저 IndexedDB)에만 저장됩니다. 어떤 데이터도 서버로
-    전송·수집하지 않습니다. 다만 무료 버전에는 Google AdSense 광고가 표시되며,
-    이 과정에서 Google이 쿠키나 광고 식별자를 사용할 수 있습니다(아래 ‘광고’ 참고).
+    쿠폰북에는 회원가입·로그인이 없고, 운영자가 운영하는 서버도 없습니다. 입력한 모든 정보(업체,
+    쿠폰, 메모, 사용 내역, 선택적으로 저장한 위치 좌표)는 사용자의 기기 안에만 저장되며 운영자는
+    이를 수집하거나 전송받지 않습니다. 무료 버전에는 Google 광고(웹: AdSense, 앱: AdMob)가
+    표시될 수 있으며, 이 과정에서 Google이 기기 식별자나 광고 상호작용 정보를 사용할 수
+    있습니다(아래 ‘광고’ 항목).
   </div>
 
-  <h2>수집하는 정보</h2>
+  <h2>1. 사용자가 입력하는 정보 (기기 안에만 저장)</h2>
+  <ul>
+    <li>업체명·카테고리·주소·전화번호</li>
+    <li>이용권 종류(도장판·횟수권·금액권), 총량·사용량, 만료일, 메모, 쿠폰/멤버십 코드</li>
+    <li>도장 적립·사용 내역(시각, 메모, 그리고 ‘가게 근처 알림’을 켠 경우에 한해 사용 당시 좌표)</li>
+    <li>사용자가 ‘현재 위치로 저장’을 눌러 직접 저장한 업체 위치 좌표</li>
+  </ul>
   <p>
-    이 앱은 별도의 회원가입이나 계정 없이 동작합니다. 사용자가 직접 입력하거나
-    촬영한 데이터만 사용하며, 다음 정보가 이에 해당합니다:
+    위 정보는 기기의 로컬 저장소(브라우저/앱 내부의 IndexedDB)에 저장됩니다. 앱은 저장소가
+    비워지는 상황에 대비해 같은 내용을 앱 내부 전용 영역(iOS: 앱 데이터 컨테이너, 웹: 브라우저
+    저장소)에 자동 보관본으로 한 벌 더 기록합니다. 어느 것도 외부로 전송되지 않으며, 앱을
+    삭제하면 함께 삭제됩니다.
+  </p>
+
+  <h2>2. 위치 정보 (선택)</h2>
+  <p>
+    위치 권한은 다음 기능을 사용자가 직접 켜거나 누를 때만 요청되며, 사용 중에만(‘앱을 사용하는
+    동안’) 접근합니다.
   </p>
   <ul>
-    <li>업체명·주소·전화번호</li>
-    <li>쿠폰 만료일·메모·쿠폰 코드</li>
-    <li>사용자가 직접 첨부한 기프티콘 이미지</li>
-    <li>적립(도장) 현황</li>
-    <li>선택적으로 저장한 위치 좌표</li>
+    <li>지도 탭에서 현재 위치를 표시하고 등록 업체까지의 거리를 계산할 때</li>
+    <li>이용권을 등록·편집하며 ‘현재 위치로 저장’을 누를 때</li>
+    <li>설정에서 ‘가게 근처 알림’을 켠 경우, 저장한 업체 근처에 머무는지 확인할 때</li>
   </ul>
-  <p>위 정보는 모두 사용자 기기에 로컬로만 저장되며 서버로 전송되지 않습니다.</p>
-
-  <h2>기프티콘 이미지</h2>
   <p>
-    기프티콘을 첨부하면 사진첩·파일 선택 권한이 사용됩니다. 선택한 이미지는 저장
-    공간 절약을 위해 축소·재압축되어 <strong>기기 로컬(IndexedDB)에만</strong>
-    저장되며 외부로 전송되지 않습니다. 첨부 시 기기가 지원하는 경우 이미지에서
-    바코드 값을 읽어 쿠폰 코드 입력란을 자동으로 채울 수 있는데, 이 인식은
-    <strong>전적으로 기기 안에서</strong> 이루어집니다.
-  </p>
-  <p>
-    첨부한 이미지는 JSON 백업 파일에 함께 포함됩니다. 백업 파일은 사용자가 직접
-    내보내고 보관하는 파일이며, 앱이 어디로도 업로드하지 않습니다. 이미지는
-    이용권을 삭제하거나 편집 화면에서 ‘이미지 제거’를 누르면 함께 삭제됩니다.
+    위치는 기기 안에서만 계산·표시되며 운영자에게 전송되지 않습니다. 권한을 거부해도 위치 기능을
+    제외한 모든 기능을 그대로 쓸 수 있고, 기기 설정에서 언제든 권한을 바꿀 수 있습니다.
   </p>
 
-  <h2>위치 정보</h2>
+  <h2>3. 알림</h2>
   <p>
-    지도 및 근처 알림 기능에서 기기의 위치 권한을 사용할 수 있습니다. 위치 정보는
-    화면 표시와 거리 계산에만 쓰이며, 저장은 사용자가 직접 ‘현재 위치로 설정’한
-    좌표에 한해 기기 로컬에만 이루어집니다. 위치 정보는 서버로 전송되지 않습니다.
+    만료 임박 알림(D-7·D-3·D-1)과 근처 알림은 기기 안에서 예약·표시되는 로컬 알림입니다. 푸시
+    서버를 사용하지 않으며 알림 토큰도 수집하지 않습니다. 알림 권한은 사용자가 ‘만료 알림’을
+    켤 때만 요청됩니다.
   </p>
 
-  <h2>외부 통신</h2>
+  <h2>4. 백업 파일</h2>
   <p>
-    지도 타일(OpenStreetMap)과 웹폰트(jsDelivr) 로드를 위해 해당 서비스에 표준
-    요청이 갈 수 있으며, 이 경우 각 서비스의 정책이 적용됩니다. 아래 ‘광고’
-    항목의 광고 게재를 제외하면 별도의 추적·분석 도구는 사용하지 않습니다.
+    ‘백업 파일 내보내기’는 사용자가 직접 실행할 때만 JSON 파일을 만들며, 파일은 사용자가 고른
+    위치(iOS: 파일 앱의 ‘쿠폰북’ 폴더 또는 공유 시트로 보낸 곳, Android: 다운로드 폴더, 웹:
+    브라우저 다운로드)에만 저장됩니다. 운영자는 백업 파일을 받지 않습니다.
   </p>
 
-  <h2>광고</h2>
+  <h2>5. 광고 (무료 버전)</h2>
   <p>
-    무료 버전에는 Google AdSense 광고가 표시됩니다. 광고 게재 과정에서 Google과
-    그 파트너가 쿠키, 기기 식별자(광고 ID), 대략적인 위치, 광고 상호작용 정보를
-    수집·사용할 수 있으며, 이에 따라 맞춤 광고 또는 일반(비맞춤) 광고가 표시될
-    수 있습니다.
-  </p>
-  <p>
-    이는 광고 게재에 한정된 것으로, 앱 자체는 여전히 사용자가 입력한 어떤
-    개인정보도 서버로 전송·수집하지 않습니다.
+    무료 버전에는 Google 광고가 표시될 수 있습니다 — 웹사이트는 Google AdSense, iOS/Android
+    앱은 Google AdMob입니다. 광고 게재 과정에서 Google과 그 파트너는 기기 광고 식별자, IP 주소에
+    기반한 대략적인 위치, 광고 상호작용 정보를 수집·사용할 수 있습니다. 이는 광고 게재에 한정된
+    것으로, 앱이 사용자가 입력한 쿠폰 정보를 광고 사업자에게 전달하는 일은 없습니다.
   </p>
   <ul>
     <li>
-      Google의 광고 데이터 사용 안내:
-      <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">https://policies.google.com/technologies/ads</a>
+      <strong>iOS 앱 추적 투명성(ATT)</strong>: iOS 앱은 첫 광고를 불러오기 전에 추적 허용 여부를
+      묻습니다. ‘앱에 추적 금지 요청’을 선택하면 광고 식별자(IDFA)에 접근하지 않고
+      비맞춤(일반) 광고만 표시됩니다. 설정 › 개인정보 보호 및 보안 › 추적에서 언제든 바꿀 수
+      있습니다.
     </li>
-    <li>
-      맞춤 광고 관리(끄기):
-      <a href="https://adssettings.google.com" target="_blank" rel="noopener">Google 광고 설정</a>
-    </li>
+    <li>Google의 광고 데이터 사용 안내: <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">policies.google.com/technologies/ads</a></li>
+    <li>맞춤 광고 관리: <a href="https://adssettings.google.com" target="_blank" rel="noopener">Google 광고 설정</a></li>
   </ul>
 
-  <h2>데이터 보관/삭제</h2>
+  <h2>6. 외부 서비스와의 통신</h2>
+  <p>다음 기능은 표준 웹 요청(IP 주소·브라우저 정보가 포함됨)을 외부 서비스에 보냅니다.</p>
+  <table>
+    <tr><th>기능</th><th>서비스</th><th>보내는 내용</th></tr>
+    <tr><td>지도 타일</td><td>OpenStreetMap</td><td>지도 표시 영역의 타일 요청</td></tr>
+    <tr><td>화면 글꼴</td><td>jsDelivr CDN (Pretendard)</td><td>글꼴 파일 요청</td></tr>
+    <tr><td>매장 검색 (웹에서만 제공되는 선택 기능)</td><td>Kakao 지도 API</td><td>입력한 검색어와, 위치 권한을 허용한 경우 검색 기준 좌표</td></tr>
+    <tr><td>광고</td><td>Google AdSense / AdMob</td><td>‘광고’ 항목 참고</td></tr>
+  </table>
+  <p>운영자는 별도의 분석·추적 도구(애널리틱스, 크래시 리포팅 등)를 사용하지 않습니다.</p>
+
+  <h2>7. 보관 및 삭제</h2>
   <p>
-    데이터는 사용자 기기에 저장되며, 앱의 ‘전체 초기화’ 기능이나 브라우저 데이터
-    삭제로 완전히 제거됩니다. 백업(JSON)은 사용자가 직접 내보낸 파일에만 존재합니다.
+    데이터는 사용자가 삭제할 때까지 기기에 보관됩니다. 앱의 ‘모든 데이터 삭제’, 앱 삭제, 또는
+    브라우저 데이터 삭제로 완전히 제거되며, 백업 파일은 사용자가 직접 관리합니다. 운영자에게는
+    삭제를 요청할 데이터 자체가 없습니다.
   </p>
 
-  <h2>아동</h2>
-  <p>
-    이 앱은 특정 연령을 겨냥하지 않으며, 개인정보를 수집하지 않습니다.
-  </p>
+  <h2>8. 아동</h2>
+  <p>이 서비스는 만 14세 미만 아동을 대상으로 하지 않으며, 누구의 개인정보도 수집하지 않습니다.</p>
 
-  <h2>문의</h2>
+  <h2>9. 변경</h2>
+  <p>방침이 바뀌면 이 페이지의 ‘최종 업데이트’ 날짜를 갱신합니다. 중요한 변경은 앱 안에서도 안내합니다.</p>
+
+  <h2>10. 문의</h2>
   <p>운영자: 라이트온플러스랩(LightOn Plus Lab)</p>
   <p>이메일: <a href="mailto:support@lightonpluslab.com">support@lightonpluslab.com</a></p>
   <p>홈페이지: <a href="https://lightonpluslab.com" target="_blank" rel="noopener">https://lightonpluslab.com</a></p>
+  </section>
 
-  <a class="back" href="./">← 쿠폰북으로 돌아가기</a>
+  <hr class="split">
+
+  <section id="en" lang="en">
+  <h1>Privacy Policy — Coupon Book (쿠폰북)</h1>
+  <p class="updated">Last updated: 2026-09-13 · Applies to: the website (coupon.lightonpluslab.com), the iOS app and the Android app</p>
+  <p class="updated">
+    Operator: LightOn Plus Lab (sole proprietor) ·
+    <a href="https://lightonpluslab.com" target="_blank" rel="noopener">https://lightonpluslab.com</a> ·
+    Contact: <a href="mailto:support@lightonpluslab.com">support@lightonpluslab.com</a>
+  </p>
+
+  <div class="summary">
+    <strong>In short</strong>
+    Coupon Book has no accounts, no sign-in and no server run by us. Everything you enter (shops,
+    coupons, notes, usage history and any location you choose to save) stays on your device; we never
+    collect or receive it. The free version may show Google ads (AdSense on the website, AdMob in the
+    apps), and Google may use device identifiers or ad-interaction data for that (see “Advertising”).
+  </div>
+
+  <h2>1. Information you enter (stored on your device only)</h2>
+  <ul>
+    <li>Shop name, category, address, phone number</li>
+    <li>Pass type (stamp card, session pass, prepaid amount), totals and usage, expiry date, notes, coupon/membership code</li>
+    <li>Stamp and usage history (time, note and — only while “nearby alerts” is on — the position at the time of use)</li>
+    <li>A shop location you saved yourself with “Save current location”</li>
+  </ul>
+  <p>
+    This data lives in the device’s local storage (IndexedDB inside the browser/app). To survive storage
+    being cleared, the app also keeps an automatic copy in its private app area (iOS: the app’s data
+    container; web: browser storage). Nothing is transmitted anywhere, and everything is deleted with the app.
+  </p>
+
+  <h2>2. Location (optional)</h2>
+  <p>Location permission is requested only when you use one of these features, and only while the app is in use:</p>
+  <ul>
+    <li>Showing your position and distances on the Map tab</li>
+    <li>Tapping “Save current location” while adding or editing a pass</li>
+    <li>Checking whether you are near a saved shop, if you turned on “nearby alerts” in Settings</li>
+  </ul>
+  <p>
+    Location is processed and displayed on the device only and is never sent to us. If you decline, every
+    feature except the location ones keeps working, and you can change the permission in device settings at any time.
+  </p>
+
+  <h2>3. Notifications</h2>
+  <p>
+    Expiry reminders (D-7 · D-3 · D-1) and nearby alerts are local notifications scheduled and shown on the
+    device. There is no push server and no notification token is collected. Permission is requested only
+    when you turn reminders on.
+  </p>
+
+  <h2>4. Backup files</h2>
+  <p>
+    “Export backup” creates a JSON file only when you run it, and the file goes only where you choose
+    (iOS: the “Coupon Book” folder in Files or the share sheet destination; Android: Downloads; web:
+    browser download). We never receive backup files.
+  </p>
+
+  <h2>5. Advertising (free version)</h2>
+  <p>
+    The free version may show Google ads — Google AdSense on the website and Google AdMob in the iOS/Android
+    apps. To serve ads, Google and its partners may collect and use the device advertising identifier, an
+    approximate location derived from the IP address and ad-interaction data. This is limited to ad
+    serving; the app never shares the coupon data you enter with any advertising provider.
+  </p>
+  <ul>
+    <li>
+      <strong>App Tracking Transparency (iOS)</strong>: the iOS app asks for tracking permission before the
+      first ad request. If you choose “Ask App Not to Track”, the advertising identifier (IDFA) is not
+      accessed and only non-personalized ads are shown. You can change this any time under Settings › Privacy &amp; Security › Tracking.
+    </li>
+    <li>How Google uses data in ads: <a href="https://policies.google.com/technologies/ads" target="_blank" rel="noopener">policies.google.com/technologies/ads</a></li>
+    <li>Manage personalized ads: <a href="https://adssettings.google.com" target="_blank" rel="noopener">Google Ads Settings</a></li>
+  </ul>
+
+  <h2>6. Connections to external services</h2>
+  <p>These features make standard web requests (which include your IP address and browser information) to third parties:</p>
+  <table>
+    <tr><th>Feature</th><th>Service</th><th>What is sent</th></tr>
+    <tr><td>Map tiles</td><td>OpenStreetMap</td><td>Tile requests for the visible map area</td></tr>
+    <tr><td>Screen font</td><td>jsDelivr CDN (Pretendard)</td><td>Font file requests</td></tr>
+    <tr><td>Place search (optional, website only)</td><td>Kakao Maps API</td><td>The search text you type and, if you allowed location, the coordinates used to sort results</td></tr>
+    <tr><td>Advertising</td><td>Google AdSense / AdMob</td><td>See “Advertising”</td></tr>
+  </table>
+  <p>We use no analytics, crash reporting or other tracking tools.</p>
+
+  <h2>7. Retention and deletion</h2>
+  <p>
+    Data stays on your device until you delete it: use “Delete all data” in the app, delete the app, or
+    clear browser data. Backup files are yours to manage. There is nothing held by us that could be deleted on request.
+  </p>
+
+  <h2>8. Children</h2>
+  <p>The service is not directed at children under 13 (under 14 in Korea), and it collects no personal information from anyone.</p>
+
+  <h2>9. Changes</h2>
+  <p>When this policy changes, the “Last updated” date above is revised; significant changes are also announced in the app.</p>
+
+  <h2>10. Contact</h2>
+  <p>Operator: LightOn Plus Lab</p>
+  <p>Email: <a href="mailto:support@lightonpluslab.com">support@lightonpluslab.com</a></p>
+  <p>Website: <a href="https://lightonpluslab.com" target="_blank" rel="noopener">https://lightonpluslab.com</a></p>
+  </section>
+
+  <a class="back" href="./">← 쿠폰북으로 돌아가기 · Back to Coupon Book</a>
 
   <footer>
-    쿠폰북(Coupon Book) · 로컬에 저장되는 개인 쿠폰 지갑
+    쿠폰북(Coupon Book) · 계정 없이 내 기기에만 저장되는 개인 쿠폰 지갑 · A personal coupon wallet that stays on your device
     <br>
     © LightOn Plus Lab
   </footer>
