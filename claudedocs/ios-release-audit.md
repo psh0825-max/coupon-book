@@ -134,3 +134,21 @@ WKWebView는 콘텐츠가 움직이는 동안 스냅샷을 계속 갱신해 `XCU
 - 스토어 스크린샷은 시뮬레이터 캡처 기반(실기기 아님). 상태 표시줄은 9:41로 통일.
 - Android(`webview-app/`)는 이번에 손대지 않음. 웹 변경은 GitHub Pages 배포로 그대로 반영되고, 브리지 계약(`saveText`,
   `showNotification`, `scheduleReminder`, `cancelReminder`, `canNotify`)은 유지.
+
+## 6. 산출물 (2026-09-13)
+
+| 산출물 | 경로 |
+| --- | --- |
+| App Store IPA (build 1, 광고 꺼짐) | `~/Projects/_releases/쿠폰북/coupon-book-2.0.0-ios-build1.ipa` |
+| xcarchive (+zip) | `~/Projects/_releases/쿠폰북/coupon-book-2.0.0-ios-build1.xcarchive(.zip)` |
+| 스크린샷 ko / en | `store/ios/iphone-6.9/01..08.png`, `store/ios/iphone-6.9-en/01..08.png` (1320×2868) |
+| 스토어 문안·심사 메모·App Privacy | `store/ios/listing.md` |
+| 개인정보처리방침 (배포 대상) | `static/privacy.html` → https://coupon.lightonpluslab.com/privacy.html |
+| 재현 스크립트 | `scripts/ios-archive.sh`, `scripts/make-ios-icon.mjs`, `scripts/make-ios-store-assets.py` |
+
+IPA 검증: `codesign -dv --entitlements` → Identifier `com.lightonpluslab.couponbook`, Team `237X7RZB63`,
+프로필 "Coupon Book App Store", `get-task-allow` = false; Info.plist → 2.0.0 / 1 / 쿠폰북 / `GADApplicationIdentifier`
+`ca-app-pub-7180935400084577~3984818286` / `ITSAppUsesNonExemptEncryption` false. 아카이브·내보내기 로그에
+"App Store Connect request for store configuration failed (no provider)" 한 줄이 남는데, Xcode에 Apple 계정이
+없어서 나는 정보성 메시지이며 수동 서명 내보내기는 정상 완료된다.
+
