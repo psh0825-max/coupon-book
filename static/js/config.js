@@ -9,8 +9,13 @@
 //                             completely off: no SDK init, no ATT prompt, no reserved
 //                             banner space. This is the state of the release archive
 //                             until the real banner unit exists in the AdMob console.
-// The iOS app id must ALSO be present natively in ios/App/App/Info.plist
-// (GADApplicationIdentifier) — keep both in sync.
+// iOS 2.0.0 (build 2) ships WITHOUT the AdMob plugin: capacitor.config.json
+// `ios.includePlugins` leaves out @capacitor-community/admob, and Info.plist has
+// no GADApplicationIdentifier / NSUserTrackingUsageDescription / SKAdNetworkItems
+// (App Review 2.1: a binary that links ATT must show the prompt). To turn iOS ads
+// on (2.0.1): set ios.bannerId, add the plugin back to ios.includePlugins, restore
+// those three Info.plist keys (git show 5286496:ios/App/App/Info.plist), then
+// `npx cap sync ios` — scripts/ios-archive.sh refuses a half-enabled archive.
 
 export const APP_VERSION = '2.0.0';
 

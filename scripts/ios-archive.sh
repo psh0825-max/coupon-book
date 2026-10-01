@@ -59,7 +59,20 @@ TMP=$(mktemp -d)
 unzip -o -q "$OUT_DIR/${NAME}.ipa" -d "$TMP"
 APP=$(ls -d "$TMP"/Payload/*.app | head -1)
 codesign -dv --entitlements - "$APP" 2>&1 | grep -E "Identifier=|TeamIdentifier=|application-identifier|beta-reports-active|get-task-allow" || true
-/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' -c 'Print :CFBundleShortVersionString' -c 'Print :CFBundleVersion' -c 'Print :CFBundleDisplayName' -c 'Print :GADApplicationIdentifier' -c 'Print :ITSAppUsesNonExemptEncryption' "$APP/Info.plist"
+/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' -c 'Print :CFBundleShortVersionString' -c 'Print :CFBundleVersion' -c 'Print :CFBundleDisplayName' -c 'Print :ITSAppUsesNonExemptEncryption' "$APP/Info.plist"
+# Ads must be all-or-nothing: the ATT usage string, the AdMob SDK and the
+# AppTrackingTransparency framework ship together or not at all (App Review
+# 2.1 rejects a binary that links ATT but never shows the prompt).
+HAS_ATT_KEY=0; /usr/libexec/PlistBuddy -c 'Print :NSUserTrackingUsageDescription' "$APP/Info.plist" >/dev/null 2>&1 && HAS_ATT_KEY=1
+HAS_ADMOB=0; grep -q "AdMobPlugin" "$APP/capacitor.config.json" && HAS_ADMOB=1
+HAS_ATT_LINK=0; otool -L "$APP/App" | grep -q AppTrackingTransparency && HAS_ATT_LINK=1
+echo "ads: NSUserTrackingUsageDescription=$HAS_ATT_KEY AdMobPlugin=$HAS_ADMOB ATT-linked=$HAS_ATT_LINK"
+if [[ "$HAS_ATT_KEY$HAS_ADMOB" != "00" && "$HAS_ATT_KEY$HAS_ADMOB" != "11" ]]; then
+  echo "✖ ATT usage string and AdMob plugin must ship together" >&2; exit 1
+fi
+if [[ "$HAS_ADMOB" == "1" ]] && ! grep -q "bannerId: '[^']" "$APP/public/js/config.js"; then
+  echo "✖ AdMob is bundled but config.js bannerId is empty — ATT prompt would never appear" >&2; exit 1
+fi
 rm -rf "$TMP"
 echo "✔ $OUT_DIR/${NAME}.ipa"
 echo "✔ $OUT_DIR/${NAME}.xcarchive.zip"

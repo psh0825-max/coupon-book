@@ -8,7 +8,19 @@
     "backgroundColor": "#f5f7fa",
     "allowsLinkPreview": false,
     "scrollEnabled": true,
-    "loggingBehavior": "debug"
+    "loggingBehavior": "debug",
+    "includePlugins": [
+      "@capacitor/app",
+      "@capacitor/browser",
+      "@capacitor/filesystem",
+      "@capacitor/geolocation",
+      "@capacitor/haptics",
+      "@capacitor/local-notifications",
+      "@capacitor/preferences",
+      "@capacitor/share",
+      "@capacitor/splash-screen",
+      "@capacitor/status-bar"
+    ]
   },
   "plugins": {
     "SplashScreen": {
