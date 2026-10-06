@@ -11,6 +11,7 @@ import android.util.DisplayMetrics;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -35,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String APP_URL = "https://coupon.lightonpluslab.com/";
     private static final String APP_HOST = "coupon.lightonpluslab.com";
+    private static final String OFFLINE_URL = "file:///android_asset/offline.html";
 
     // Real AdMob banner unit id ("쿠폰북 하단 배너", issued 2026-07-31).
     // Do NOT click live ads on your own device (invalid-traffic policy) —
@@ -48,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
     private FrameLayout adContainer;
     private AdView adView;
     private int bannerWidthDp;
+    private boolean showingOffline;
     private final OnBackPressedCallback backCallback = new OnBackPressedCallback(false) {
         @Override
         public void handleOnBackPressed() {
@@ -97,6 +100,28 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(new WebAppBridge(this), "AndroidBridge");
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request,
+                                        WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                if (request.isForMainFrame()) {
+                    showingOffline = true;
+                    view.loadUrl(OFFLINE_URL);
+                }
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (url.startsWith(OFFLINE_URL)) {
+                    view.clearHistory();
+                } else if (showingOffline && url.startsWith(APP_URL)) {
+                    view.clearHistory();
+                    showingOffline = false;
+                }
+                backCallback.setEnabled(view.canGoBack());
+            }
+
             @Override
             public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
                 super.doUpdateVisitedHistory(view, url, isReload);
