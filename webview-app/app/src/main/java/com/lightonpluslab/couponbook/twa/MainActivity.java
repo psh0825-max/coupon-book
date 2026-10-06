@@ -3,6 +3,7 @@ package com.lightonpluslab.couponbook.twa;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,6 +17,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -45,6 +47,13 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private FrameLayout adContainer;
     private AdView adView;
+    private int bannerWidthDp;
+    private final OnBackPressedCallback backCallback = new OnBackPressedCallback(false) {
+        @Override
+        public void handleOnBackPressed() {
+            webView.goBack();
+        }
+    };
 
     private GeolocationPermissions.Callback pendingGeoCallback;
     private String pendingGeoOrigin;
@@ -56,15 +65,17 @@ public class MainActivity extends AppCompatActivity {
 
         webView = findViewById(R.id.webview);
         adContainer = findViewById(R.id.ad_container);
+        getOnBackPressedDispatcher().addCallback(this, backCallback);
 
         configureWebView();
-        loadBanner();
+        adContainer.post(this::loadBanner);
         requestNotificationPermission();
 
         if (savedInstanceState == null) {
             webView.loadUrl(APP_URL);
         } else {
             webView.restoreState(savedInstanceState);
+            backCallback.setEnabled(webView.canGoBack());
         }
     }
 
@@ -86,6 +97,12 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(new WebAppBridge(this), "AndroidBridge");
 
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+                super.doUpdateVisitedHistory(view, url, isReload);
+                backCallback.setEnabled(view.canGoBack());
+            }
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return handleUri(request.getUrl());
@@ -148,6 +165,10 @@ public class MainActivity extends AppCompatActivity {
 
     // ── AdMob banner ──────────────────────────────────────────────────────────
     private void loadBanner() {
+        if (adView != null) {
+            adView.destroy();
+            adView = null;
+        }
         adView = new AdView(this);
         adView.setAdUnitId(BANNER_UNIT_ID);
         adView.setAdSize(adaptiveSize());
@@ -158,8 +179,14 @@ public class MainActivity extends AppCompatActivity {
 
     private AdSize adaptiveSize() {
         DisplayMetrics dm = getResources().getDisplayMetrics();
-        int adWidth = (int) (dm.widthPixels / dm.density);
-        return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, adWidth);
+        bannerWidthDp = getBannerWidthDp(dm);
+        return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, bannerWidthDp);
+    }
+
+    private int getBannerWidthDp(DisplayMetrics dm) {
+        int widthPx = adContainer.getWidth();
+        if (widthPx <= 0) widthPx = dm.widthPixels;
+        return (int) (widthPx / dm.density);
     }
 
     // ── Permissions ───────────────────────────────────────────────────────────
@@ -192,14 +219,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ── Back button: navigate the SPA history first ───────────────────────────
+    // ── Configuration ─────────────────────────────────────────────────────────
     @Override
-    public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        adContainer.post(() -> {
+            int widthDp = getBannerWidthDp(getResources().getDisplayMetrics());
+            if (widthDp != bannerWidthDp) loadBanner();
+        });
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
