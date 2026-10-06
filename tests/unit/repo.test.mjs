@@ -1,6 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeShop } from '../../static/js/data/repo.js';
+import { demoShops, normalizeShop } from '../../static/js/data/repo.js';
+
+function localDateOffset(now, days) {
+  const date = new Date(now);
+  date.setDate(date.getDate() + days);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+test('demoShops: returns fresh future-dated sample passes', () => {
+  const now = new Date(2026, 9, 7, 12, 0, 0);
+  const first = demoShops(now);
+  const second = demoShops(now);
+  assert.deepEqual(first.map((shop) => shop.name), ['안양 스타 마사지', '허브 커피 로스터스', '태양 찜질방']);
+  assert.deepEqual(first.map((shop) => shop.expiresAt), [
+    localDateOffset(now, 180), localDateOffset(now, 40), localDateOffset(now, 6)
+  ]);
+  assert.ok(first.every((shop) => shop.expiresAt > localDateOffset(now, 0)));
+  assert.notStrictEqual(first, second);
+  assert.notStrictEqual(first[0], second[0]);
+});
 
 test('normalizeShop: clamps totalCoupons to 1000 max', () => {
   assert.equal(normalizeShop({ totalCoupons: 9999 }).totalCoupons, 1000);
