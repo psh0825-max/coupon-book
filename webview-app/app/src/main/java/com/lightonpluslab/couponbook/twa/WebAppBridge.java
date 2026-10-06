@@ -30,11 +30,17 @@ import java.nio.charset.StandardCharsets;
  */
 public class WebAppBridge {
 
+    public interface NotificationPermissionRequester {
+        void requestNotificationPermission();
+    }
+
     private final Context ctx;
+    private final NotificationPermissionRequester requester;
     private final Handler main = new Handler(Looper.getMainLooper());
 
-    WebAppBridge(Context ctx) {
+    WebAppBridge(Context ctx, NotificationPermissionRequester requester) {
         this.ctx = ctx.getApplicationContext();
+        this.requester = requester;
     }
 
     private void toast(String msg) {
@@ -116,5 +122,10 @@ public class WebAppBridge {
     @JavascriptInterface
     public boolean canNotify() {
         return NotificationManagerCompat.from(ctx).areNotificationsEnabled();
+    }
+
+    @JavascriptInterface
+    public void requestNotificationPermission() {
+        main.post(requester::requestNotificationPermission);
     }
 }

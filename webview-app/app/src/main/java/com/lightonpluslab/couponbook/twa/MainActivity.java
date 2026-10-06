@@ -21,6 +21,7 @@ import android.widget.FrameLayout;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.ads.AdRequest;
@@ -72,7 +73,6 @@ public class MainActivity extends AppCompatActivity {
 
         configureWebView();
         adContainer.post(this::loadBanner);
-        requestNotificationPermission();
 
         if (savedInstanceState == null) {
             webView.loadUrl(APP_URL);
@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
         // only the native AdMob banner shows in the app.
         s.setUserAgentString(s.getUserAgentString() + " CouponBookApp/2.0");
 
-        webView.addJavascriptInterface(new WebAppBridge(this), "AndroidBridge");
+        webView.addJavascriptInterface(new WebAppBridge(this, this::requestNotificationPermission), "AndroidBridge");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -228,7 +228,16 @@ public class MainActivity extends AppCompatActivity {
                     != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFY);
+                return;
             }
+        }
+        deliverNotifyResult(NotificationManagerCompat.from(this).areNotificationsEnabled());
+    }
+
+    private void deliverNotifyResult(boolean granted) {
+        if (webView != null) {
+            webView.evaluateJavascript("window.__cbNotifyPermission && window.__cbNotifyPermission("
+                    + granted + ")", null);
         }
     }
 
@@ -241,6 +250,9 @@ public class MainActivity extends AppCompatActivity {
             pendingGeoCallback.invoke(pendingGeoOrigin, granted, false);
             pendingGeoCallback = null;
             pendingGeoOrigin = null;
+        } else if (requestCode == REQ_NOTIFY) {
+            deliverNotifyResult(grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED);
         }
     }
 
