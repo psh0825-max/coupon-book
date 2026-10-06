@@ -10,7 +10,7 @@ android {
         // SAME applicationId as the TWA so this ships as an UPDATE to the existing
         // Play listing (users never see the package id; the ".twa" suffix is cosmetic).
         applicationId 'com.lightonpluslab.couponbook.twa'
-        minSdk 23
+        minSdk 24
         targetSdk 36
         versionCode 5
         versionName '2.0.0'
