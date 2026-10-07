@@ -162,6 +162,10 @@ export function priorityShop(shops) {
   return sortShops(active, 'smart')[0];
 }
 
+export function usableShops(shops) {
+  return sortShops((shops || []).filter((s) => !isExpired(s) && !isCompleted(s)), 'smart');
+}
+
 export function sortShops(shops, sortKey = 'smart') {
   const arr = [...(shops || [])];
   const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ko');

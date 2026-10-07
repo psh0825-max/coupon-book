@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   daysUntil, isCompleted, isExpired, isExpiringSoon, remainingCount, progressPercent,
-  couponStatus, formatExpiry, priorityShop, sortShops, filterShops, stats, dueReminders,
+  couponStatus, formatExpiry, priorityShop, usableShops, sortShops, filterShops, stats, dueReminders,
   reminderThreshold, expiryBucket,
   isAmountKind, isCountKind, isCouponKind, passTotal, passUsed, remainingValue,
   remainingLabel, totalLabel, usedLabel, lowBalancePasses, needsBackupNudge
@@ -149,6 +149,17 @@ test('sortShops: smart orders by urgency score, completed last', () => {
   // incomplete shops first (by urgency), completed sinks to the bottom
   assert.deepEqual(sorted.map((s) => s.name), ['e', 'u', 'n', 'c']);
   assert.equal(sorted[sorted.length - 1].name, 'c');
+});
+
+test('usableShops: excludes expired and completed passes in smart order', () => {
+  const expired = shop({ name: '만료', expiresAt: dateOffset(-1) });
+  const completed = shop({ name: '완료', usedCoupons: 10, expiresAt: dateOffset(3) });
+  const urgent = shop({ name: '긴급', expiresAt: dateOffset(3) });
+  const soon = shop({ name: '임박', expiresAt: dateOffset(20) });
+  const noExpiry = shop({ name: '기한없음' });
+  assert.deepEqual(usableShops([noExpiry, completed, soon, expired, urgent]).map((s) => s.name), ['긴급', '임박', '기한없음']);
+  assert.deepEqual(usableShops(), []);
+  assert.deepEqual(usableShops([]), []);
 });
 
 test('sortShops: remaining and name', () => {

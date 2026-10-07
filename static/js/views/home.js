@@ -3,7 +3,7 @@
 
 import { h } from '../core/h.js';
 import { shopCard, summaryCard, adBanner, nearbyCard, emptyState } from '../ui/components.js';
-import { stats, priorityShop, sortShops, couponStatus, progressPercent, isAmountKind, needsBackupNudge } from '../domain.js';
+import { stats, priorityShop, usableShops, couponStatus, progressPercent, isAmountKind, needsBackupNudge } from '../domain.js';
 import { getCurrentPosition, haversine } from '../services/location.js';
 import { showToast } from '../ui/toast.js';
 
@@ -22,6 +22,7 @@ export function render(ctx) {
   const settings = st.settings || {};
   const s = stats(shops, logs);
   const priority = priorityShop(shops);
+  const usable = usableShops(shops);
 
   const root = h('div');
   const hasShops = shops.length > 0;
@@ -33,8 +34,8 @@ export function render(ctx) {
     ? h('div', { class: 'home-head' },
         h('div', null,
           h('h1', null, '내 이용권'),
-          h('p', null, priority
-            ? `${priority.name} 이용권을 가장 먼저 챙기세요.`
+          h('p', null, usable.length
+            ? `${usable[0].name} 이용권을 가장 먼저 챙기세요.`
             : '잔액과 만료일을 한눈에 확인하세요.')
         ),
         h('button', {
@@ -130,7 +131,18 @@ export function render(ctx) {
     }));
   } else {
     rail = h('div', { class: 'shop-rail' });
-    sortShops(shops, 'smart').slice(0, 10).forEach((shop) => {
+    if (!usable.length) {
+      rail.classList.add('is-empty');
+      rail.appendChild(emptyState({
+        art: 'ticket',
+        title: '바로 쓸 수 있는 이용권이 없어요',
+        desc: '만료되거나 다 쓴 이용권은 모두보기에서 확인하세요',
+        actions: [
+          { label: '모두보기', className: 'btn-secondary', onClick: () => router.navigate('list') }
+        ]
+      }));
+    }
+    usable.slice(0, 10).forEach((shop) => {
       rail.appendChild(shopCard(shop, {
         onOpen: () => router.navigate('detail', { id: shop.id }),
         // Amount passes need an entry sheet; count passes fast-path one session.
