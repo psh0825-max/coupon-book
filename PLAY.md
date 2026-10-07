@@ -31,7 +31,7 @@
 - **v1.0.1 (vc3)** — 내부 테스트 트랙 활성. **v1.0.0 (vc1)** — 비활성.
 - **v2.0.0 (versionCode 5, WebView 셸)** — **빌드·서명 완료**
   (`webview-app/app/build/outputs/bundle/release/app-release.aab`, 2026-07-17,
-  targetSdk 36 / minSdk 23, 업로드 키로 서명됨). 남은 것은 AdMob 테스트 ID를
+  targetSdk 36 / minSdk 24, 업로드 키로 서명됨). 남은 것은 AdMob 테스트 ID를
   실 ID로 교체하는 것뿐 — §4.
 - 등록정보 초안(홍보영상 URL, 새 스크린샷 6장, 피처그래픽 v2)은 전송 대기 상태.
 - **프로덕션 = 비활성**(한 번도 출시된 적 없음). ← 현재 유일한 병목.
@@ -185,7 +185,7 @@ TWA는 **Chrome 프로필**의 IndexedDB에, WebView 셸은 **앱 자체 WebView
   불필요. 확장 전에 UMP 통합 또는 배포국 유지.
 - **target API**: 2026-08-31부터 API 36 필수 — `twa-build`(vc4)·`webview-app`(vc5)
   모두 이미 targetSdk 36이라 **바이너리 요건은 충족**. 남은 건 프로덕션 게시 —
-  §1.1 참조. minSdk는 TWA 21 → WebView 셸 **23**(Android 6.0+, 커버리지 영향
+  §1.1 참조. minSdk는 TWA 21 → WebView 셸 **24**(Android 7.0+ — Play 자동 보호 요구사항, 커버리지 영향
   사실상 없음).
 - 서명 키·`keystore-credentials.txt` 백업 유지(분실 = 업데이트 불가).
 

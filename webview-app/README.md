@@ -70,4 +70,4 @@ keyPassword=<기존 키 비밀번호>
 ## 6. Play Console 변경점 (자세한 건 ../PLAY.md)
 - **데이터 보안**: AdMob SDK는 **광고 ID(AD_ID)** 를 수집/공유합니다 — 이미 신고돼 있던 항목과 동일하나, TWA(웹쿠키)에서 **네이티브 SDK**로 근거가 바뀝니다. 광고 ID 권한 선언을 **사용함**으로.
 - 패키지·키가 같으므로 알파 트랙에 그대로 업로드하면 됩니다(versionCode 5).
-- minSdk 23(Android 6.0). 더 낮은 기기가 필요하면 `app/build.gradle`에서 낮추되 `play-services-ads` 호환 버전을 확인하세요.
+- minSdk 24(Android 7.0) — Google Play 자동 보호가 24 이상을 요구함. 더 낮은 기기가 필요하면 `app/build.gradle`에서 낮추되 `play-services-ads` 호환 버전을 확인하세요.

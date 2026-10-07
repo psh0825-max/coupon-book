@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>인터넷 연결 필요</title>
+  <style>
+    :root {
+      color: #0f172a;
+      background: #f7f9fb;
+      font-family: -apple-system, 'Pretendard', 'Noto Sans KR', sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      align-items: center;
+      background: #f7f9fb;
+      display: flex;
+      margin: 0;
+      min-height: 100vh;
+      padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+    }
+
+    main {
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      margin: auto;
+      max-width: 420px;
+      padding: 36px 24px 24px;
+      text-align: center;
+      width: 100%;
+    }
+
+    svg {
+      color: #2563eb;
+      height: 64px;
+      margin-bottom: 20px;
+      width: 64px;
+    }
+
+    h1 {
+      font-size: 22px;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    p {
+      color: #475569;
+      font-size: 16px;
+      line-height: 1.6;
+      margin: 12px 0 28px;
+      word-break: keep-all;
+    }
+
+    button {
+      background: #2563eb;
+      border: 0;
+      border-radius: 12px;
+      color: #ffffff;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+      min-height: 48px;
+      width: 100%;
+    }
+
+    button:active { background: #1d4ed8; }
+
+    button:focus-visible {
+      outline: 3px solid #0f172a;
+      outline-offset: 3px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <svg aria-hidden="true" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4">
+      <path d="M18 43h-2a10 10 0 0 1 2-19.8A15 15 0 0 1 45.6 25 10 10 0 0 1 48 44H32" />
+      <path d="M8 8l48 48" />
+    </svg>
+    <h1>인터넷에 연결되지 않았어요</h1>
+    <p>쿠폰북을 처음 열 때는 인터넷 연결이 한 번 필요해요. 연결되면 자동으로 다시 시도해요.</p>
+    <button type="button">다시 시도</button>
+  </main>
+  <script>
+    const APP_URL = 'https://coupon.lightonpluslab.com/';
+    function retry() { location.replace(APP_URL); }
+    document.querySelector('button').addEventListener('click', retry);
+    window.addEventListener('online', retry);
+  </script>
+</body>
+</html>
