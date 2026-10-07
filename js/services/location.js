@@ -19,11 +19,32 @@ export function getCurrentPosition() {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
-      err => reject(err),
+      pos => {
+        try { localStorage.setItem('cb:geo-granted', '1'); } catch { /* storage optional */ }
+        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+      },
+      err => {
+        if (err?.code === 1) {
+          try { localStorage.removeItem('cb:geo-granted'); } catch { /* storage optional */ }
+        }
+        reject(err);
+      },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
     );
   });
+}
+
+export async function getPositionIfGranted() {
+  let granted = false;
+  try { granted = localStorage.getItem('cb:geo-granted') === '1'; } catch { /* storage optional */ }
+  if (!granted) {
+    try {
+      const permission = await navigator.permissions?.query({ name: 'geolocation' });
+      granted = permission?.state === 'granted';
+    } catch { /* permission query optional */ }
+  }
+  if (!granted) throw new Error('location-not-granted');
+  return getCurrentPosition();
 }
 
 /* ===== Location Watch System ===== */

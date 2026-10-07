@@ -13,9 +13,32 @@ let _onDue = null;
 let _listenerAttached = false;
 
 export async function ensurePermission() {
-  // Native app shell: notification permission is an Android runtime grant; the
-  // WebView has no Notification API. Report the native state instead.
+  // Newer native shells expose an explicit request so the OS prompt appears
+  // only after the user turns reminders on. Older shells asked at launch and
+  // can only report their current state.
   const bridge = typeof window !== 'undefined' ? window.AndroidBridge : null;
+  if (bridge && typeof bridge.requestNotificationPermission === 'function') {
+    return new Promise((resolve) => {
+      let settled = false;
+      let timeoutId;
+      const nativeState = () => bridge.canNotify() ? 'granted' : 'denied';
+      const settle = (result) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        delete window.__cbNotifyPermission;
+        resolve(result);
+      };
+
+      window.__cbNotifyPermission = (granted) => settle(granted === true ? 'granted' : 'denied');
+      timeoutId = setTimeout(() => settle(nativeState()), 60000);
+      try {
+        bridge.requestNotificationPermission();
+      } catch (e) {
+        settle(nativeState());
+      }
+    });
+  }
   if (bridge && typeof bridge.canNotify === 'function') {
     return bridge.canNotify() ? 'granted' : 'denied';
   }

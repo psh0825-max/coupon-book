@@ -6,11 +6,11 @@ import { createRouter } from './core/router.js';
 import { h, clear } from './core/h.js';
 
 import { Shops, Logs, Settings, seedDemoData, clearAll } from './data/repo.js';
-import { remainingCount, remainingValue, remainingLabel, isAmountKind } from './domain.js';
+import { remainingCount, remainingValue, remainingLabel, isAmountKind, isExpired } from './domain.js';
 import { formatWon, groupDigits, parseNumber } from './services/format.js';
 
 import {
-  setNotifySettings, startLocationWatch, stopLocationWatch, getCurrentPosition
+  setNotifySettings, startLocationWatch, stopLocationWatch, getPositionIfGranted
 } from './services/location.js';
 import { syncReminders, ensurePermission } from './services/reminders.js';
 import {
@@ -108,6 +108,17 @@ function onUpdateAvailable(reg) {
 // clamp to an integer range; NaN propagates so callers can guard with `if (!v)`.
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
+function confirmExpiredUse(shop, action) {
+  showSheet({
+    title: '만료된 이용권이에요',
+    body: `${shop.name} 이용권은 유효기간이 지났어요. 가게에서 사용을 확인했다면 기록할 수 있어요.`,
+    actions: [
+      { id: 'cancel', label: '취소', className: 'btn-secondary' },
+      action
+    ]
+  });
+}
+
 // ── Actions ──────────────────────────────────────────────────────────────────
 const actions = {
   // Kind-aware "use": deduct won (amount pass) or sessions (count pass). A used-up
@@ -117,6 +128,13 @@ const actions = {
     if (!shop) return;
     if (remainingValue(shop) <= 0) {
       showToast('남은 이용권이 없어요', 'danger');
+      return;
+    }
+    if (isExpired(shop) && !opts.confirmExpired) {
+      confirmExpiredUse(shop, {
+        id: 'use', label: '그래도 사용', className: 'btn-primary',
+        onClick: () => actions.usePass(shopId, { ...opts, confirmExpired: true })
+      });
       return;
     }
     const updated = { ...shop };
@@ -132,7 +150,7 @@ const actions = {
       logFields = { count: n };
     }
     let pos = null;
-    try { pos = await getCurrentPosition(); } catch { /* location optional */ }
+    try { pos = await getPositionIfGranted(); } catch { /* location optional */ }
     await Shops.update(updated);
     await Logs.add({
       shopId,
@@ -155,10 +173,17 @@ const actions = {
   },
 
   // Opens an accessible use-entry sheet, then delegates to usePass.
-  promptUse(shop) {
+  promptUse(shop, opts = {}) {
     if (!shop) return;
     if (remainingValue(shop) <= 0) {
       showToast('남은 이용권이 없어요', 'danger');
+      return;
+    }
+    if (isExpired(shop) && !opts.confirmExpired) {
+      confirmExpiredUse(shop, {
+        id: 'use', label: '그래도 사용', className: 'btn-primary', close: false,
+        onClick: () => actions.promptUse(shop, { confirmExpired: true })
+      });
       return;
     }
     const remaining = remainingValue(shop);
@@ -197,7 +222,7 @@ const actions = {
           { id: 'cancel', label: '취소', className: 'btn-secondary' },
           {
             id: 'confirm', label: '사용', className: 'btn-primary',
-            onClick: () => actions.usePass(shop.id, { amount: parseNumber(amountInput.value), note: memoInput.value.trim() })
+            onClick: () => actions.usePass(shop.id, { amount: parseNumber(amountInput.value), note: memoInput.value.trim(), confirmExpired: true })
           }
         ]
       });
@@ -217,7 +242,7 @@ const actions = {
           { id: 'cancel', label: '취소', className: 'btn-secondary' },
           {
             id: 'confirm', label: '사용', className: 'btn-primary',
-            onClick: () => actions.usePass(shop.id, { count: Number(countInput.value) || 1, note: memoInput.value.trim() })
+            onClick: () => actions.usePass(shop.id, { count: Number(countInput.value) || 1, note: memoInput.value.trim(), confirmExpired: true })
           }
         ]
       });

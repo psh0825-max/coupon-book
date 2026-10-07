@@ -3,7 +3,7 @@
 
 import { h, clear } from '../core/h.js';
 import { stampBoard, skinSelector } from '../ui/components.js';
-import { getCurrentPosition } from '../services/location.js';
+import { getCurrentPosition, getPositionIfGranted } from '../services/location.js';
 import { CATEGORIES, getDefaultSkin } from '../data/skins.js';
 import { showToast } from '../ui/toast.js';
 import { showConfirm } from '../ui/overlay.js';
@@ -110,7 +110,7 @@ export function render(ctx, params = {}) {
     const runSearch = async (query) => {
       showMessage('place-empty', '검색 중…');
       let pos;
-      try { pos = await getCurrentPosition(); } catch (e) { pos = undefined; }
+      try { pos = await getPositionIfGranted(); } catch (e) { pos = undefined; }
       try {
         const places = await searchPlaces(query, pos || {});
         if (query !== latestQuery) return; // out-of-order guard
