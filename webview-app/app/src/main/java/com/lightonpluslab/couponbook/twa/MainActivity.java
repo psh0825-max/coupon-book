@@ -1,6 +1,7 @@
 package com.lightonpluslab.couponbook.twa;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -16,9 +17,12 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.ValueCallback;
 import android.widget.FrameLayout;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -39,10 +43,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String APP_HOST = "coupon.lightonpluslab.com";
     private static final String OFFLINE_URL = "file:///android_asset/offline.html";
 
-    // Real AdMob banner unit id ("쿠폰북 하단 배너", issued 2026-07-31).
-    // Do NOT click live ads on your own device (invalid-traffic policy) —
-    // for testing swap back to the Google TEST id ca-app-pub-3940256099942544/6300978111.
-    private static final String BANNER_UNIT_ID = "ca-app-pub-7180935400084577/2526964676";
+    // Per build type: debug uses Google test ads; release uses the real unit id (see app/build.gradle).
+    private static final String BANNER_UNIT_ID = BuildConfig.BANNER_UNIT_ID;
 
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_NOTIFY = 1002;
@@ -61,6 +63,14 @@ public class MainActivity extends AppCompatActivity {
 
     private GeolocationPermissions.Callback pendingGeoCallback;
     private String pendingGeoOrigin;
+    private ValueCallback<Uri[]> pendingFileCallback;
+    private final ActivityResultLauncher<Intent> fileChooserLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (pendingFileCallback == null) return;
+                pendingFileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(
+                        result.getResultCode(), result.getData()));
+                pendingFileCallback = null;
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -143,6 +153,20 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> filePathCallback,
+                                             FileChooserParams params) {
+                if (pendingFileCallback != null) pendingFileCallback.onReceiveValue(null);
+                pendingFileCallback = filePathCallback;
+                try {
+                    fileChooserLauncher.launch(buildFileChooserIntent(params));
+                } catch (ActivityNotFoundException ignored) {
+                    filePathCallback.onReceiveValue(null);
+                    pendingFileCallback = null;
+                }
+                return true;
+            }
+
+            @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 if (hasLocationPermission()) {
                     callback.invoke(origin, true, false);
@@ -161,6 +185,24 @@ public class MainActivity extends AppCompatActivity {
                 request.deny();
             }
         });
+    }
+
+    private static Intent buildFileChooserIntent(WebChromeClient.FileChooserParams params) {
+        boolean hasAcceptType = false;
+        boolean imagesOnly = true;
+        for (String acceptType : params.getAcceptTypes()) {
+            if (acceptType != null && !acceptType.trim().isEmpty()) {
+                hasAcceptType = true;
+                if (!acceptType.trim().startsWith("image/")) imagesOnly = false;
+            }
+        }
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType(hasAcceptType && imagesOnly ? "image/*" : "*/*");
+        if (params.getMode() == WebChromeClient.FileChooserParams.MODE_OPEN_MULTIPLE) {
+            intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        }
+        // Do not use params.createIntent(): a .json accept value becomes an invalid MIME filter.
+        return intent;
     }
 
     /** Keep our own origin in the WebView; hand everything else to the system. */
@@ -288,6 +330,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         if (adView != null) adView.destroy();
+        if (pendingFileCallback != null) {
+            pendingFileCallback.onReceiveValue(null);
+            pendingFileCallback = null;
+        }
         if (webView != null) webView.destroy();
         super.onDestroy();
     }

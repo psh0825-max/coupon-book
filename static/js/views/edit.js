@@ -337,7 +337,10 @@ export function render(ctx, params = {}) {
     if (!file) return;
     imgHint.textContent = '이미지를 처리하는 중...';
     try {
-      const [data, found] = await Promise.all([readGifticon(file), detectCode(file)]);
+      // Android app picks can be content://-backed; decoding the File directly occasionally failed
+      // on-device even though its bytes were readable, so decode an in-memory copy instead.
+      const blob = new Blob([await file.arrayBuffer()], { type: file.type });
+      const [data, found] = await Promise.all([readGifticon(blob), detectCode(blob)]);
       imageData = data;
       syncImage();
       // Never overwrite a code the user typed — only fill an empty field.

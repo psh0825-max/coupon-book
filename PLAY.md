@@ -31,8 +31,8 @@
 - **v1.0.1 (vc3)** — 내부 테스트 트랙 활성. **v1.0.0 (vc1)** — 비활성.
 - **v2.0.0 (versionCode 5, WebView 셸)** — **빌드·서명 완료**
   (`webview-app/app/build/outputs/bundle/release/app-release.aab`, 2026-07-17,
-  targetSdk 36 / minSdk 24, 업로드 키로 서명됨). 남은 것은 AdMob 테스트 ID를
-  실 ID로 교체하는 것뿐 — §4.
+  targetSdk 36 / minSdk 24, 업로드 키로 서명됨). AdMob ID는 현재 빌드 타입별로
+  구성됨 — debug는 구글 테스트 ID, release는 실제 ID(§4).
 - 등록정보 초안(홍보영상 URL, 새 스크린샷 6장, 피처그래픽 v2)은 전송 대기 상태.
 - **프로덕션 = 비활성**(한 번도 출시된 적 없음). ← 현재 유일한 병목.
 
@@ -80,7 +80,7 @@ opt-in이 하루 늦어질 때마다 버퍼가 그대로 줄어듦.
 ### 1.3 진행 방침 (2026-07-28 결정)
 
 - 14일 테스트는 **vc4(현행 TWA)로 그대로 진행** — 이미 게시돼 있어 추가 빌드 불필요.
-- **v2.0.0은 병렬 준비** — AdMob 실 ID 확보 후 §4의 2곳 교체 → 재빌드 → §5로 제출.
+- **v2.0.0은 병렬 준비** — release에 실제 AdMob ID가 구성되어 있으므로 재빌드 → §5로 제출.
   14일 카운트를 리셋하지 않도록, v2.0.0 업로드는 프로덕션 액세스 승인 이후를 권장.
 
 ## 2. 사전 요건
@@ -110,16 +110,18 @@ opt-in이 하루 늦어질 때마다 버퍼가 그대로 줄어듦.
 3. **빌드**: `webview-app/`에서
    ```
    .\gradlew.bat bundleRelease    # AAB → app/build/outputs/bundle/release/
-   .\gradlew.bat assembleDebug    # 실기기 테스트용 APK (테스트 광고 표시)
+   .\gradlew.bat assembleDebug    # 실기기 테스트용 APK (구글 테스트 광고 표시)
    ```
 4. 실기기 스모크 테스트: 앱 부팅(온보딩/홈) → 하단에 "Test Ad" 배너 →
    이용권 추가·사용 → 설정에서 백업 내보내기(다운로드 폴더 저장) →
    지도(위치 권한 프롬프트) → 전화/길찾기 링크가 외부 앱으로 → 뒤로가기 동작.
    **테스트 광고는 클릭해도 안전**합니다(테스트 ID일 때만).
 
-## 4. AdMob 실계정 연결 (출시 전 필수)
+## 4. AdMob ID 구성
 
-지금은 구글 공개 테스트 ID — 수익이 발생하지 않습니다. 절차:
+ID는 `webview-app/app/build.gradle`의 빌드 타입별로 설정됩니다. `debug`는 구글 공개
+테스트 ID라 "Test Ad"가 표시되고 클릭해도 안전하며, `release`는 실제 AdMob ID를
+사용합니다. `MainActivity`는 `BuildConfig.BANNER_UNIT_ID`를 읽습니다.
 
 1. <https://admob.google.com> 에서 계정 생성 (AdSense와 같은 Google 계정이어도
    **AdMob 게시자 ID는 별도 발급**됩니다 — AdSense의 `pub-7180935400084577`과
@@ -127,11 +129,7 @@ opt-in이 하루 늦어질 때마다 버퍼가 그대로 줄어듦.
 2. 앱 등록(안드로이드, 패키지 `com.lightonpluslab.couponbook.twa`) → **앱 ID**
    (`ca-app-pub-…~…`) 발급.
 3. 광고단위 생성: **배너** 1개 → **광고단위 ID**(`ca-app-pub-…/…`) 발급.
-4. 코드에서 **정확히 2곳** 교체:
-   - `webview-app/app/build.gradle` → `admobAppId: 'ca-app-pub-3940256099942544~3347511713'`
-   - `webview-app/app/src/main/java/com/lightonpluslab/couponbook/twa/MainActivity.java`
-     → `BANNER_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"`
-5. **app-ads.txt**: `static/app-ads.txt` 파일을 새로 만들어 배포:
+4. **app-ads.txt**: `static/app-ads.txt` 파일을 새로 만들어 배포:
    ```
    google.com, pub-<AdMob 게시자 ID 숫자>, DIRECT, f08c47fec0942fa0
    ```
@@ -140,9 +138,8 @@ opt-in이 하루 늦어질 때마다 버퍼가 그대로 줄어듦.
      `https://coupon.lightonpluslab.com` 으로 설정하면 `static/`가 그대로 루트라
      추가 인프라가 필요 없습니다. (기존 `static/ads.txt`는 웹 AdSense용 — 별개
      파일이며 둘 다 유지.)
-6. ⚠️ 실제 ID로 바꾼 뒤에는 **본인 기기에서 실광고를 클릭하지 마세요**(무효
-   트래픽 정책). 개발 중 재테스트가 필요하면 AdMob 콘솔에 테스트 기기를
-   등록하거나 테스트 ID로 되돌려서 하세요.
+5. ⚠️ release의 실제 광고는 **본인 기기에서 클릭하지 마세요**(무효 트래픽 정책).
+   개발 테스트는 구글 테스트 ID가 적용되는 debug 빌드를 사용하세요.
 
 ## 5. Play Console 제출 (v2.0.0)
 
