@@ -3,15 +3,14 @@
 
 import { createStore } from './core/store.js';
 import { createRouter } from './core/router.js';
+import { createKeyedLock } from './core/keyed-lock.js';
 import { h, clear } from './core/h.js';
 
 import { Shops, Logs, Settings, seedDemoData, clearAll } from './data/repo.js';
 import { remainingCount, remainingValue, remainingLabel, isAmountKind, isExpired } from './domain.js';
 import { formatWon, groupDigits, parseNumber } from './services/format.js';
 
-import {
-  setNotifySettings, startLocationWatch, stopLocationWatch, getPositionIfGranted
-} from './services/location.js';
+import { setNotifySettings, startLocationWatch, stopLocationWatch } from './services/location.js';
 import { syncReminders, ensurePermission } from './services/reminders.js';
 import {
   registerSW, applyUpdate, initInstallPrompt, canInstall, promptInstall, isStandalone, isIos
@@ -41,6 +40,8 @@ const store = createStore({
   ui: { filter: { query: '', category: 'all', status: 'all', sort: 'smart' } },
   ready: false
 });
+// one read-modify-write per pass at a time; a second tap while the first is still writing is ignored.
+const passLock = createKeyedLock();
 
 async function refresh() {
   const [shops, logs, settings] = await Promise.all([
@@ -124,52 +125,51 @@ const actions = {
   // Kind-aware "use": deduct won (amount pass) or sessions (count pass). A used-up
   // paid pass is depleted, not a prize — no confetti/reward here.
   async usePass(shopId, opts = {}) {
-    const shop = store.getState().shops.find((s) => s.id === shopId);
-    if (!shop) return;
-    if (remainingValue(shop) <= 0) {
-      showToast('남은 이용권이 없어요', 'danger');
-      return;
-    }
-    if (isExpired(shop) && !opts.confirmExpired) {
-      confirmExpiredUse(shop, {
-        id: 'use', label: '그래도 사용', className: 'btn-primary',
-        onClick: () => actions.usePass(shopId, { ...opts, confirmExpired: true })
+    return passLock.run(shopId, async () => {
+      const shop = store.getState().shops.find((s) => s.id === shopId);
+      if (!shop) return;
+      if (remainingValue(shop) <= 0) {
+        showToast('남은 이용권이 없어요', 'danger');
+        return;
+      }
+      if (isExpired(shop) && !opts.confirmExpired) {
+        confirmExpiredUse(shop, {
+          id: 'use', label: '그래도 사용', className: 'btn-primary',
+          onClick: () => actions.usePass(shopId, { ...opts, confirmExpired: true })
+        });
+        return;
+      }
+      const updated = { ...shop };
+      let logFields;
+      if (isAmountKind(shop)) {
+        const amt = clamp(Math.round(opts.amount), 1, remainingValue(shop));
+        if (!amt) return;
+        updated.usedAmount = (shop.usedAmount || 0) + amt;
+        logFields = { amount: amt };
+      } else {
+        const n = clamp(Math.round(opts.count || 1), 1, remainingValue(shop));
+        updated.usedCoupons = (shop.usedCoupons || 0) + n;
+        logFields = { count: n };
+      }
+      await Shops.update(updated);
+      await Logs.add({
+        shopId,
+        note: opts.note || undefined,
+        ...logFields
       });
-      return;
-    }
-    const updated = { ...shop };
-    let logFields;
-    if (isAmountKind(shop)) {
-      const amt = clamp(Math.round(opts.amount), 1, remainingValue(shop));
-      if (!amt) return;
-      updated.usedAmount = (shop.usedAmount || 0) + amt;
-      logFields = { amount: amt };
-    } else {
-      const n = clamp(Math.round(opts.count || 1), 1, remainingValue(shop));
-      updated.usedCoupons = (shop.usedCoupons || 0) + n;
-      logFields = { count: n };
-    }
-    let pos = null;
-    try { pos = await getPositionIfGranted(); } catch { /* location optional */ }
-    await Shops.update(updated);
-    await Logs.add({
-      shopId,
-      note: opts.note || undefined,
-      location: pos ? { lat: pos.lat, lng: pos.lng } : undefined,
-      ...logFields
+      await refresh();
+      const depleted = remainingValue(updated) <= 0;
+      // One-tap undo on the toast: quick uses shouldn't need detail + confirm.
+      const undo = { actionLabel: '되돌리기', onAction: () => actions.undoLastCoupon(shopId, { confirm: false }) };
+      if (depleted) {
+        haptic('medium');
+        showToast('이용권을 모두 사용했어요', 'success', undo);
+      } else {
+        haptic('light');
+        showToast(`사용 완료 · ${remainingLabel(updated)} 남음`, 'success', undo);
+      }
+      resyncServices();
     });
-    await refresh();
-    const depleted = remainingValue(updated) <= 0;
-    // One-tap undo on the toast: quick uses shouldn't need detail + confirm.
-    const undo = { actionLabel: '되돌리기', onAction: () => actions.undoLastCoupon(shopId, { confirm: false }) };
-    if (depleted) {
-      haptic('medium');
-      showToast('이용권을 모두 사용했어요', 'success', undo);
-    } else {
-      haptic('light');
-      showToast(`사용 완료 · ${remainingLabel(updated)} 남음`, 'success', undo);
-    }
-    resyncServices();
   },
 
   // Opens an accessible use-entry sheet, then delegates to usePass.
@@ -258,22 +258,24 @@ const actions = {
       });
       if (!ok) return;
     }
-    const shop = store.getState().shops.find((s) => s.id === shopId);
-    if (!shop) return;
-    const logs = (store.getState().logs || [])
-      .filter((l) => l.shopId === shopId)
-      .sort((a, b) => b.usedAt - a.usedAt);
-    if (!logs.length) return;
-    const last = logs[0];
-    // Restore exactly what the last use deducted (falls back to one session for
-    // legacy logs that predate per-use amount/count fields).
-    const restored = last.amount != null
-      ? { ...shop, usedAmount: Math.max(0, (shop.usedAmount || 0) - last.amount) }
-      : { ...shop, usedCoupons: Math.max(0, (shop.usedCoupons || 0) - (last.count || 1)) };
-    await Shops.update(restored);
-    await Logs.remove(last.id);
-    showToast('마지막 사용 기록을 취소했어요');
-    await refresh();
+    return passLock.run(shopId, async () => {
+      const shop = store.getState().shops.find((s) => s.id === shopId);
+      if (!shop) return;
+      const logs = (store.getState().logs || [])
+        .filter((l) => l.shopId === shopId)
+        .sort((a, b) => b.usedAt - a.usedAt);
+      if (!logs.length) return;
+      const last = logs[0];
+      // Restore exactly what the last use deducted (falls back to one session for
+      // legacy logs that predate per-use amount/count fields).
+      const restored = last.amount != null
+        ? { ...shop, usedAmount: Math.max(0, (shop.usedAmount || 0) - last.amount) }
+        : { ...shop, usedCoupons: Math.max(0, (shop.usedCoupons || 0) - (last.count || 1)) };
+      await Shops.update(restored);
+      await Logs.remove(last.id);
+      showToast('마지막 사용 기록을 취소했어요');
+      await refresh();
+    });
   },
 
   async saveShop(data, id) {
