@@ -113,6 +113,11 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays }
 // in-app (sheet → sub page → root → exit) instead of exiting immediately.
 ```
 
+### core/keyed-lock.js — per-key non-queuing async lock
+`createKeyedLock()` returns `run(key, fn)` and `isBusy(key)` with no dependencies.
+`run` immediately returns `undefined` for a busy key, otherwise awaits `fn` and releases in `finally`.
+Duplicate taps are ignored rather than queued so delayed actions cannot apply unexpectedly later.
+
 ### data/db.js — IndexedDB primitives (schema compatible)
 ```js
 export const DB_NAME = 'CouponBookDB';
