@@ -52,20 +52,15 @@ keyPassword=<기존 키 비밀번호>
 ## 4. 빌드
 ```
 .\gradlew.bat bundleRelease      # AAB → app/build/outputs/bundle/release/
-.\gradlew.bat assembleDebug      # 테스트 APK (테스트 광고 뜸)
+.\gradlew.bat assembleDebug      # 테스트 APK (구글 테스트 광고가 표시되며 클릭해도 안전)
 ```
 
 ---
 
-## 5. ⚠️ 실제 AdMob ID 교체 (출시 전 필수)
-지금은 **구글 공개 테스트 ID**라 테스트 광고만 뜹니다. AdMob 콘솔에서 앱 등록 후 2곳 교체:
-
-1. **앱 ID** — `app/build.gradle` 의
-   `admobAppId: 'ca-app-pub-3940256099942544~3347511713'` → 실제 `ca-app-pub-…~…`
-2. **배너 광고단위 ID** — `MainActivity.java` 의
-   `BANNER_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"` → 실제 `ca-app-pub-…/…`
-
-> 실제 ID로 바꾸기 전에 실기기에서 실제 광고를 클릭하지 마세요(AdMob 무효 트래픽 정책). 테스트 ID는 클릭해도 안전합니다.
+## 5. AdMob ID 구성
+ID는 `app/build.gradle`의 빌드 타입별로 설정됩니다. `debug`는 구글 공개 테스트 ID라
+`assembleDebug`에서 "Test Ad"가 표시되고 클릭해도 안전하며, `release`는 실제 AdMob ID를
+사용합니다. `MainActivity`는 `BuildConfig.BANNER_UNIT_ID`를 읽습니다.
 
 ## 6. Play Console 변경점 (자세한 건 ../PLAY.md)
 - **데이터 보안**: AdMob SDK는 **광고 ID(AD_ID)** 를 수집/공유합니다 — 이미 신고돼 있던 항목과 동일하나, TWA(웹쿠키)에서 **네이티브 SDK**로 근거가 바뀝니다. 광고 ID 권한 선언을 **사용함**으로.

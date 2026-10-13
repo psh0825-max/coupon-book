@@ -12,13 +12,8 @@ android {
         applicationId 'com.lightonpluslab.couponbook.twa'
         minSdk 24
         targetSdk 36
-        versionCode 8
-        versionName '2.0.3'
-
-        // AdMob application id (real, issued 2026-07-31 — AdMob console > 쿠폰북 > 앱 설정).
-        // For local ad testing, temporarily swap back to the Google TEST id
-        // ca-app-pub-3940256099942544~3347511713 or register a test device in AdMob.
-        manifestPlaceholders = [admobAppId: 'ca-app-pub-7180935400084577~4176068203']
+        versionCode 9
+        versionName '2.0.4'
     }
 
     // Optional release signing. Ship as an UPDATE to the same listing by signing with
@@ -42,8 +37,20 @@ android {
         }
     }
 
+    buildFeatures {
+        buildConfig true
+    }
+
+    // debug = Google test ads (safe to tap), release = real ids (AdMob console > 쿠폰북, issued 2026-07-31).
     buildTypes {
+        debug {
+            manifestPlaceholders = [admobAppId: 'ca-app-pub-3940256099942544~3347511713']
+            buildConfigField 'String', 'BANNER_UNIT_ID', '"ca-app-pub-3940256099942544/6300978111"'
+        }
+
         release {
+            manifestPlaceholders = [admobAppId: 'ca-app-pub-7180935400084577~4176068203']
+            buildConfigField 'String', 'BANNER_UNIT_ID', '"ca-app-pub-7180935400084577/2526964676"'
             // Keep minify off for a first correct build; AdMob needs keep rules otherwise.
             minifyEnabled false
             def kp = new File(rootDir, 'keystore.properties')
