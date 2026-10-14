@@ -30,6 +30,12 @@ public class ReminderReceiver extends BroadcastReceiver {
         String title = intent.getStringExtra(EXTRA_TITLE);
         String body = intent.getStringExtra(EXTRA_BODY);
         int id = intent.getIntExtra(EXTRA_ID, 1);
+        post(context, id, title, body);
+        ReminderStore.remove(context, id);
+    }
+
+    /** Post an expiry notification and reopen the app when it is tapped. */
+    static void post(Context context, int id, String title, String body) {
         if (title == null) title = "쿠폰북";
         if (body == null) body = "";
 

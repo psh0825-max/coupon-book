@@ -287,8 +287,7 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQ_LOCATION && pendingGeoCallback != null) {
-            boolean granted = grantResults.length > 0
-                    && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            boolean granted = hasLocationPermission();
             pendingGeoCallback.invoke(pendingGeoOrigin, granted, false);
             pendingGeoCallback = null;
             pendingGeoOrigin = null;
