@@ -127,6 +127,7 @@ export function generateId();            // crypto.randomUUID w/ fallback
 // generic helpers
 export function getAll(store), get(store,key), put(store,rec), del(store,key),
        getAllByIndex(store,index,key), clearStores(names);
+export function runTx(storeNames, work); // one readwrite transaction; resolves after commit
 ```
 
 ### data/repo.js — repositories (validation/normalization here)
@@ -141,6 +142,12 @@ export function normalizeLog(raw);
 export async function seedDemoData();  // returns count added (idempotent by name)
 export async function clearAll();      // shops+logs only (keep settings)
 ```
+`runTx()` is used for writes that must commit together: it exposes named object
+stores to a synchronous request-queuing callback and resolves only at transaction
+completion. `Shops.applyUse(shop, log)` writes the normalized shop and new log
+together; `Shops.applyUndo(shop, logId)` restores the shop and deletes that log
+together; `Shops.remove(id)` deletes the shop and all indexed `shopId` logs in
+one transaction.
 Settings DEFAULTS:
 ```js
 { notifyEnabled:false, notifyRadius:100, notifyDelay:5,
@@ -215,8 +222,15 @@ export function isIos();                              // for manual-install hint
 ### services/backup.js
 ```js
 export async function exportData();   // triggers JSON download {version,shops,logs,settings,exportedAt}
-export async function importData(file);// validates, upserts via repo.normalize*, returns summary
+export function parseBackup(text);    // synchronously validates/normalizes the entire file before any write
+export async function restoreBackup(parsed); // clears shops/logs then writes backup in one transaction
+export async function importData(file);// thin parseBackup + restoreBackup wrapper
 ```
+Restore is validate-then-replace: malformed entries are counted and skipped during
+parsing, orphan logs are dropped, and no IndexedDB write occurs until parsing has
+completed. `restoreBackup()` clears `shops` and `logs` and restores all parsed
+records (plus valid settings) in one `runTx(['shops','logs','settings'])`, so a
+failed transaction cannot leave mixed old/new pass balances and history.
 
 ### services/fx.js  (keep current behavior)
 ```js
@@ -285,7 +299,7 @@ deleteShop(id)
 setFilter(patch)              // ui.filter
 toggleNotify(bool) / saveNotifySettings({radius,delay})
 toggleReminders(bool) / setReminderDays(arr)
-seedDemo() / clearAll() / exportData() / importData(file)
+seedDemo() / clearAll() / exportData() / restoreData(parsed)
 completeOnboarding() / requestInstall()
 ```
 All actions: mutate via repo -> refresh store slices -> trigger re-render -> resync

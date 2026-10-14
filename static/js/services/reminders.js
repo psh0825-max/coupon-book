@@ -10,6 +10,7 @@ import { formatWon } from './format.js';
 let _shops = [];
 let _settings = {};
 let _onDue = null;
+let _persistMarkers = null;
 let _listenerAttached = false;
 
 export async function ensurePermission() {
@@ -83,7 +84,8 @@ function balanceMarkerKey(shopId) {
   return `cb_balalert:${shopId}:${todayKey()}`;
 }
 
-function alreadyFired(key) {
+function alreadyFired(key, settings) {
+  if (settings && settings.reminderMarkers && settings.reminderMarkers[key]) return true;
   try {
     return localStorage.getItem(key) === '1';
   } catch (e) {
@@ -104,19 +106,36 @@ function expiryLabel(days) {
   return `D-${days}`;
 }
 
+export function pruneReminderMarkers(markers, now) {
+  if (!markers || typeof markers !== 'object' || Array.isArray(markers)) return {};
+  const today = new Date(now);
+  const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const out = {};
+  for (const [key, value] of Object.entries(markers)) {
+    const match = /^cb_reminder:[^:]+:([^:]+):t[^:]+$/.exec(key);
+    if (!match || (match[1] !== 'none' && match[1] >= todayValue)) out[key] = value;
+  }
+  return out;
+}
+
 export function checkDueNow(shops, settings, onDue) {
   if (!settings || !settings.remindersEnabled) return;
 
+  const nativeAlarms = typeof window !== 'undefined'
+    && window.AndroidBridge && typeof window.AndroidBridge.scheduleReminder === 'function';
+  const newMarkers = {};
   const due = dueReminders(shops, settings.reminderDays);
   for (const shop of due) {
     const days = daysUntil(shop.expiresAt);
     const threshold = reminderThreshold(shop, settings.reminderDays);
     if (days === null || threshold === null) continue;
     const key = markerKey(shop.id, shop.expiresAt, threshold);
-    if (alreadyFired(key)) continue;
+    if (alreadyFired(key, settings)) continue;
     markFired(key);
+    newMarkers[key] = Date.now();
 
-    pushNotification('쿠폰 만료 임박', `${shop.name} · ${expiryLabel(days)}`, `cb_reminder:${shop.id}:${days}`);
+    // Android's scheduled alarm owns OS notifications in the app shell.
+    if (!nativeAlarms) pushNotification('쿠폰 만료 임박', `${shop.name} · ${expiryLabel(days)}`, `cb_reminder:${shop.id}:${days}`);
     if (typeof onDue === 'function') onDue(shop, { type: 'expiry', days });
   }
 
@@ -127,12 +146,15 @@ export function checkDueNow(shops, settings, onDue) {
     markFired(key);
     const remaining = remainingValue(shop);
 
-    pushNotification('잔액 임박', `${shop.name} · ${formatWon(remaining)} 남음`, `cb_balalert:${shop.id}`);
+    if (!nativeAlarms) pushNotification('잔액 임박', `${shop.name} · ${formatWon(remaining)} 남음`, `cb_balalert:${shop.id}`);
     if (typeof onDue === 'function') onDue(shop, { type: 'lowbalance', remaining });
+  }
+  if (Object.keys(newMarkers).length && typeof _persistMarkers === 'function') {
+    _persistMarkers(pruneReminderMarkers({ ...(settings.reminderMarkers || {}), ...newMarkers }, Date.now()));
   }
 }
 
-function reminderId(shopId, d) {
+export function reminderId(shopId, d) {
   let hsh = 0;
   const s = String(shopId);
   for (let i = 0; i < s.length; i++) hsh = (hsh * 31 + s.charCodeAt(i)) | 0;
@@ -140,7 +162,7 @@ function reminderId(shopId, d) {
 }
 
 // ms at 10:00 local, d days before the expiry date; null if no valid date.
-function triggerTimeFor(dateStr, d) {
+export function triggerTimeFor(dateStr, d) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr || ''));
   if (!m) return null;
   const t = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
@@ -152,27 +174,54 @@ function triggerTimeFor(dateStr, d) {
 // Native app shell: hand upcoming expiry thresholds to Android (AlarmManager) so
 // reminders fire even when the app is closed — a bare WebView cannot run the
 // service-worker periodic sync the TWA relied on. Idempotent (same id updates).
-function scheduleNativeReminders(shops, settings) {
-  const bridge = typeof window !== 'undefined' ? window.AndroidBridge : null;
-  if (!bridge || typeof bridge.scheduleReminder !== 'function') return;
-  if (!settings || !settings.remindersEnabled) return;
+export function nativeReminderPlan(shops, settings, now = Date.now()) {
+  const desired = {};
+  if (!settings || !settings.remindersEnabled) return desired;
   const days = Array.isArray(settings.reminderDays) ? settings.reminderDays : [7, 3, 1];
-  const now = Date.now();
   for (const shop of (shops || [])) {
     if (!shop.expiresAt || isCompleted(shop)) continue;
     for (const d of days) {
       const when = triggerTimeFor(shop.expiresAt, d);
-      if (when == null || when <= now) continue;
-      bridge.scheduleReminder(reminderId(shop.id, d), '쿠폰 만료 임박',
-        `${shop.name} · ${expiryLabel(d)}`, when);
+      if (when != null && when > now) {
+        desired[reminderId(shop.id, d)] = { title: '쿠폰 만료 임박', body: `${shop.name} · ${expiryLabel(d)}`, when };
+      }
     }
   }
+  return desired;
 }
 
-export function syncReminders(shops, settings, onDue) {
+function storedNativeIds() {
+  try {
+    const ids = JSON.parse(localStorage.getItem('cb_native_reminder_ids'));
+    return Array.isArray(ids) ? ids.filter(Number.isInteger) : null;
+  } catch (e) { return null; }
+}
+
+function storeNativeIds(ids) {
+  try { localStorage.setItem('cb_native_reminder_ids', JSON.stringify(ids)); } catch (e) { /* best-effort */ }
+}
+
+function scheduleNativeReminders(shops, settings) {
+  const bridge = typeof window !== 'undefined' ? window.AndroidBridge : null;
+  if (!bridge || typeof bridge.scheduleReminder !== 'function') return;
+  const desired = nativeReminderPlan(shops, settings, Date.now());
+  const desiredIds = Object.keys(desired).map(Number);
+  const previous = storedNativeIds();
+  if (typeof bridge.cancelReminder === 'function') {
+    const cancel = previous === null
+      ? (shops || []).flatMap((shop) => Array.from({ length: 10 }, (_, d) => reminderId(shop.id, d)))
+      : previous;
+    for (const id of new Set(cancel)) if (!Object.prototype.hasOwnProperty.call(desired, id)) bridge.cancelReminder(id);
+  }
+  for (const [id, reminder] of Object.entries(desired)) bridge.scheduleReminder(Number(id), reminder.title, reminder.body, reminder.when);
+  storeNativeIds(desiredIds);
+}
+
+export function syncReminders(shops, settings, onDue, opts = {}) {
   _shops = shops;
   _settings = settings;
   _onDue = onDue;
+  _persistMarkers = opts.persistMarkers;
 
   checkDueNow(_shops, _settings, _onDue);
   scheduleNativeReminders(_shops, _settings);

@@ -1,7 +1,5 @@
 package com.lightonpluslab.couponbook.twa;
 
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -93,29 +91,15 @@ public class WebAppBridge {
     /** Schedule a future expiry reminder (fires even if the app is closed). */
     @JavascriptInterface
     public void scheduleReminder(int id, String title, String body, double whenMillis) {
-        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
-        if (am == null) return;
-        Intent i = new Intent(ctx, ReminderReceiver.class);
-        i.putExtra(ReminderReceiver.EXTRA_ID, id);
-        i.putExtra(ReminderReceiver.EXTRA_TITLE, title);
-        i.putExtra(ReminderReceiver.EXTRA_BODY, body);
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags |= PendingIntent.FLAG_IMMUTABLE;
-        PendingIntent pi = PendingIntent.getBroadcast(ctx, id, i, flags);
-        // Inexact + doze-friendly: no exact-alarm permission needed for day-scale reminders.
-        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, (long) whenMillis, pi);
+        ReminderScheduler.schedule(ctx, id, title, body, (long) whenMillis);
+        ReminderStore.save(ctx, id, title, body, (long) whenMillis);
     }
 
     /** Cancel a previously scheduled reminder. */
     @JavascriptInterface
     public void cancelReminder(int id) {
-        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
-        if (am == null) return;
-        Intent i = new Intent(ctx, ReminderReceiver.class);
-        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags |= PendingIntent.FLAG_IMMUTABLE;
-        PendingIntent pi = PendingIntent.getBroadcast(ctx, id, i, flags);
-        am.cancel(pi);
+        ReminderScheduler.cancel(ctx, id);
+        ReminderStore.remove(ctx, id);
     }
 
     /** Whether the app currently holds notification permission (for the web to know). */

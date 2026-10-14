@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coupon-book-v35';
+const CACHE_NAME = 'coupon-book-v36';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -132,6 +132,38 @@ function swTodayKey() {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function swPassTotal(shop) {
+  return shop && shop.kind === 'amount' ? Number(shop.totalAmount) || 0 : Number(shop && shop.totalCoupons) || 0;
+}
+
+function swPassUsed(shop) {
+  return shop && shop.kind === 'amount' ? Number(shop.usedAmount) || 0 : Number(shop && shop.usedCoupons) || 0;
+}
+
+function swIsCompleted(shop) {
+  return swPassTotal(shop) > 0 && swPassUsed(shop) >= swPassTotal(shop);
+}
+
+function swThreshold(shop, reminderDays) {
+  if (swIsCompleted(shop)) return null;
+  const days = swDaysUntil(shop && shop.expiresAt);
+  if (days === null || days < 0) return null;
+  const reached = (reminderDays || []).filter((t) => days <= t);
+  return reached.length ? Math.min(...reached) : null;
+}
+
+function swPruneReminderMarkers(markers, now = Date.now()) {
+  if (!markers || typeof markers !== 'object' || Array.isArray(markers)) return {};
+  const d = new Date(now);
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const out = {};
+  for (const [key, value] of Object.entries(markers)) {
+    const match = /^cb_reminder:[^:]+:([^:]+):t[^:]+$/.exec(key);
+    if (!match || (match[1] !== 'none' && match[1] >= today)) out[key] = value;
+  }
+  return out;
+}
+
 async function checkExpiryInBackground() {
   let db;
   try {
@@ -143,14 +175,16 @@ async function checkExpiryInBackground() {
     if (settings[SW_MARKER_KEY] === swTodayKey()) return; // once per day
 
     const reminderDays = Array.isArray(settings.reminderDays) ? settings.reminderDays : [7, 3, 1];
-    const thresholds = new Set(reminderDays);
     const shops = await swGetAll(db, 'shops');
-    const due = shops.filter((s) => {
-      const days = swDaysUntil(s.expiresAt);
-      return days !== null && days >= 0 && thresholds.has(days);
-    });
+    const markers = settings.reminderMarkers && typeof settings.reminderMarkers === 'object'
+      && !Array.isArray(settings.reminderMarkers) ? settings.reminderMarkers : {};
+    let notified = 0;
 
-    for (const shop of due.slice(0, 5)) {
+    for (const shop of shops) {
+      const threshold = swThreshold(shop, reminderDays);
+      if (threshold === null) continue;
+      const key = `cb_reminder:${shop.id}:${shop.expiresAt || 'none'}:t${threshold}`;
+      if (markers[key] || notified >= 5) continue;
       const days = swDaysUntil(shop.expiresAt);
       await self.registration.showNotification('쿠폰북', {
         body: `${shop.name} · ${days === 0 ? '오늘 만료' : `D-${days}`} 만료 임박`,
@@ -158,8 +192,13 @@ async function checkExpiryInBackground() {
         badge: './icon-192.png',
         tag: `expiry-${shop.id}-${swTodayKey()}`
       });
+      markers[key] = Date.now();
+      notified += 1;
     }
-    await swPut(db, 'settings', { key: SW_MARKER_KEY, value: swTodayKey() });
+    await Promise.all([
+      swPut(db, 'settings', { key: SW_MARKER_KEY, value: swTodayKey() }),
+      swPut(db, 'settings', { key: 'reminderMarkers', value: swPruneReminderMarkers(markers) })
+    ]);
   } catch (e) {
     // best-effort: background check must never throw out of the event
   } finally {

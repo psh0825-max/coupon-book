@@ -15,6 +15,7 @@
 - **위치**(근처 알림·현재 위치): `onGeolocationPermissionsShowPrompt` + 런타임 위치 권한.
 - **백업 내보내기**: `saveText()` → 다운로드 폴더에 JSON 저장(`static/js/services/backup.js`).
 - **만료 알림**: 앱 실행 중 즉시 알림은 `showNotification()`, 앱이 닫혀도 뜨는 예약 알림은 `scheduleReminder()`(AlarmManager)로 처리(`static/js/services/reminders.js`).
+- 예약된 만료 알림은 네이티브에 저장되며, 기기 재부팅 또는 앱 업데이트 후 다시 예약됩니다.
 - **외부 링크**(tel:/지도/정책): 시스템 인텐트로 위임. **뒤로가기**: WebView 히스토리 우선.
 
 ---
