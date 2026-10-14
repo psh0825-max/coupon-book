@@ -4,7 +4,7 @@
 import * as Leaflet from '../../vendor/leaflet/leaflet-src.esm.js';
 import { h, clear } from '../core/h.js';
 import { emptyState } from '../ui/components.js';
-import { couponStatus } from '../domain.js';
+import { couponStatus, remainingLabel } from '../domain.js';
 import { getCurrentPosition, haversine } from '../services/location.js';
 import { mapsDirectionsUrl } from '../services/maps.js';
 import { formatDistance } from '../services/format.js';
@@ -107,7 +107,7 @@ async function drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, for
 
   function showFloat(shop, distance) {
     const dir = mapsDirectionsUrl(shop);
-    const remaining = shop.totalCoupons - (shop.usedCoupons || 0);
+    const remaining = remainingLabel(shop);
     floatEl.hidden = false;
     clear(floatEl);
     floatEl.appendChild(h('div', { class: 'map-float-info' },
@@ -116,7 +116,7 @@ async function drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, for
       ),
       h('div', { class: 'map-float-text' },
         h('strong', null, shop.name),
-        h('span', null, `${distance !== null ? formatDistance(distance) + ' · ' : ''}${remaining}개 남음`)
+        h('span', null, `${distance !== null ? formatDistance(distance) + ' · ' : ''}${remaining} 남음`)
       )
     ));
     floatEl.appendChild(h('div', { class: 'map-float-actions' },

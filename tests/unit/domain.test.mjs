@@ -140,14 +140,15 @@ test('formatExpiry', () => {
   assert.equal(formatExpiry(dateOffset(5)), 'D-5');
 });
 
-test('sortShops: smart orders by urgency score, completed last', () => {
+test('sortShops: smart orders usable urgency, then expired, then completed', () => {
   const completed = shop({ usedCoupons: 10, name: 'c' });
   const expired = shop({ usedCoupons: 1, expiresAt: dateOffset(-1), name: 'e' });
   const urgent = shop({ usedCoupons: 1, expiresAt: dateOffset(2), name: 'u' });
   const neutral = shop({ usedCoupons: 1, expiresAt: dateOffset(100), name: 'n' });
   const sorted = sortShops([neutral, completed, urgent, expired], 'smart');
-  // incomplete shops first (by urgency), completed sinks to the bottom
-  assert.deepEqual(sorted.map((s) => s.name), ['e', 'u', 'n', 'c']);
+  // The list keeps usable passes actionable before already-expired ones; completed
+  // passes remain last because they no longer need attention.
+  assert.deepEqual(sorted.map((s) => s.name), ['u', 'n', 'e', 'c']);
   assert.equal(sorted[sorted.length - 1].name, 'c');
 });
 
@@ -162,10 +163,12 @@ test('usableShops: excludes expired and completed passes in smart order', () => 
   assert.deepEqual(usableShops([]), []);
 });
 
-test('sortShops: remaining and name', () => {
-  const a = shop({ usedCoupons: 8, name: '가' }); // remaining 2
-  const b = shop({ usedCoupons: 3, name: '나' }); // remaining 7
-  assert.deepEqual(sortShops([b, a], 'remaining').map((s) => s.name), ['가', '나']);
+test('sortShops: remaining uses remaining ratio across count and amount, completed last', () => {
+  const a = shop({ usedCoupons: 8, name: '가' }); // 20% remaining
+  const b = amountShop({ usedAmount: 500000, name: '나' }); // 50% remaining
+  const c = amountShop({ usedAmount: 900000, name: '다' }); // 10% remaining
+  const completed = shop({ usedCoupons: 10, name: '라' });
+  assert.deepEqual(sortShops([b, completed, a, c], 'remaining').map((s) => s.name), ['다', '가', '나', '라']);
   assert.deepEqual(sortShops([b, a], 'name').map((s) => s.name), ['가', '나']);
 });
 
@@ -207,6 +210,12 @@ test('priorityShop: highest-priority non-completed or null', () => {
   assert.equal(priorityShop([completed, urgent]).name, 'u');
   assert.equal(priorityShop([completed]), null);
   assert.equal(priorityShop([]), null);
+});
+
+test('priorityShop: attention order keeps expired pass ahead of usable ones', () => {
+  const expired = shop({ name: '만료', expiresAt: dateOffset(-1) });
+  const urgent = shop({ name: '긴급', expiresAt: dateOffset(1) });
+  assert.equal(priorityShop([urgent, expired]).name, '만료');
 });
 
 test('lowBalancePasses: amount pass at/under 20% remaining', () => {

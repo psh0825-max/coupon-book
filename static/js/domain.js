@@ -159,7 +159,7 @@ export function formatExpiry(dateStr) {
 export function priorityShop(shops) {
   const active = (shops || []).filter((s) => !isCompleted(s));
   if (!active.length) return null;
-  return sortShops(active, 'smart')[0];
+  return sortShops(active, 'attention')[0];
 }
 
 export function usableShops(shops) {
@@ -169,8 +169,20 @@ export function usableShops(shops) {
 export function sortShops(shops, sortKey = 'smart') {
   const arr = [...(shops || [])];
   const byName = (a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ko');
+  const smartOrder = (a, b) =>
+    (Number(isExpired(a)) - Number(isExpired(b))) // usable first, expired after them
+    || (couponStatus(a).score - couponStatus(b).score)
+    || (remainingCount(a) - remainingCount(b))
+    || (num(b.updatedAt) - num(a.updatedAt));
+  const remainingRatio = (shop) => {
+    const total = passTotal(shop);
+    return total > 0 ? remainingValue(shop) / total : 1;
+  };
   const comparators = {
-    remaining: (a, b) => remainingCount(a) - remainingCount(b) || byName(a, b),
+    remaining: (a, b) =>
+      (Number(isCompleted(a)) - Number(isCompleted(b)))
+      || (remainingRatio(a) - remainingRatio(b))
+      || byName(a, b),
     // 사용기한이 임박한 순. 기한 없는 항목은 재촉할 것이 없으므로 항상 뒤로.
     expiry: (a, b) => {
       const ea = a.expiresAt ? Date.parse(a.expiresAt) : NaN;
@@ -182,11 +194,14 @@ export function sortShops(shops, sortKey = 'smart') {
     },
     updated: (a, b) => num(b.updatedAt) - num(a.updatedAt) || byName(a, b),
     name: byName,
-    smart: (a, b) =>
+    attention: (a, b) =>
       (Number(isCompleted(a)) - Number(isCompleted(b)))  // incomplete first, completed last
       || (couponStatus(a).score - couponStatus(b).score)
       || (remainingCount(a) - remainingCount(b))
-      || (num(b.updatedAt) - num(a.updatedAt))
+      || (num(b.updatedAt) - num(a.updatedAt)),
+    smart: (a, b) =>
+      (Number(isCompleted(a)) - Number(isCompleted(b))) // completed always last
+      || smartOrder(a, b)
   };
   arr.sort(comparators[sortKey] || comparators.smart);
   return arr;

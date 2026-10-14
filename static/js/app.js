@@ -7,7 +7,7 @@ import { createKeyedLock } from './core/keyed-lock.js';
 import { h, clear } from './core/h.js';
 
 import { Shops, Logs, Settings, seedDemoData, clearAll } from './data/repo.js';
-import { remainingCount, remainingValue, remainingLabel, isAmountKind, isExpired } from './domain.js';
+import { remainingValue, remainingLabel, isAmountKind, isExpired } from './domain.js';
 import { formatWon, groupDigits, parseNumber } from './services/format.js';
 
 import { setNotifySettings, startLocationWatch, stopLocationWatch } from './services/location.js';
@@ -79,7 +79,7 @@ function onGeofence(notifyList) {
         h('h4', null, shop.name),
         h('p', null, `${shop.address || ''}${distance != null ? ` · ${Math.round(distance)}m` : ''}`)
       ),
-      h('div', { class: 'badge badge-accent' }, `${remainingCount(shop)}개 남음`)
+      h('div', { class: 'badge badge-accent' }, `${remainingLabel(shop)} 남음`)
     ))
   );
   showSheet({ title: '근처 가게 방문 감지', body: list });
@@ -329,7 +329,7 @@ const actions = {
     store.setState((s) => ({ settings: { ...s.settings, backupHinted: true } }));
     showSheet({
       title: '백업을 권장해요',
-      body: h('p', null, '쿠폰은 이 기기에만 저장돼요. 기기를 바꾸거나 앱을 지우면 사라질 수 있어요. JSON으로 백업해 두면 안전해요.'),
+      body: h('p', null, '이용권 정보는 이 기기에만 저장돼요. 기기를 바꾸거나 앱을 지우면 사라질 수 있어요. JSON으로 백업해 두면 안전해요.'),
       actions: [
         { id: 'later', label: '나중에', className: 'btn-secondary' },
         { id: 'backup', label: '지금 백업', className: 'btn-primary', onClick: () => actions.exportData() }

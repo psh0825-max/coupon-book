@@ -25,10 +25,18 @@ export function render(ctx, params = {}) {
   const amount = isAmountKind(shop);
   const depleted = remaining <= 0;
 
-  const stat = (value, label) => h('div', { class: 'stat' },
-    h('div', { class: 'num' }, String(value)),
-    h('div', { class: 'lbl' }, label)
-  );
+  const stat = (value, label) => {
+    const text = String(value);
+    const unit = text.endsWith('원') || text.endsWith('회') ? text.slice(-1) : null;
+    const number = unit ? text.slice(0, -1) : text;
+    return h('div', { class: 'stat' },
+      h('div', { class: `num${number.length > 9 ? ' num--long' : ''}` },
+        unit ? h('span', { class: 'num-val' }, number) : text,
+        unit ? h('span', { class: 'num-unit' }, unit) : null
+      ),
+      h('div', { class: 'lbl' }, label)
+    );
+  };
 
   const root = h('div');
 

@@ -96,6 +96,7 @@ export function render(ctx, params = {}) {
           phoneInput.value = p.phone;
           if (Number.isFinite(p.lat)) latInput.value = p.lat.toFixed(6);
           if (Number.isFinite(p.lng)) lngInput.value = p.lng.toFixed(6);
+          more.open = true;
           hideResults();
           searchInput.value = '';
           showToast('매장 정보를 불러왔어요');
@@ -236,32 +237,35 @@ export function render(ctx, params = {}) {
   totalAmountInput.addEventListener('input', () => liveGroup(totalAmountInput));
   usedAmountInput.addEventListener('input', () => liveGroup(usedAmountInput));
 
-  function applyKind() {
-    [[segCount, 'count'], [segAmount, 'amount'], [segCoupon, 'coupon']].forEach(([el, k]) => {
-      el.classList.toggle('active', kind === k);
-      el.setAttribute('aria-pressed', kind === k ? 'true' : 'false');
-    });
-    countGroup.hidden = kind !== 'count';
-    amountGroup.hidden = kind !== 'amount';
-    couponGroup.hidden = kind !== 'coupon';
-    if (kind === 'count') renderPreview();
-    else if (kind === 'amount') renderAmountPreview();
-  }
-  segCount.addEventListener('click', () => { kind = 'count'; applyKind(); });
-  segAmount.addEventListener('click', () => { kind = 'amount'; applyKind(); });
-  segCoupon.addEventListener('click', () => { kind = 'coupon'; applyKind(); });
+  // Expiry is one of the few fields worth setting for every pass, so it stays
+  // with the core setup instead of being hidden with store details.
+  const expiresInput = h('input', { id: 'f-expires', attrs: { type: 'date', name: 'expiresAt', value: isEdit ? (shop.expiresAt || '') : '' } });
+  form.appendChild(field('만료일', 'f-expires', expiresInput));
+
+  // Everything below is optional and lives one level away from the core setup.
+  // Keep the groups themselves stable: applyKind only moves them, never clones
+  // an input (which would lose its value, handlers, and unique id).
+  const defaultSkin = getDefaultSkin(hasInit ? src.category : catSelect.value);
+  const moreHasValue = isEdit && (!!(src.address || src.phone || src.memo || src.code)
+    || (src.lat != null && src.lng != null)
+    || (kind !== 'coupon' && !!src.image)
+    || (src.skin && src.skin !== defaultSkin));
+  const moreContent = h('div', { class: 'form-more-content' });
+  const more = h('details', { class: 'form-more', attrs: { open: moreHasValue ? '' : null } },
+    h('summary', null,
+      h('span', { class: 'form-more-title' }, '더 입력하기 (선택)'),
+      h('span', { class: 'form-more-hint' })
+    ),
+    moreContent
+  );
 
   // address
   const addressInput = h('input', { id: 'f-address', attrs: { type: 'text', name: 'address', placeholder: '주소를 입력하세요', value: hasInit ? (src.address || '') : '' } });
-  form.appendChild(field('주소', 'f-address', addressInput));
+  const addressGroup = field('주소', 'f-address', addressInput);
 
-  // phone + expiry
+  // phone
   const phoneInput = h('input', { id: 'f-phone', attrs: { type: 'tel', name: 'phone', placeholder: '예: 031-000-0000', value: hasInit ? (src.phone || '') : '' } });
-  const expiresInput = h('input', { id: 'f-expires', attrs: { type: 'date', name: 'expiresAt', value: isEdit ? (shop.expiresAt || '') : '' } });
-  form.appendChild(h('div', { class: 'form-row' },
-    field('전화번호', 'f-phone', phoneInput),
-    field('만료일', 'f-expires', expiresInput)
-  ));
+  const phoneGroup = field('전화번호', 'f-phone', phoneInput);
 
   // location
   const latInput = h('input', { id: 'f-lat', attrs: { type: 'text', name: 'lat', placeholder: '위도', readonly: '', 'aria-label': '위도', value: hasInit && src.lat != null ? String(src.lat) : '' } });
@@ -277,11 +281,11 @@ export function render(ctx, params = {}) {
       showToast('위치 정보를 가져올 수 없어요', 'danger');
     }
   });
-  form.appendChild(h('div', { class: 'form-group' },
+  const locationGroup = h('div', { class: 'form-group' },
     h('label', { attrs: { for: 'f-lat' } }, '위치'),
     h('div', { class: 'form-row' }, latInput, lngInput),
     locBtn
-  ));
+  );
 
   // skin selector — default by category for new shops, by shop.skin for edit
   let currentSkin = hasInit ? (src.skin || getDefaultSkin(src.category)) : getDefaultSkin(catSelect.value);
@@ -296,14 +300,14 @@ export function render(ctx, params = {}) {
     currentSkin = getDefaultSkin(catSelect.value);
     mountSkin(currentSkin);
   });
-  form.appendChild(h('div', { class: 'form-group' },
+  const skinGroup = h('div', { class: 'form-group' },
     h('label', null, '스킨 테마'),
     skinContainer
-  ));
+  );
 
   // memo
   const memoInput = h('textarea', { id: 'f-memo', attrs: { name: 'memo', rows: '3', placeholder: '예: 평일 오전 할인, 주차 가능' } }, isEdit ? (shop.memo || '') : '');
-  form.appendChild(field('메모', 'f-memo', memoInput));
+  const memoGroup = field('메모', 'f-memo', memoInput);
 
   // ── gifticon image (optional) ──
   // Event gifticons arrive as a screenshot; keeping it here means one place to
@@ -356,21 +360,49 @@ export function render(ctx, params = {}) {
   });
   syncImage();
 
-  form.appendChild(h('div', { class: 'form-group' },
+  const imageGroup = h('div', { class: 'form-group' },
     h('label', { attrs: { for: 'f-gifticon' } }, '기프티콘 이미지'),
     imgInput,
     imgPick,
     imgWrap,
     imgHint
-  ));
+  );
 
   // coupon code (optional) — shown as scannable barcode/QR on the detail page
   const codeInput = h('input', { id: 'f-code', attrs: { type: 'text', name: 'code', placeholder: '예: 1234-5678-9012 (선택)', value: hasInit ? (src.code || '') : '' } });
-  form.appendChild(h('div', { class: 'form-group' },
+  const codeGroup = h('div', { class: 'form-group' },
     h('label', { attrs: { for: 'f-code' } }, '쿠폰/멤버십 코드'),
     codeInput,
     h('p', { class: 'field-hint' }, '이용권·멤버십 코드를 입력하면 상세 화면에서 바코드·QR로 크게 보여줘요.')
-  ));
+  );
+
+  moreContent.append(addressGroup, phoneGroup, locationGroup, memoGroup, codeGroup, imageGroup, skinGroup);
+  form.appendChild(more);
+
+  function applyKind() {
+    [[segCount, 'count'], [segAmount, 'amount'], [segCoupon, 'coupon']].forEach(([el, k]) => {
+      el.classList.toggle('active', kind === k);
+      el.setAttribute('aria-pressed', kind === k ? 'true' : 'false');
+    });
+    countGroup.hidden = kind !== 'count';
+    amountGroup.hidden = kind !== 'amount';
+    couponGroup.hidden = kind !== 'coupon';
+    more.querySelector('.form-more-hint').textContent = kind === 'coupon'
+      ? '주소 · 전화 · 위치 · 메모 · 테마'
+      : '주소 · 전화 · 위치 · 메모 · 코드 · 이미지 · 테마';
+    if (kind === 'coupon') {
+      form.insertBefore(imageGroup, more);
+      form.insertBefore(codeGroup, more);
+    } else {
+      moreContent.append(codeGroup, imageGroup);
+      moreContent.append(skinGroup);
+    }
+    if (kind === 'count') renderPreview();
+    else if (kind === 'amount') renderAmountPreview();
+  }
+  segCount.addEventListener('click', () => { kind = 'count'; applyKind(); });
+  segAmount.addEventListener('click', () => { kind = 'amount'; applyKind(); });
+  segCoupon.addEventListener('click', () => { kind = 'coupon'; applyKind(); });
 
   form.appendChild(h('div', { class: 'form-spacer' }));
   const submitBtn = h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'submit' } }, isEdit ? '저장하기' : '추가하기');
