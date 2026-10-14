@@ -135,7 +135,7 @@ export function checkDueNow(shops, settings, onDue) {
     newMarkers[key] = Date.now();
 
     // Android's scheduled alarm owns OS notifications in the app shell.
-    if (!nativeAlarms) pushNotification('쿠폰 만료 임박', `${shop.name} · ${expiryLabel(days)}`, `cb_reminder:${shop.id}:${days}`);
+    if (!nativeAlarms) pushNotification('이용권 만료 임박', `${shop.name} · ${expiryLabel(days)}`, `cb_reminder:${shop.id}:${days}`);
     if (typeof onDue === 'function') onDue(shop, { type: 'expiry', days });
   }
 
@@ -183,7 +183,7 @@ export function nativeReminderPlan(shops, settings, now = Date.now()) {
     for (const d of days) {
       const when = triggerTimeFor(shop.expiresAt, d);
       if (when != null && when > now) {
-        desired[reminderId(shop.id, d)] = { title: '쿠폰 만료 임박', body: `${shop.name} · ${expiryLabel(d)}`, when };
+        desired[reminderId(shop.id, d)] = { title: '이용권 만료 임박', body: `${shop.name} · ${expiryLabel(d)}`, when };
       }
     }
   }

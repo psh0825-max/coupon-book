@@ -166,7 +166,7 @@ export function progressPercent(shop);              // 0..100 int
 export function couponStatus(shop);                 // { key, label, className, score } (see tiers)
 export function formatExpiry(dateStr);              // '만료 없음'|'만료됨'|'오늘 만료'|'D-n'
 export function priorityShop(shops);                // next-best non-completed or null
-export function sortShops(shops, sortKey);          // 'smart'|'remaining'|'updated'|'name'
+export function sortShops(shops, sortKey);          // 'smart'|'attention'|'remaining'|'updated'|'name'
 export function filterShops(shops, {query,category,status}); // pure predicate set
 export function stats(shops, logs);                 // { totalShops,totalCoupons,usedCoupons,
                                                     //   completionRate, expiringCount, completedCount,
@@ -174,7 +174,7 @@ export function stats(shops, logs);                 // { totalShops,totalCoupons
 export function dueReminders(shops, reminderDays);  // shops crossing a threshold today (pure given Date.now)
 ```
 Status tiers (single definition, className drives badge color):
-- completed -> `{key:'done', className:'success', score:0}` label `완성`
+- completed -> `{key:'done', className:'success', score:0}` label `소진`
 - expired -> `{className:'danger', score:10}` label `만료됨`
 - days<=7 -> `{className:'danger', score:20+days}` label `만료 D-n`/`오늘 만료`
 - remaining<=2 -> `{className:'warning', score:40+remaining}` label `n개 남음`
@@ -250,10 +250,6 @@ export function closeOverlay();
 // REQUIREMENTS: focus trap, restore focus on close, ESC closes, backdrop click closes,
 // role=dialog aria-modal=true aria-labelledby, body scroll lock. No inline onclick.
 ```
-### ui/reward.js
-```js
-export function showReward({shopName, total});  // full-screen, reduced-motion aware, focus-managed
-```
 ### ui/components.js — reusable view pieces (return Nodes, built via h)
 ```js
 export function shopCard(shop, {onOpen, onQuickUse});  // keyboard-activatable (role/button semantics)
@@ -277,7 +273,7 @@ or via store subscription where a live region is needed.
   via domain.filterShops/sortShops.
 - **detail.js**: skinned header, quick actions (전화/지도/만료), memo, progress, stamp
   board, use/edit/undo actions, usage timeline, ad. Use **consistent maps provider**
-  for 지도 + 길찾기 (use Google Maps directions for both; see §5).
+  for 지도 + 길찾기 (Kakao Map links for both; see §5).
 - **edit.js**: add/edit form, live stamp preview, set-current-location, skin selector,
   delete (edit mode). Validation via repo.normalizeShop.
 - **map.js**: Leaflet map, user marker + accuracy circle, status-colored pins, floating
@@ -292,7 +288,7 @@ or via store subscription where a live region is needed.
 
 ## 4. actions (defined in app.js, injected into ctx)
 ```
-useCoupon(shopId, note?)      // +1 used, log (+location if available), reward+confetti on complete, persist, refresh
+useCoupon(shopId, note?)      // +1 used, log (+location if available), persist, refresh
 undoLastCoupon(shopId)        // confirm, -1, delete last log
 saveShop(data, id?)           // add/update via repo
 deleteShop(id)
@@ -306,7 +302,7 @@ All actions: mutate via repo -> refresh store slices -> trigger re-render -> res
 location/reminder services as needed.
 
 ## 5. Consistency fixes (carry into rewrite)
-- Single maps provider: Google Maps for both "지도" view-on-map and "길찾기".
+- Single maps provider: Kakao Map for both "지도" view-on-map and "길찾기".
   `mapViewUrl(shop)` and `mapsDirectionsUrl(shop)` live in services (one helper file,
   e.g. services/format.js or a small services/maps.js).
 - Single status/expiry source: domain.js only.
@@ -320,7 +316,7 @@ location/reminder services as needed.
 - Toast region: `aria-live="polite"`.
 - Inputs have associated `<label>` (htmlFor/id).
 - Icons decorative => `aria-hidden`; icon-only buttons have `aria-label`.
-- Respect `prefers-reduced-motion` for confetti/reward/anim.
+- Respect `prefers-reduced-motion` for confetti/anim.
 - Visible focus outline (`:focus-visible`).
 - Central icon registry in h.js (`icon(name)`), reused everywhere.
 
@@ -343,7 +339,7 @@ location/reminder services as needed.
 ## 8. Testing (requirement-driven)
 - Unit (node --test): domain.js (status tiers, daysUntil edge cases, expiring, sort,
   filter, stats, dueReminders), repo normalize (clamping), format, location.haversine.
-- E2E (Playwright): onboarding → seed → use coupon (toast/reward) → undo →
+- E2E (Playwright): onboarding → seed → use coupon (toast) → undo →
   filter on list → settings toggles → backup export → tabs navigate; assert no console
   errors. Reset via correct DB name.
 - Keep `node --test` and `playwright` scripts.

@@ -582,17 +582,26 @@
 }
 .detail-header .stats .stat {
   text-align: center;
-  padding: 0 8px;
+  padding: 0 4px;
   border-right: 1px solid var(--border);
 }
 .detail-header .stats .stat:last-child {
   border-right: none;
 }
 .detail-header .stats .stat .num {
-  font-size: 1.3rem;
+  white-space: nowrap;
+  font-size: clamp(0.95rem, 4.4vw, 1.3rem);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
+}
+.detail-header .stats .stat .num--long {
+  font-size: clamp(0.8rem, 3.6vw, 1.1rem);
+}
+.detail-header .stats .stat .num-unit {
+  font-size: 0.72em;
+  margin-left: 1px;
+  font-weight: 700;
 }
 .detail-header .stats .stat .lbl {
   font-size: 0.7rem;

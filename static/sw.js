@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coupon-book-v36';
+const CACHE_NAME = 'coupon-book-v37';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -48,9 +48,7 @@ const URLS_TO_CACHE = [
   './art/empty-map.webp',
   './art/empty-search.webp',
   './art/backup-restore.webp',
-  './art/reward-complete.webp',
   './js/ui/overlay.js',
-  './js/ui/reward.js',
   './js/ui/components.js',
   './js/views/home.js',
   './js/views/list.js',

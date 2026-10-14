@@ -3,7 +3,7 @@
 
 import { h, icon, frag } from '../core/h.js';
 import {
-  couponStatus, remainingCount, remainingValue, progressPercent, formatExpiry, isCompleted,
+  couponStatus, remainingValue, progressPercent, formatExpiry, isCompleted,
   isAmountKind, isCountKind, passTotal, passUsed, remainingLabel, totalLabel, usedLabel, isCouponKind} from '../domain.js';
 import { formatDate, formatRelative, formatWon } from '../services/format.js';
 import { SKINS, getCategoryIcon } from '../data/skins.js';
@@ -136,7 +136,7 @@ export function nearbyCard(shop, distance, onClick) {
       h('h4', null, shop.name),
       h('p', null, `${shop.address || ''} · ${Math.round(distance)}m`)
     ),
-    h('div', { class: 'badge badge-accent' }, `${remainingCount(shop)}개 남음`)
+    h('div', { class: 'badge badge-accent' }, `${remainingLabel(shop)} 남음`)
   );
 }
 

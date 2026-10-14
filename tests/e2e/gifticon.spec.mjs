@@ -52,6 +52,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('G1: attaches a valid gifticon image', async ({ page }) => {
+  await page.getByRole('button', { name: '쿠폰', exact: true }).click();
   const input = page.locator('#f-gifticon');
   const hint = page.locator('#f-gifticon ~ .field-hint');
   const preview = page.locator('#f-gifticon ~ .gifticon-preview .gifticon-thumb');
@@ -64,6 +65,7 @@ test('G1: attaches a valid gifticon image', async ({ page }) => {
 });
 
 test('G2: rejects a non-image gifticon attachment', async ({ page }) => {
+  await page.getByRole('button', { name: '쿠폰', exact: true }).click();
   const input = page.locator('#f-gifticon');
   const hint = page.locator('#f-gifticon ~ .field-hint');
   const preview = page.locator('#f-gifticon ~ .gifticon-preview .gifticon-thumb');
