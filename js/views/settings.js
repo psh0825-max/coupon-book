@@ -46,21 +46,20 @@ export function render(ctx) {
   // numbers, and someone opening settings came to change a setting.)
   const statsPanel = h('section', { class: 'settings-panel' },
     h('div', { class: 'section-title' },
-      h('h3', null, '운영 통계'),
-      h('span', null, `이번 달 사용 ${s.monthUses}회`)
+      h('h3', null, '이용 현황')
     ),
     h('div', { class: 'metric-grid' },
-      metric(s.totalShops, '업체'),
-      metric(s.totalCoupons, '이용권 수'),
-      metric(s.usedCoupons, '사용'),
-      metric(s.completedCount, '완성')
+      metric(s.totalShops, '이용권'),
+      metric(`${s.monthUses}회`, '이번 달 사용'),
+      metric(s.expiringCount, '만료 임박'),
+      metric(s.completedCount, '소진')
     )
   );
 
   // ── (a) 위치 알림 ──
   root.appendChild(card(
     h('div', { class: 'toggle-row' },
-      h('div', { class: 'info' }, h('h4', null, '위치 알림'), h('p', null, '가게 근처에 가면 팝업 띄우기')),
+      h('div', { class: 'info' }, h('h4', null, '위치 알림'), h('p', null, '앱을 열어 둔 동안 등록한 가게 근처에 머물면 알려줘요')),
       makeToggle(settings.notifyEnabled, async (next) => {
         await actions.toggleNotify(next);
         showToast(next ? '알림이 켜졌어요' : '알림이 꺼졌어요');
@@ -149,7 +148,7 @@ export function render(ctx) {
   root.appendChild(card(
     h('div', { class: 'info' }, h('h4', null, '데이터 보관'), storageStatus),
     storageActions,
-    h('p', { class: 'field-hint' }, '쿠폰은 이 기기에만 저장됩니다. 정기적으로 백업하세요.')
+    h('p', { class: 'field-hint' }, '이용권 정보는 이 기기에만 저장돼요. 정기적으로 백업하세요.')
   ));
   (async () => {
     const [persisted, est] = await Promise.all([isPersisted(), storageEstimate()]);
@@ -241,7 +240,7 @@ export function render(ctx) {
   root.appendChild(h('p', { class: 'field-hint', style: { 'text-align': 'center', 'margin-top': '8px' } },
     '쿠폰북 · LightOn Plus Lab 제품',
     h('br'),
-    '로컬에 저장되는 개인 쿠폰 지갑',
+    '이 기기에 저장되는 내 이용권·쿠폰 지갑',
     h('br'),
     h('a', { attrs: { href: 'https://lightonpluslab.com', target: '_blank', rel: 'noopener' } }, 'LightOn Plus Lab'),
     ' · ',

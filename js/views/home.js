@@ -59,10 +59,10 @@ export function render(ctx) {
 
   const summaryRow = hasShops
     ? h('div', { class: 'summary-row' },
-        summaryCard(s.totalShops, '업체', 'var(--text-primary)'),
-        summaryCard(`${s.completionRate}%`, '진행률', 'var(--accent)'),
+        summaryCard(s.totalShops, '이용권', 'var(--text-primary)'),
+        summaryCard(`${s.monthUses}회`, '이번 달 사용', 'var(--accent)'),
         summaryCard(s.expiringCount, '만료 임박', 'var(--warning)'),
-        summaryCard(s.completedCount, '완성', 'var(--success)')
+        summaryCard(s.completedCount, '소진', 'var(--success)')
       )
     : null;
 
@@ -70,8 +70,8 @@ export function render(ctx) {
   const nudge = needsBackupNudge(shops, settings)
     ? h('div', { class: 'nudge-banner', attrs: { role: 'status' } },
         h('div', { class: 'nudge-text' },
-          h('strong', null, '백업한 지 오래됐어요'),
-          h('p', null, '쿠폰은 이 기기에만 저장돼요. 기기를 바꾸면 사라질 수 있어요.')
+          h('strong', null, settings.lastBackupAt ? '백업한 지 오래됐어요' : '아직 백업하지 않았어요'),
+          h('p', null, '이용권 정보는 이 기기에만 저장돼요. 기기를 바꾸면 사라질 수 있어요.')
         ),
         h('div', { class: 'nudge-actions' },
           h('button', { class: 'btn btn-warning', attrs: { type: 'button' }, on: { click: () => actions.exportData() } }, '지금 백업'),
