@@ -56,6 +56,8 @@ keyPassword=<기존 키 비밀번호>
 .\gradlew.bat assembleDebug      # 테스트 APK (구글 테스트 광고가 표시되며 클릭해도 안전)
 ```
 
+`release`와 `qa`는 `app/proguard-rules.pro`에서 `@JavascriptInterface` 메서드를 보존한 R8 최소화 빌드입니다. `gradlew assembleQa`로 디버그 가능 WebView와 Google 테스트 광고를 사용하는 최소화 빌드를 실기기에서 테스트할 수 있으며, AAB에는 Play가 충돌을 역난독화할 R8 매핑 파일이 포함됩니다.
+
 ---
 
 ## 5. AdMob ID 구성
