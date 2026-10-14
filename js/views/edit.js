@@ -373,7 +373,8 @@ export function render(ctx, params = {}) {
   ));
 
   form.appendChild(h('div', { class: 'form-spacer' }));
-  form.appendChild(h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'submit' } }, isEdit ? '저장하기' : '추가하기'));
+  const submitBtn = h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'submit' } }, isEdit ? '저장하기' : '추가하기');
+  form.appendChild(submitBtn);
 
   if (isEdit) {
     const delBtn = h('button', { class: 'btn btn-danger btn-block subtle-danger', attrs: { type: 'button' } }, '이용권 삭제');
@@ -385,15 +386,17 @@ export function render(ctx, params = {}) {
         danger: true
       });
       if (!ok) return;
-      await actions.deleteShop(shop.id);
+      if (!await actions.deleteShop(shop.id)) return;
       showToast('삭제되었어요');
       router.navigate('home');
     });
     form.appendChild(delBtn);
   }
 
+  let saving = false;
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (saving) return;
     const total = kind === 'coupon'
       ? Math.max(1, Math.min(100, parseInt(couponTotalInput.value) || 1))
       : Math.max(1, Math.min(1000, parseInt(totalInput.value) || 10));
@@ -432,9 +435,18 @@ export function render(ctx, params = {}) {
       benefit: benefitInput.value.trim(),
       image: imageData
     };
-    await actions.saveShop(data, params.id);
-    showToast(isEdit ? '저장되었어요' : '추가되었어요');
-    router.navigate('home');
+    saving = true;
+    submitBtn.disabled = true;
+    try {
+      const ok = await actions.saveShop(data, params.id);
+      if (!ok) return;
+      showToast(isEdit ? '저장되었어요' : '추가되었어요');
+      router.navigate('home');
+      if (!params.id) await actions.maybeShowFirstBackupHint();
+    } finally {
+      saving = false;
+      submitBtn.disabled = false;
+    }
   });
 
   applyKind();

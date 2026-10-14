@@ -15,7 +15,7 @@ import { syncReminders, ensurePermission } from './services/reminders.js';
 import {
   registerSW, applyUpdate, initInstallPrompt, canInstall, promptInstall, isStandalone, isIos
 } from './services/pwa.js';
-import { exportData as backupExport, importData as backupImport } from './services/backup.js';
+import { exportData as backupExport, restoreBackup } from './services/backup.js';
 import { requestPersistentStorage } from './services/storage.js';
 import { haptic } from './services/fx.js';
 import { mountAds } from './services/ads.js';
@@ -60,7 +60,7 @@ function resyncServices() {
   });
   if (settings.notifyEnabled) startLocationWatch(shops, onGeofence);
   else stopLocationWatch();
-  syncReminders(shops, settings, onReminderDue);
+  syncReminders(shops, settings, onReminderDue, { persistMarkers: (m) => Settings.set('reminderMarkers', m).catch(() => {}) });
 }
 
 function onGeofence(notifyList) {
@@ -109,6 +109,17 @@ function onUpdateAvailable(reg) {
 // clamp to an integer range; NaN propagates so callers can guard with `if (!v)`.
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
+function saveErrorMessage(err) {
+  return err && (err.name === 'QuotaExceededError' || /quota/i.test(String(err.message)))
+    ? '저장 공간이 부족해서 저장하지 못했어요. 필요 없는 기프티콘 이미지를 지우고 다시 시도해 주세요.'
+    : '저장하지 못했어요. 잠시 후 다시 시도해 주세요.';
+}
+
+function reportSaveError(err) {
+  console.error(err);
+  showToast(saveErrorMessage(err), 'danger');
+}
+
 function confirmExpiredUse(shop, action) {
   showSheet({
     title: '만료된 이용권이에요',
@@ -151,12 +162,12 @@ const actions = {
         updated.usedCoupons = (shop.usedCoupons || 0) + n;
         logFields = { count: n };
       }
-      await Shops.update(updated);
-      await Logs.add({
-        shopId,
-        note: opts.note || undefined,
-        ...logFields
-      });
+      try {
+        await Shops.applyUse(updated, { shopId, note: opts.note || undefined, ...logFields });
+      } catch (err) {
+        reportSaveError(err);
+        return;
+      }
       await refresh();
       const depleted = remainingValue(updated) <= 0;
       // One-tap undo on the toast: quick uses shouldn't need detail + confirm.
@@ -271,45 +282,59 @@ const actions = {
       const restored = last.amount != null
         ? { ...shop, usedAmount: Math.max(0, (shop.usedAmount || 0) - last.amount) }
         : { ...shop, usedCoupons: Math.max(0, (shop.usedCoupons || 0) - (last.count || 1)) };
-      await Shops.update(restored);
-      await Logs.remove(last.id);
-      showToast('마지막 사용 기록을 취소했어요');
+      try {
+        await Shops.applyUndo(restored, last.id);
+      } catch (err) {
+        reportSaveError(err);
+        return;
+      }
       await refresh();
+      showToast('마지막 사용 기록을 취소했어요');
     });
   },
 
   async saveShop(data, id) {
-    if (id) {
-      const cur = store.getState().shops.find((s) => s.id === id);
-      await Shops.update({ ...cur, ...data, id });
-    } else {
-      await Shops.add(data);
-    }
-    await refresh();
-    resyncServices();
-
-    // First-backup nudge: one time only, right after the user's very first shop.
-    if (!id) {
-      const st = store.getState();
-      if ((st.shops || []).length === 1 && !st.settings.backupHinted) {
-        await Settings.set('backupHinted', true);
-        store.setState((s) => ({ settings: { ...s.settings, backupHinted: true } }));
-        showSheet({
-          title: '백업을 권장해요',
-          body: h('p', null, '쿠폰은 이 기기에만 저장돼요. 기기를 바꾸거나 앱을 지우면 사라질 수 있어요. JSON으로 백업해 두면 안전해요.'),
-          actions: [
-            { id: 'later', label: '나중에', className: 'btn-secondary' },
-            { id: 'backup', label: '지금 백업', className: 'btn-primary', onClick: () => actions.exportData() }
-          ]
-        });
+    try {
+      if (id) {
+        const cur = store.getState().shops.find((s) => s.id === id);
+        await Shops.update({ ...cur, ...data, id });
+      } else {
+        await Shops.add(data);
       }
+      await refresh();
+      resyncServices();
+      return true;
+    } catch (err) {
+      reportSaveError(err);
+      return false;
     }
   },
 
   async deleteShop(id) {
-    await Shops.remove(id);
-    await refresh();
-    resyncServices();
+    try {
+      await Shops.remove(id);
+      await refresh();
+      resyncServices();
+      return true;
+    } catch (err) {
+      reportSaveError(err);
+      return false;
+    }
+  },
+
+  async maybeShowFirstBackupHint() {
+    const st = store.getState();
+    if ((st.shops || []).length !== 1 || st.settings.backupHinted) return;
+    await Settings.set('backupHinted', true);
+    store.setState((s) => ({ settings: { ...s.settings, backupHinted: true } }));
+    showSheet({
+      title: '백업을 권장해요',
+      body: h('p', null, '쿠폰은 이 기기에만 저장돼요. 기기를 바꾸거나 앱을 지우면 사라질 수 있어요. JSON으로 백업해 두면 안전해요.'),
+      actions: [
+        { id: 'later', label: '나중에', className: 'btn-secondary' },
+        { id: 'backup', label: '지금 백업', className: 'btn-primary', onClick: () => actions.exportData() }
+      ]
+    });
   },
 
   setFilter(patch) {
@@ -370,11 +395,16 @@ const actions = {
     await refresh();
   },
 
-  async importData(file) {
-    const sum = await backupImport(file);
-    await refresh();
-    resyncServices();
-    return sum;
+  async restoreData(parsed) {
+    try {
+      const sum = await restoreBackup(parsed);
+      await refresh();
+      resyncServices();
+      return sum;
+    } catch (err) {
+      reportSaveError(err);
+      return null;
+    }
   },
 
   async completeOnboarding() {

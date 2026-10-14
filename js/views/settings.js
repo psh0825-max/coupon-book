@@ -8,6 +8,7 @@ import { isPersisted, storageEstimate, requestPersistentStorage } from '../servi
 import { showToast } from '../ui/toast.js';
 import { showConfirm } from '../ui/overlay.js';
 import { formatDate } from '../services/format.js';
+import { parseBackup } from '../services/backup.js';
 import { illust } from '../ui/art.js';
 
 export function render(ctx) {
@@ -177,15 +178,24 @@ export function render(ctx) {
   })();
 
   // ── (e) 백업 / 복원 ──
-  const importInput = h('input', { id: 's-import', attrs: { type: 'file', accept: '.json' } });
+  const importInput = h('input', { id: 's-import', class: 'gifticon-input', attrs: { type: 'file', accept: '.json,application/json' } });
   importInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      await actions.importData(file);
-      showToast('복원 완료!');
+      const parsed = parseBackup(await file.text());
+      const skipped = parsed.skipped.shops + parsed.skipped.logs;
+      const message = `${parsed.exportedAt ? `${formatDate(parsed.exportedAt)}에 만든 ` : ''}백업의 이용권 ${parsed.shops.length}개 · 사용 내역 ${parsed.logs.length}건으로 바꿔요.`
+        + (shops.length ? ` 지금 이 기기에 있는 이용권 ${shops.length}개 · 내역 ${logs.length}건은 지워져요.` : '')
+        + (skipped > 0 ? ` 읽을 수 없는 항목 ${skipped}개는 건너뛰어요.` : '');
+      const ok = await showConfirm({ title: '백업으로 복원할까요?', confirmLabel: '복원하기', danger: true, message });
+      if (!ok) return;
+      const sum = await actions.restoreData(parsed);
+      if (sum) showToast(`복원 완료 · 이용권 ${sum.shops}개, 내역 ${sum.logs}건`);
     } catch (err) {
-      showToast('복원 실패: ' + (err?.message || err), 'danger');
+      showToast(err?.message || '백업을 복원하지 못했어요.', 'danger');
+    } finally {
+      importInput.value = '';
     }
   });
   root.appendChild(card(
@@ -199,7 +209,8 @@ export function render(ctx) {
     ),
     h('div', { class: 'form-group' },
       h('label', { attrs: { for: 's-import' } }, '복원 데이터'),
-      importInput
+      importInput,
+      h('label', { class: 'btn btn-secondary btn-block gifticon-pick', attrs: { for: 's-import' } }, '백업 파일에서 복원')
     )
   ));
 
