@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -82,7 +81,14 @@ public class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, backCallback);
 
         configureWebView();
-        adContainer.post(this::loadBanner);
+        // Layout changes provide the settled width after rotation, unlike onConfigurationChanged.
+        adContainer.addOnLayoutChangeListener((v, left, top, right, bottom,
+                                               oldLeft, oldTop, oldRight, oldBottom) -> {
+            int widthDp = (int) ((right - left) / getResources().getDisplayMetrics().density);
+            if (widthDp > 0 && widthDp != bannerWidthDp) {
+                v.post(this::loadBanner);
+            }
+        });
 
         if (savedInstanceState == null) {
             webView.loadUrl(APP_URL);
@@ -295,16 +301,6 @@ public class MainActivity extends AppCompatActivity {
             deliverNotifyResult(grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED);
         }
-    }
-
-    // ── Configuration ─────────────────────────────────────────────────────────
-    @Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        adContainer.post(() -> {
-            int widthDp = getBannerWidthDp(getResources().getDisplayMetrics());
-            if (widthDp != bannerWidthDp) loadBanner();
-        });
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────

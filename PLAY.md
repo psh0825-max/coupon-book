@@ -121,6 +121,7 @@ opt-in이 하루 늦어질 때마다 버퍼가 그대로 줄어듦.
    .\gradlew.bat bundleRelease    # AAB → app/build/outputs/bundle/release/
    .\gradlew.bat assembleDebug    # 실기기 테스트용 APK (구글 테스트 광고 표시)
    ```
+   `release`와 `qa`는 R8 최소화 빌드이며, `assembleQa`는 디버그 가능 WebView와 Google 테스트 광고로 실기기 검증하고 AAB의 매핑 파일은 Play 충돌 역난독화에 사용됩니다.
 4. 실기기 스모크 테스트: 앱 부팅(온보딩/홈) → 하단에 "Test Ad" 배너 →
    이용권 추가·사용 → 설정에서 백업 내보내기(다운로드 폴더 저장) →
    지도(위치 권한 프롬프트) → 전화/길찾기 링크가 외부 앱으로 → 뒤로가기 동작.
