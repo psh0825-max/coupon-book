@@ -2,7 +2,7 @@
 // rest of the app can trust the shapes coming out of the data layer.
 
 import {
-  generateId, getAll, get, put, del, getAllByIndex, clearStores
+  generateId, getAll, get, put, del, getAllByIndex, clearStores, runTx
 } from './db.js';
 import { CATEGORIES, SKINS, getDefaultSkin } from './skins.js';
 
@@ -12,6 +12,7 @@ export const DEFAULTS = {
   notifyDelay: 5,
   remindersEnabled: false,
   reminderDays: [7, 3, 1],
+  reminderMarkers: {},
   onboarded: false,
   backupHinted: false,
   lastBackupAt: null,
@@ -122,10 +123,35 @@ export const Shops = {
     await put('shops', rec);
     return rec;
   },
+  async applyUse(shop, log) {
+    const rec = {
+      ...normalizeShop(shop), id: shop.id,
+      createdAt: shop.createdAt || Date.now(), updatedAt: Date.now()
+    };
+    const logRec = { ...normalizeLog(log), id: generateId() };
+    await runTx(['shops', 'logs'], ({ shops, logs }) => {
+      shops.put(rec);
+      logs.put(logRec);
+    });
+    return { shop: rec, log: logRec };
+  },
+  async applyUndo(shop, logId) {
+    const rec = {
+      ...normalizeShop(shop), id: shop.id,
+      createdAt: shop.createdAt || Date.now(), updatedAt: Date.now()
+    };
+    await runTx(['shops', 'logs'], ({ shops, logs }) => {
+      shops.put(rec);
+      logs.delete(logId);
+    });
+    return rec;
+  },
   async remove(id) {
-    await del('shops', id);
-    const logs = await getAllByIndex('logs', 'shopId', id);
-    await Promise.all(logs.map((l) => del('logs', l.id)));
+    await runTx(['shops', 'logs'], ({ shops, logs }) => {
+      shops.delete(id);
+      const keys = logs.index('shopId').getAllKeys(id);
+      keys.onsuccess = () => keys.result.forEach((key) => logs.delete(key));
+    });
   }
 };
 

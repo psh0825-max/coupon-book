@@ -1,5 +1,6 @@
-// services/location.js — geolocation + dwell-based geofence. Self-contained;
-// ported verbatim in behavior from the original static/js/location.js.
+// services/location.js — geolocation + dwell-based geofence.
+
+import { isCompleted, isExpired } from '../domain.js';
 
 export const EARTH_RADIUS = 6371000; // meters
 
@@ -54,24 +55,47 @@ export let _visited = new Map(); // shopId -> {enteredAt, lastSeen, confirmed}
 export let _callbacks = null;
 export let _settings = { radius: 100, delay: 300, enabled: true };
 let _warnedLocation = false;
+let _generation = 0;
+
+function teardown() {
+  if (_checkInterval) { clearInterval(_checkInterval); _checkInterval = null; }
+  if (_watchId !== null) { navigator.geolocation?.clearWatch(_watchId); _watchId = null; }
+  _generation += 1;
+}
 
 export async function startLocationWatch(shops, onNotify) {
-  stopLocationWatch();
+  teardown();
   if (!_settings.enabled) return;
 
+  const generation = _generation;
   _callbacks = { onNotify };
-  _visited.clear();
+  const usableShops = (shops || []).filter((shop) =>
+    shop.lat !== '' && shop.lat != null && Number.isFinite(Number(shop.lat))
+    && shop.lng !== '' && shop.lng != null && Number.isFinite(Number(shop.lng))
+    && !isCompleted(shop) && !isExpired(shop)
+  );
+  const usableIds = new Set(usableShops.map((shop) => shop.id));
+  for (const shopId of _visited.keys()) {
+    if (!usableIds.has(shopId)) _visited.delete(shopId);
+  }
 
   // immediate check
-  await _checkLocation(shops);
+  await _checkLocation(usableShops, generation);
+  if (generation !== _generation || !_settings.enabled) return;
 
   // periodic check every 30s
-  _checkInterval = setInterval(() => _checkLocation(shops), 30000);
+  _checkInterval = setInterval(() => {
+    if (generation !== _generation) return;
+    _checkLocation(usableShops, generation);
+  }, 30000);
 
   // also use watchPosition for more responsive updates
   if (navigator.geolocation) {
     _watchId = navigator.geolocation.watchPosition(
-      () => _checkLocation(shops),
+      () => {
+        if (generation !== _generation) return;
+        _checkLocation(usableShops, generation);
+      },
       () => {},
       { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
     );
@@ -79,9 +103,9 @@ export async function startLocationWatch(shops, onNotify) {
 }
 
 export function stopLocationWatch() {
-  if (_checkInterval) { clearInterval(_checkInterval); _checkInterval = null; }
-  if (_watchId !== null) { navigator.geolocation.clearWatch(_watchId); _watchId = null; }
+  teardown();
   _visited.clear();
+  _callbacks = null;
 }
 
 export function setNotifySettings({ radius, delay, enabled }) {
@@ -89,9 +113,11 @@ export function setNotifySettings({ radius, delay, enabled }) {
   _settings = { radius: radius || 100, delay: Math.max(0, d) * 60, enabled: enabled !== false };
 }
 
-export async function _checkLocation(shops) {
+export async function _checkLocation(shops, generation) {
+  if (!_settings.enabled || (generation !== undefined && generation !== _generation)) return;
   try {
     const pos = await getCurrentPosition();
+    if (!_settings.enabled || (generation !== undefined && generation !== _generation)) return;
     _warnedLocation = false; // genuine success — let a later real failure warn again
     const now = Date.now();
     const notifyList = [];

@@ -78,14 +78,25 @@ export async function get(store, key) {
 export async function put(store, rec) {
   const db = await getDB();
   const tx = db.transaction(store, 'readwrite');
-  await reqAsPromise(tx.objectStore(store).put(rec));
-  return rec;
+  return new Promise((resolve, reject) => {
+    const request = tx.objectStore(store).put(rec);
+    const fail = () => reject(tx.error || request.error || new Error('IndexedDB transaction aborted'));
+    tx.oncomplete = () => resolve(rec);
+    tx.onabort = fail;
+    tx.onerror = fail;
+  });
 }
 
 export async function del(store, key) {
   const db = await getDB();
   const tx = db.transaction(store, 'readwrite');
-  return reqAsPromise(tx.objectStore(store).delete(key));
+  return new Promise((resolve, reject) => {
+    const request = tx.objectStore(store).delete(key);
+    const fail = () => reject(tx.error || request.error || new Error('IndexedDB transaction aborted'));
+    tx.oncomplete = () => resolve(request.result);
+    tx.onabort = fail;
+    tx.onerror = fail;
+  });
 }
 
 export async function getAllByIndex(store, index, key) {
@@ -101,6 +112,28 @@ export async function clearStores(names) {
     const tx = db.transaction(list, 'readwrite');
     list.forEach((name) => tx.objectStore(name).clear());
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
+    tx.onabort = tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+  });
+}
+
+// Queue a related group of writes in one transaction. `work` must synchronously
+// start its requests; request callbacks may continue queueing work on this tx.
+export async function runTx(storeNames, work) {
+  const db = await getDB();
+  const names = Array.isArray(storeNames) ? storeNames : [storeNames];
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(names, 'readwrite');
+    const stores = Object.fromEntries(names.map((name) => [name, tx.objectStore(name)]));
+    let result;
+    const fail = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+    tx.oncomplete = () => resolve(result);
+    tx.onabort = fail;
+    tx.onerror = fail;
+    try {
+      result = work(stores);
+    } catch (err) {
+      try { tx.abort(); } catch {}
+      reject(err);
+    }
   });
 }

@@ -117,7 +117,7 @@ export function render(ctx, params = {}) {
           danger: true
         });
         if (!ok) return;
-        await actions.deleteShop(shop.id);
+        if (!await actions.deleteShop(shop.id)) return;
         showToast('삭제되었어요');
         router.navigate('home');
       } }
