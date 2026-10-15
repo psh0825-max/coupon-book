@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coupon-book-v41';
+const CACHE_NAME = 'coupon-book-v42';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -63,7 +63,8 @@ const URLS_TO_CACHE = [
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(URLS_TO_CACHE))
+    // Bypass the HTTP cache (Pages max-age=600) so a new version never precaches the previous deploy's files.
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(URLS_TO_CACHE.map((url) => new Request(url, { cache: 'reload' }))))
   );
   // No automatic skipWaiting: a new SW waits until the page asks it to take over
   // (via the SKIP_WAITING message below), so it never swaps in mid-session.
