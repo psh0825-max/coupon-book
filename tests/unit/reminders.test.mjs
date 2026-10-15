@@ -1,6 +1,6 @@
 import { afterEach, mock, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ensurePermission, checkDueNow, syncReminders, reminderId, pruneReminderMarkers } from '../../static/js/services/reminders.js';
+import { ensurePermission, checkDueNow, syncReminders, nativeReminderPlan, reminderId, pruneReminderMarkers } from '../../static/js/services/reminders.js';
 
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
 const originalNotification = Object.getOwnPropertyDescriptor(globalThis, 'Notification');
@@ -77,6 +77,17 @@ test('N5 completed passes have their alarms cancelled', () => {
   syncReminders([far('a')], enabled()); b.calls.cancelled.length = 0;
   syncReminders([far('a', { usedCoupons: 10 })], enabled());
   assert.equal(b.calls.cancelled.length, 3);
+});
+
+test('N5a archived passes have their alarms cancelled', () => {
+  const storage = fakeStorage(); const b = bridge(); setGlobal('localStorage', storage); setGlobal('window', { AndroidBridge: b.api });
+  syncReminders([far('a')], enabled()); b.calls.cancelled.length = 0;
+  syncReminders([far('a', { archivedAt: Date.now() })], enabled());
+  assert.equal(b.calls.cancelled.length, 3);
+});
+
+test('N5b nativeReminderPlan skips archived passes', () => {
+  assert.deepEqual(nativeReminderPlan([far('a', { archivedAt: Date.now() })], enabled()), {});
 });
 
 test('N6 first reconciliation sweeps all known digit ids except desired alarms', () => {

@@ -26,6 +26,7 @@ test('service worker threshold mirrors domain reminderThreshold for pass kinds a
     ['active amount', activeAmount(localDate(7))],
     ['used count', { ...activeCount(localDate(7)), usedCoupons: 10 }],
     ['used amount', { ...activeAmount(localDate(7)), usedAmount: 10000 }],
+    ['archived', { ...activeCount(localDate(7)), archivedAt: Date.now() }],
     ['expired', activeCount(localDate(-1))],
     ['no date', activeCount(null)],
     ['today', activeCount(localDate(0))],

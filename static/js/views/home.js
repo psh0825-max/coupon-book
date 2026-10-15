@@ -3,7 +3,7 @@
 
 import { h } from '../core/h.js';
 import { shopCard, summaryCard, adBanner, nearbyCard, emptyState } from '../ui/components.js';
-import { stats, priorityShop, usableShops, couponStatus, progressPercent, isAmountKind, needsBackupNudge } from '../domain.js';
+import { stats, priorityShop, usableShops, couponStatus, progressPercent, isArchived, isAmountKind, needsBackupNudge } from '../domain.js';
 import { getCurrentPosition, haversine } from '../services/location.js';
 import { showToast } from '../ui/toast.js';
 
@@ -23,9 +23,11 @@ export function render(ctx) {
   const s = stats(shops, logs);
   const priority = priorityShop(shops);
   const usable = usableShops(shops);
+  const activeShops = shops.filter((shop) => !isArchived(shop));
+  const archivedCount = shops.length - activeShops.length;
 
   const root = h('div');
-  const hasShops = shops.length > 0;
+  const hasShops = activeShops.length > 0;
 
   // The marketing hero earns its space only while the wallet is empty. Once there
   // are passes, that is what the user opened the app to see, so a compact head
@@ -127,7 +129,10 @@ export function render(ctx) {
           const added = await actions.seedDemo();
           showToast(added ? `${added}개 샘플 업체를 추가했어요` : '이미 샘플 업체가 있어요');
         } }
-      ]
+      ].concat(archivedCount ? [{ label: `보관함 보기 (${archivedCount})`, className: 'btn-secondary', onClick: () => {
+        actions.setFilter({ status: 'archived' });
+        router.navigate('list');
+      } }] : [])
     }));
   } else {
     rail = h('div', { class: 'shop-rail' });
@@ -160,8 +165,8 @@ export function render(ctx) {
     : [head, rail, nearbyArea, ad];
   order.filter(Boolean).forEach((node) => root.appendChild(node));
 
-  if (settings.notifyEnabled && shops.some(hasCoords)) {
-    populateNearby(nearbyArea, shops, router);
+  if (settings.notifyEnabled && activeShops.some(hasCoords)) {
+    populateNearby(nearbyArea, activeShops, router);
   }
 
   return root;

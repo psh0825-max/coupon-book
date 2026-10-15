@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coupon-book-v37';
+const CACHE_NAME = 'coupon-book-v39';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -28,6 +28,7 @@ const URLS_TO_CACHE = [
   './js/data/repo.js',
   './js/domain.js',
   './js/services/format.js',
+  './js/services/presentation.js',
   './js/services/codes.js',
   './js/services/maps.js',
   './js/services/location.js',
@@ -143,6 +144,7 @@ function swIsCompleted(shop) {
 }
 
 function swThreshold(shop, reminderDays) {
+  if (Number.isFinite(shop && shop.archivedAt)) return null;
   if (swIsCompleted(shop)) return null;
   const days = swDaysUntil(shop && shop.expiresAt);
   if (days === null || days < 0) return null;

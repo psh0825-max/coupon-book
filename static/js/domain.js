@@ -33,6 +33,7 @@ export function daysUntil(dateStr) {
 // Two kinds of paid pass: 'count' (횟수권, sessions) and 'amount' (금액권, KRW).
 // Records predating the concept have no `kind` and are treated as 'count'.
 export function isAmountKind(shop) { return shop && shop.kind === 'amount'; }
+export function isArchived(shop) { return Number.isFinite(shop?.archivedAt); }
 // 'coupon' (모바일 쿠폰/기프티콘) is a count pass whose value is a stated benefit
 // ('10% 할인', '아메리카노 1잔') rather than a drawn-down balance, so it rides the
 // same count arithmetic and only differs in how it is presented.
@@ -122,6 +123,7 @@ export function progressPercent(shop) {
 
 /** { key, label, className, score } — lower score = higher priority. */
 export function couponStatus(shop) {
+  if (isArchived(shop)) return { key: 'archived', label: '보관됨', className: 'neutral', score: 1000 };
   // A used-up paid pass is depleted ('소진'), not a prize to redeem.
   if (isCompleted(shop)) return { key: 'done', label: '소진', className: 'success', score: 0 };
   const days = daysUntil(shop.expiresAt);
@@ -157,13 +159,13 @@ export function formatExpiry(dateStr) {
 
 /** next-best non-completed shop, or null */
 export function priorityShop(shops) {
-  const active = (shops || []).filter((s) => !isCompleted(s));
+  const active = (shops || []).filter((s) => !isArchived(s) && !isCompleted(s));
   if (!active.length) return null;
   return sortShops(active, 'attention')[0];
 }
 
 export function usableShops(shops) {
-  return sortShops((shops || []).filter((s) => !isExpired(s) && !isCompleted(s)), 'smart');
+  return sortShops((shops || []).filter((s) => !isArchived(s) && !isExpired(s) && !isCompleted(s)), 'smart');
 }
 
 export function sortShops(shops, sortKey = 'smart') {
@@ -208,6 +210,8 @@ export function sortShops(shops, sortKey = 'smart') {
 }
 
 function matchStatus(shop, status) {
+  if (status === 'archived') return isArchived(shop);
+  if (isArchived(shop)) return false;
   if (!status || status === 'all') return true;
   if (status === 'completed') return isCompleted(shop);
   if (status === 'expired') return isExpired(shop);
@@ -231,16 +235,17 @@ export function filterShops(shops, { query = '', category = '', status = '' } = 
 }
 
 export function stats(shops = [], logs = []) {
-  const totalShops = shops.length;
-  const totalCoupons = shops.reduce((acc, s) => acc + num(s.totalCoupons), 0);
-  const usedCoupons = shops.reduce((acc, s) => acc + num(s.usedCoupons), 0);
+  const activeShops = shops.filter((s) => !isArchived(s));
+  const totalShops = activeShops.length;
+  const totalCoupons = activeShops.reduce((acc, s) => acc + num(s.totalCoupons), 0);
+  const usedCoupons = activeShops.reduce((acc, s) => acc + num(s.usedCoupons), 0);
   // Average of each shop's progress %. Summing raw totals would mix won and
   // sessions across kinds, which is meaningless — per-shop % is comparable.
   const completionRate = totalShops
-    ? Math.round(shops.reduce((acc, s) => acc + progressPercent(s), 0) / totalShops)
+    ? Math.round(activeShops.reduce((acc, s) => acc + progressPercent(s), 0) / totalShops)
     : 0;
-  const expiringCount = shops.filter((s) => isExpiringSoon(s)).length;
-  const completedCount = shops.filter(isCompleted).length;
+  const expiringCount = activeShops.filter((s) => isExpiringSoon(s)).length;
+  const completedCount = activeShops.filter(isCompleted).length;
   const now = new Date(Date.now());
   const monthUses = logs.filter((l) => {
     const d = new Date(l.usedAt);
@@ -254,7 +259,7 @@ export function stats(shops = [], logs = []) {
 /** amount passes whose remaining balance has dropped to <= ratio of the total. */
 export function lowBalancePasses(shops, ratio = 0.2) {
   return (shops || []).filter((s) =>
-    isAmountKind(s) && !isCompleted(s) && passTotal(s) > 0
+    !isArchived(s) && isAmountKind(s) && !isCompleted(s) && passTotal(s) > 0
     && remainingValue(s) > 0 && remainingValue(s) <= passTotal(s) * ratio);
 }
 
@@ -288,7 +293,7 @@ export function needsBackupNudge(shops, settings = {}, now = Date.now()) {
  * D-1 window rather than falling through with no alert at all.
  */
 export function reminderThreshold(shop, reminderDays = [7, 3, 1]) {
-  if (isCompleted(shop)) return null;
+  if (isArchived(shop) || isCompleted(shop)) return null;
   const days = daysUntil(shop.expiresAt);
   if (days === null || days < 0) return null;
   const reached = (reminderDays || []).filter((t) => days <= t);

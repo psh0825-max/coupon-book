@@ -76,6 +76,7 @@ export function normalizeShop(raw = {}) {
     usedCoupons: used,
     totalAmount,
     usedAmount,
+    archivedAt: Number.isFinite(raw.archivedAt) ? raw.archivedAt : null,
     skin
   };
   if (raw.id != null) shop.id = raw.id;

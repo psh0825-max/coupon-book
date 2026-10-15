@@ -4,7 +4,7 @@
 import * as Leaflet from '../../vendor/leaflet/leaflet-src.esm.js';
 import { h, clear } from '../core/h.js';
 import { emptyState } from '../ui/components.js';
-import { couponStatus, remainingLabel } from '../domain.js';
+import { couponStatus, isArchived, remainingLabel } from '../domain.js';
 import { getCurrentPosition, haversine } from '../services/location.js';
 import { mapsDirectionsUrl } from '../services/maps.js';
 import { formatDistance } from '../services/format.js';
@@ -32,7 +32,7 @@ export function render(ctx) {
 
   const { store, router } = ctx;
   const st = store.getState();
-  const located = (st.shops || []).filter(hasCoords);
+  const located = (st.shops || []).filter((shop) => !isArchived(shop) && hasCoords(shop));
 
   const root = h('div', { class: 'map-page' });
 

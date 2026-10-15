@@ -11,7 +11,7 @@ must match the exported API listed here exactly so cross-module imports resolve.
      (keyPath `id`, indexes `shopId`, `usedAt`), `settings` (keyPath `key`).
    - Shop record shape (do not rename fields):
      `{ id, name, category, address, phone, expiresAt, memo, lat, lng,
-        totalCoupons, usedCoupons, skin, createdAt, updatedAt }`
+        totalCoupons, usedCoupons, skin, archivedAt?, createdAt, updatedAt }`
    - Log record shape: `{ id, shopId, note?, location?, usedAt }`
    - Settings are key/value rows: `{ key, value }`.
    - Bump DB version to 2 and add an idempotent `onupgradeneeded` migration that
@@ -159,6 +159,7 @@ Settings DEFAULTS:
 ```js
 export function daysUntil(dateStr);                 // null if no/!valid date; ceil to days (end-of-day)
 export function isCompleted(shop);
+export function isArchived(shop);                   // finite archivedAt
 export function isExpired(shop);                    // has date & days<0 & !completed
 export function isExpiringSoon(shop, within=30);    // 0..within days, !completed
 export function remainingCount(shop);
@@ -196,6 +197,13 @@ export function getCurrentPosition();                 // Promise<{lat,lng,accura
 export function setNotifySettings({radius,delay,enabled});
 export function startLocationWatch(shops, onNotify);  // dwell-based geofence
 export function stopLocationWatch();
+```
+
+### services/presentation.js
+```js
+export async function startPresenting(); // native presentation mode or Screen Wake Lock
+export async function stopPresenting();
+export function controlsBrightness();    // true for Android shell brightness control
 ```
 
 ### services/reminders.js — expiry reminders (NEW)
@@ -289,6 +297,7 @@ or via store subscription where a live region is needed.
 ## 4. actions (defined in app.js, injected into ctx)
 ```
 useCoupon(shopId, note?)      // +1 used, log (+location if available), persist, refresh
+archiveShop(id) / unarchiveShop(id) // preserve pass and its usage history
 undoLastCoupon(shopId)        // confirm, -1, delete last log
 saveShop(data, id?)           // add/update via repo
 deleteShop(id)

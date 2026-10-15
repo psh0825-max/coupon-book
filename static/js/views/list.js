@@ -10,7 +10,7 @@ import { showToast } from '../ui/toast.js';
 
 const STATUS_TABS = [
   ['all', '전체'], ['active', '이용 중'], ['expiring', '임박'],
-  ['completed', '소진'], ['expired', '만료']
+  ['completed', '소진'], ['expired', '만료'], ['archived', '보관함']
 ];
 const SORTS = [
   ['smart', '추천순'], ['expiry', '사용기한순'], ['remaining', '남은 양 적은 순'],

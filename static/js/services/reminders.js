@@ -2,7 +2,7 @@
 // Notification API is unsupported or denied: always calls onDue so the app can
 // show an in-app badge/toast fallback.
 
-import { daysUntil, dueReminders, reminderThreshold, lowBalancePasses, remainingValue, isCompleted } from '../domain.js';
+import { daysUntil, dueReminders, reminderThreshold, lowBalancePasses, remainingValue, isArchived, isCompleted } from '../domain.js';
 import { formatWon } from './format.js';
 
 // Latest inputs, kept in module scope so the visibilitychange listener re-runs
@@ -179,7 +179,7 @@ export function nativeReminderPlan(shops, settings, now = Date.now()) {
   if (!settings || !settings.remindersEnabled) return desired;
   const days = Array.isArray(settings.reminderDays) ? settings.reminderDays : [7, 3, 1];
   for (const shop of (shops || [])) {
-    if (!shop.expiresAt || isCompleted(shop)) continue;
+    if (!shop.expiresAt || isArchived(shop) || isCompleted(shop)) continue;
     for (const d of days) {
       const when = triggerTimeFor(shop.expiresAt, d);
       if (when != null && when > now) {

@@ -126,3 +126,10 @@ test('normalizeShop: 알 수 없는 kind는 count로', () => {
   assert.equal(normalizeShop({ name: 'a', kind: 'weird' }).kind, 'count');
   assert.equal(normalizeShop({ name: 'a' }).kind, 'count');
 });
+
+test('normalizeShop: archivedAt은 유한한 숫자만 보존한다', () => {
+  assert.equal(normalizeShop({ archivedAt: 123 }).archivedAt, 123);
+  assert.equal(normalizeShop({ archivedAt: '123' }).archivedAt, null);
+  assert.equal(normalizeShop({ archivedAt: Infinity }).archivedAt, null);
+  assert.equal(normalizeShop({}).archivedAt, null);
+});

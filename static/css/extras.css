@@ -161,6 +161,37 @@ body.overlay-open .main {
   color: var(--text-muted);
   font-size: 0.85rem;
 }
+.coupon-code-actions { display: flex; gap: 8px; }
+
+/* Full-screen counter presentation: the backdrop cannot dismiss this view. */
+.presenter-overlay { z-index: 3000; padding: 0; background: rgba(0, 0, 0, .88); }
+.presenter {
+  position: fixed; inset: 0; z-index: 3001; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 20px;
+  padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+}
+.presenter-content { max-width: 100%; max-height: calc(100vh - 110px); overflow: auto; }
+.presenter-close { min-width: 120px; min-height: 52px; padding: 12px 28px; border-radius: 999px; background: #fff; color: #111; font-size: 1rem; font-weight: 800; }
+.gifticon-viewer { position: static; inset: auto; z-index: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 0; background: transparent; }
+.gifticon-viewer img { display: block; max-width: min(100%, 680px); max-height: calc(100vh - 180px); object-fit: contain; }
+.gifticon-viewer-hint, .presenter-hint { color: rgba(255,255,255,.78); font-size: .9rem; text-align: center; }
+.code-presenter { display: flex; flex-direction: column; align-items: center; gap: 20px; min-width: min(100%, 340px); padding: 28px 20px; border-radius: 20px; background: #fff; color: #111; }
+.code-presenter-media { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.code-presenter-media svg, .code-presenter-media canvas { max-width: 100%; height: auto; }
+.code-presenter-text { font-family: var(--font-mono); font-size: clamp(1.5rem, 7vw, 2.5rem); font-weight: 800; letter-spacing: .08em; word-break: break-all; text-align: center; }
+.code-presenter .presenter-hint { color: var(--text-muted); }
+
+/* Archived pass state on the detail page. */
+.archive-banner {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.archive-banner p { margin: 0; color: var(--text-secondary); }
+.archive-banner-actions { display: flex; gap: 8px; margin-top: 12px; }
 
 /* ── Storage retention status line ────────────────────────────────────────── */
 .storage-status {
