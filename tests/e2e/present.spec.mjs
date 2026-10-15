@@ -100,15 +100,16 @@ test('P3: Android bridge controls brightness and bypasses Wake Lock', async ({ p
 test('P4: short landscape screens show QR, barcode and code without scrolling', async ({ page }) => {
   const viewports = [{ width: 1204, height: 591 }, { width: 780, height: 360 }];
 
-  for (const viewport of viewports) {
+  for (const android of [false, true]) for (const viewport of viewports) {
     await page.setViewportSize(viewport);
-    await openCodePass(page);
+    await openCodePass(page, { android });
     await page.getByRole('button', { name: '크게 보기' }).click();
     await expect(page.getByRole('dialog', { name: '쿠폰 코드 크게 보기' })).toBeVisible();
     const layout = await page.evaluate(() => {
       const presenter = document.querySelector('.presenter-content');
       const code = document.querySelector('.code-presenter');
       const [qr, barcode] = code.querySelectorAll('.code-presenter-media svg');
+      const info = code.querySelector('.code-presenter-info');
       const text = code.querySelector('.code-presenter-text');
       const close = document.querySelector('.presenter-close');
       const bounds = (element) => {
@@ -116,7 +117,7 @@ test('P4: short landscape screens show QR, barcode and code without scrolling', 
         return { left, top, right, bottom, height };
       };
       return {
-        qr: bounds(qr), barcode: bounds(barcode), text: bounds(text), close: bounds(close),
+        qr: bounds(qr), barcode: bounds(barcode), info: bounds(info), text: bounds(text), close: bounds(close),
         scrollHeight: presenter.scrollHeight, clientHeight: presenter.clientHeight,
         width: innerWidth, height: innerHeight
       };
@@ -128,6 +129,7 @@ test('P4: short landscape screens show QR, barcode and code without scrolling', 
       expect(layout[element].bottom).toBeLessThanOrEqual(layout.height + 1);
     }
     expect(layout.qr.height).toBeGreaterThanOrEqual(viewport.width === 1204 ? 180 : 120);
+    expect(Math.abs((layout.info.top + layout.info.height / 2) - (layout.qr.top + layout.qr.height / 2))).toBeLessThanOrEqual(8);
     expect(layout.scrollHeight).toBeLessThanOrEqual(layout.clientHeight + 1);
     await page.getByRole('button', { name: '닫기' }).click();
   }
@@ -135,5 +137,11 @@ test('P4: short landscape screens show QR, barcode and code without scrolling', 
   await page.setViewportSize({ width: 360, height: 780 });
   await openCodePass(page);
   await page.getByRole('button', { name: '크게 보기' }).click();
-  await expect(page.getByRole('dialog', { name: '쿠폰 코드 크게 보기' }).getByRole('heading', { name: '쿠폰/멤버십 코드' })).toBeVisible();
+  const presenter = page.getByRole('dialog', { name: '쿠폰 코드 크게 보기' });
+  await expect(presenter.getByRole('heading', { name: '쿠폰/멤버십 코드' })).toBeVisible();
+  const portrait = await presenter.evaluate((dialog) => {
+    const [qr, barcode] = dialog.querySelectorAll('.code-presenter-media svg');
+    return { qr: qr.getBoundingClientRect().toJSON(), barcode: barcode.getBoundingClientRect().toJSON() };
+  });
+  expect(portrait.qr.bottom).toBeLessThanOrEqual(portrait.barcode.top);
 });

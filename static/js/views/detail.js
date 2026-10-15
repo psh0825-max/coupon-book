@@ -251,9 +251,13 @@ function openCodePresenter(code) {
   const barcode = renderBarcode(code);
   const body = h('div', { class: 'code-presenter' },
     h('h2', null, '쿠폰/멤버십 코드'),
-    h('div', { class: 'code-presenter-media' }, qr, barcode),
-    h('div', { class: 'code-presenter-text' }, code),
-    !controlsBrightness() ? h('p', { class: 'presenter-hint' }, '화면 밝기를 최대로 올리면 더 잘 읽혀요') : null
+    h('div', { class: 'code-presenter-media' }, qr,
+      h('div', { class: 'code-presenter-info' },
+        barcode,
+        h('div', { class: 'code-presenter-text' }, code),
+        !controlsBrightness() ? h('p', { class: 'presenter-hint' }, '화면 밝기를 최대로 올리면 더 잘 읽혀요') : null
+      )
+    )
   );
   showPresenter({ label: '쿠폰 코드 크게 보기', body, onOpen: startPresenting, onClose: stopPresenting });
 }
