@@ -4,7 +4,7 @@ import {
   daysUntil, isCompleted, isExpired, isExpiringSoon, remainingCount, progressPercent,
   couponStatus, formatExpiry, priorityShop, usableShops, sortShops, filterShops, stats, dueReminders,
   reminderThreshold, expiryBucket,
-  isAmountKind, isCountKind, isCouponKind, passTotal, passUsed, remainingValue,
+  isAmountKind, isArchived, isCountKind, isCouponKind, passTotal, passUsed, remainingValue,
   remainingLabel, totalLabel, usedLabel, lowBalancePasses, needsBackupNudge
 } from '../../static/js/domain.js';
 
@@ -131,6 +131,25 @@ test('couponStatus tiers', () => {
   // neutral, no expiry
   s = couponStatus(shop({ usedCoupons: 1 }));
   assert.equal(s.className, 'neutral');
+});
+
+test('보관된 이용권은 보관 상태이며 활성 집계와 추천에서 제외한다', () => {
+  const archived = shop({ name: '보관', archivedAt: Date.now(), expiresAt: dateOffset(1), usedCoupons: 9 });
+  const active = shop({ name: '활성', expiresAt: dateOffset(10) });
+  assert.equal(isArchived(archived), true);
+  assert.equal(isArchived({ archivedAt: '1' }), false);
+  assert.deepEqual(couponStatus(archived), { key: 'archived', label: '보관됨', className: 'neutral', score: 1000 });
+  assert.deepEqual(filterShops([active, archived], { status: 'all' }).map((s) => s.name), ['활성']);
+  assert.deepEqual(filterShops([active, archived], { status: 'archived' }).map((s) => s.name), ['보관']);
+  assert.deepEqual(usableShops([active, archived]).map((s) => s.name), ['활성']);
+  assert.equal(priorityShop([archived, active]).name, '활성');
+  assert.deepEqual(lowBalancePasses([amountShop({ name: '보관 금액', usedAmount: 900000, archivedAt: Date.now() })]), []);
+  assert.equal(reminderThreshold(archived, [7, 3, 1]), null);
+  const s = stats([active, archived], [{ usedAt: Date.now() }]);
+  assert.equal(s.totalShops, 1);
+  assert.equal(s.expiringCount, 1);
+  assert.equal(s.completedCount, 0);
+  assert.equal(s.monthUses, 1);
 });
 
 test('formatExpiry', () => {

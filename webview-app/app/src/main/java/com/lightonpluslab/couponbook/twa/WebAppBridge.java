@@ -32,13 +32,20 @@ public class WebAppBridge {
         void requestNotificationPermission();
     }
 
+    public interface PresentationController {
+        void setPresentationMode(boolean on);
+    }
+
     private final Context ctx;
     private final NotificationPermissionRequester requester;
+    private final PresentationController presenter;
     private final Handler main = new Handler(Looper.getMainLooper());
 
-    WebAppBridge(Context ctx, NotificationPermissionRequester requester) {
+    WebAppBridge(Context ctx, NotificationPermissionRequester requester,
+                 PresentationController presenter) {
         this.ctx = ctx.getApplicationContext();
         this.requester = requester;
+        this.presenter = presenter;
     }
 
     private void toast(String msg) {
@@ -111,5 +118,10 @@ public class WebAppBridge {
     @JavascriptInterface
     public void requestNotificationPermission() {
         main.post(requester::requestNotificationPermission);
+    }
+
+    @JavascriptInterface
+    public void setPresentationMode(boolean on) {
+        main.post(() -> presenter.setPresentationMode(on));
     }
 }

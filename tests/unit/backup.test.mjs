@@ -27,6 +27,11 @@ test('v3 백업을 식별자, 날짜, 금액 및 기프티콘 데이터와 함�
   assert.equal(result.exportedAt, 400);
 });
 
+test('보관 시각은 백업 파싱을 거쳐 보존된다', () => {
+  const result = parse({ shops: [validShop({ archivedAt: 123 })], logs: [validLog()] });
+  assert.equal(result.shops[0].archivedAt, 123);
+});
+
 test('잘못된 JSON과 백업 형식 오류를 알린다', () => {
   assert.throws(() => parseBackup('{'), /JSON/);
   assert.throws(() => parseBackup('[]'), { message: '쿠폰북 백업 파일이 아니에요.' });

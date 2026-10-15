@@ -117,6 +117,41 @@ export function showSheet({ title, body, actions = [], onClose } = {}) {
   return overlay;
 }
 
+/** Full-screen counter presentation. Its backdrop deliberately does not dismiss. */
+export function showPresenter({ label, body, onOpen, onClose } = {}) {
+  closeOverlay(true, { keepHistory: true });
+
+  const prevFocus = document.activeElement;
+  const closeBtn = h('button', {
+    class: 'presenter-close', attrs: { type: 'button' }, on: { click: () => closeOverlay() }
+  }, '닫기');
+  const bodyNode = body instanceof Node ? body : h('div', null, body == null ? '' : String(body));
+  const presenter = h('div', {
+    class: 'presenter', attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-label': label || '크게 보기' }
+  }, h('div', { class: 'presenter-content' }, bodyNode), closeBtn);
+  const overlay = h('div', { id: 'overlay', class: 'overlay presenter-overlay' }, presenter);
+
+  document.body.appendChild(overlay);
+  document.body.classList.add('overlay-open');
+  if (!(history.state && history.state.overlay)) {
+    history.pushState({ ...(history.state || {}), overlay: true,
+      depth: (((history.state && history.state.depth) || 0) + 1) }, '');
+  }
+  const onKeydown = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); }
+    else trapFocus(presenter, e);
+  };
+  document.addEventListener('keydown', onKeydown, true);
+  activeState = { overlay, onClose, prevFocus, onKeydown };
+  onOpen?.();
+  requestAnimationFrame(() => {
+    overlay.classList.add('active');
+    const focusables = getFocusable(presenter);
+    (focusables[0] || closeBtn).focus();
+  });
+  return overlay;
+}
+
 /** showConfirm(...) -> Promise<boolean> built on showSheet. */
 export function showConfirm({ title, message, confirmLabel = '확인', danger = false } = {}) {
   return new Promise((resolve) => {

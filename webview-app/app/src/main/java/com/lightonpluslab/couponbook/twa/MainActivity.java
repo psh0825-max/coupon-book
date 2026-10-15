@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.view.WindowManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
@@ -36,7 +37,7 @@ import com.google.android.gms.ads.AdView;
  * This replaces the TWA so the app can show AdMob (a native SDK) instead of AdSense
  * (a website product that must not run inside an app).
  */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements WebAppBridge.PresentationController {
 
     private static final String APP_URL = "https://coupon.lightonpluslab.com/";
     private static final String APP_HOST = "coupon.lightonpluslab.com";
@@ -113,7 +114,7 @@ public class MainActivity extends AppCompatActivity {
         // only the native AdMob banner shows in the app.
         s.setUserAgentString(s.getUserAgentString() + " CouponBookApp/2.0");
 
-        webView.addJavascriptInterface(new WebAppBridge(this, this::requestNotificationPermission), "AndroidBridge");
+        webView.addJavascriptInterface(new WebAppBridge(this, this::requestNotificationPermission, this), "AndroidBridge");
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -280,6 +281,19 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         deliverNotifyResult(NotificationManagerCompat.from(this).areNotificationsEnabled());
+    }
+
+    @Override
+    public void setPresentationMode(boolean on) {
+        if (isFinishing() || isDestroyed()) return;
+        if (on) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+        WindowManager.LayoutParams attributes = getWindow().getAttributes();
+        attributes.screenBrightness = on ? 1f : WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE;
+        getWindow().setAttributes(attributes);
     }
 
     private void deliverNotifyResult(boolean granted) {
