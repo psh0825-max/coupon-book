@@ -7,7 +7,7 @@ import { createKeyedLock } from './core/keyed-lock.js';
 import { h, clear } from './core/h.js';
 
 import { Shops, Logs, Settings, seedDemoData, clearAll } from './data/repo.js';
-import { remainingValue, remainingLabel, isAmountKind, isExpired } from './domain.js';
+import { remainingValue, remainingLabel, isArchived, isAmountKind, isExpired } from './domain.js';
 import { formatWon, groupDigits, parseNumber } from './services/format.js';
 
 import { setNotifySettings, startLocationWatch, stopLocationWatch } from './services/location.js';
@@ -19,6 +19,7 @@ import { exportData as backupExport, restoreBackup } from './services/backup.js'
 import { requestPersistentStorage } from './services/storage.js';
 import { haptic } from './services/fx.js';
 import { mountAds } from './services/ads.js';
+import { resetPresentation } from './services/presentation.js';
 
 import { showToast } from './ui/toast.js';
 import { showSheet, showConfirm, closeOverlay, closeOverlayFromPop } from './ui/overlay.js';
@@ -139,6 +140,7 @@ const actions = {
     return passLock.run(shopId, async () => {
       const shop = store.getState().shops.find((s) => s.id === shopId);
       if (!shop) return;
+      if (isArchived(shop)) return;
       if (remainingValue(shop) <= 0) {
         showToast('남은 이용권이 없어요', 'danger');
         return;
@@ -322,6 +324,38 @@ const actions = {
     }
   },
 
+  async archiveShop(id) {
+    const cur = store.getState().shops.find((s) => s.id === id);
+    if (!cur) return false;
+    try {
+      await Shops.update({ ...cur, archivedAt: Date.now() });
+      await refresh();
+      resyncServices();
+      showToast('보관함으로 옮겼어요', 'success', {
+        actionLabel: '되돌리기', onAction: () => actions.unarchiveShop(id)
+      });
+      return true;
+    } catch (err) {
+      reportSaveError(err);
+      return false;
+    }
+  },
+
+  async unarchiveShop(id) {
+    const cur = store.getState().shops.find((s) => s.id === id);
+    if (!cur) return false;
+    try {
+      await Shops.update({ ...cur, archivedAt: null });
+      await refresh();
+      resyncServices();
+      showToast('보관함에서 꺼냈어요');
+      return true;
+    } catch (err) {
+      reportSaveError(err);
+      return false;
+    }
+  },
+
   async maybeShowFirstBackupHint() {
     const st = store.getState();
     if ((st.shops || []).length !== 1 || st.settings.backupHinted) return;
@@ -482,6 +516,8 @@ window.addEventListener('unhandledrejection', (e) => { console.error('unhandledr
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 async function init() {
+  // Clear Android window flags left behind if a prior renderer was restarted.
+  await resetPresentation();
   document.body.dataset.theme = 'light';
   registerSW(onUpdateAvailable);
   initInstallPrompt();

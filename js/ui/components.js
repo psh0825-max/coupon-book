@@ -4,7 +4,7 @@
 import { h, icon, frag } from '../core/h.js';
 import {
   couponStatus, remainingValue, progressPercent, formatExpiry, isCompleted,
-  isAmountKind, isCountKind, passTotal, passUsed, remainingLabel, totalLabel, usedLabel, isCouponKind} from '../domain.js';
+  isAmountKind, isCountKind, passTotal, passUsed, remainingLabel, totalLabel, usedLabel, isArchived, isCouponKind} from '../domain.js';
 import { formatDate, formatRelative, formatWon } from '../services/format.js';
 import { SKINS, getCategoryIcon } from '../data/skins.js';
 import { illust } from './art.js';
@@ -31,7 +31,7 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
   const complete = isCompleted(shop) || remainingValue(shop) <= 0;
   const categoryText = shop.category + (shop.expiresAt ? ` · ${formatExpiry(shop.expiresAt)}` : '');
 
-  const quickUse = h('button', {
+  const quickUse = isArchived(shop) ? null : h('button', {
     class: 'card-quick-use',
     attrs: {
       type: 'button', 'data-action': 'quick-use',

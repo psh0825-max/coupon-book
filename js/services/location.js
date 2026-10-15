@@ -1,6 +1,6 @@
 // services/location.js — geolocation + dwell-based geofence.
 
-import { isCompleted, isExpired } from '../domain.js';
+import { isArchived, isCompleted, isExpired } from '../domain.js';
 
 export const EARTH_RADIUS = 6371000; // meters
 
@@ -72,7 +72,7 @@ export async function startLocationWatch(shops, onNotify) {
   const usableShops = (shops || []).filter((shop) =>
     shop.lat !== '' && shop.lat != null && Number.isFinite(Number(shop.lat))
     && shop.lng !== '' && shop.lng != null && Number.isFinite(Number(shop.lng))
-    && !isCompleted(shop) && !isExpired(shop)
+    && !isArchived(shop) && !isCompleted(shop) && !isExpired(shop)
   );
   const usableIds = new Set(usableShops.map((shop) => shop.id));
   for (const shopId of _visited.keys()) {
