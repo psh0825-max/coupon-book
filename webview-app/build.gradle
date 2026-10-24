@@ -1,5 +1,4 @@
-// Root build file. Plugin versions match the existing twa-build toolchain
-// (AGP 8.9.1 / Gradle 8.11.1) so the same JDK 17 + Android SDK builds both.
+// Root build file. AGP 9.4.1 / Gradle 9.6.1 (JDK 17+). Play Vitals asked for AGP 9+ and optimized resource shrinking.
 plugins {
-    id 'com.android.application' version '8.9.1' apply false
+    id 'com.android.application' version '9.4.1' apply false
 }
