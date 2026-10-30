@@ -1,10 +1,2 @@
-# Google AdSense ads.txt
-# Replace pub-XXXXXXXXXXXXXXXX with YOUR publisher ID (the digits after "ca-", no "ca-" prefix).
-# NOTE: AdSense reads ads.txt from the DOMAIN ROOT. Once the app is served at the
-# subdomain https://coupon.lightonpluslab.com/, this file (in static/) is served at
-#   https://coupon.lightonpluslab.com/ads.txt
-# which IS the served root for the app — so it is now in exactly the right place and
-# no separate root repo is required.
-# (If AdSense is instead registered for the apex lightonpluslab.com, an ads.txt at the
-# apex root must be served by that site's own repo — see rootdomain/README.md.)
+# AdSense는 서빙 루트에서 ads.txt를 읽는다. 이 파일은 coupon.lightonpluslab.com/ads.txt 로 나간다.
 google.com, pub-7180935400084577, DIRECT, f08c47fec0942fa0
