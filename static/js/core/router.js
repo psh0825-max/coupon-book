@@ -7,7 +7,7 @@
 const ROOT_PAGES = ['home', 'history', 'map', 'settings'];
 
 const TITLES = {
-  home: 'Coupon Book',
+  home: '쿠폰북',
   list: '내 이용권',
   map: '주변 지도',
   add: (p) => (p && p.id ? '이용권 편집' : '이용권 추가'),

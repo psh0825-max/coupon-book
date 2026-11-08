@@ -144,7 +144,9 @@ export function render(ctx, params = {}) {
   // category (shared across kinds)
   const catSelect = h('select', { id: 'f-category', attrs: { name: 'category' } },
     Object.keys(CATEGORIES).map((c) => h('option', {
-      attrs: { value: c, selected: hasInit && src.category === c ? '' : null }
+      // A blank form used to land on the first key, 찜질방, for a gifticon or a
+      // cafe card alike; 기타 is the neutral default.
+      attrs: { value: c, selected: (hasInit ? src.category === c : c === '기타') ? '' : null }
     }, c))
   );
   form.appendChild(field('카테고리', 'f-category', catSelect));

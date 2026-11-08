@@ -66,7 +66,7 @@ test('smoke: onboarding, seed sample, use coupon, chrome, navigate tabs', async 
 
   // Home: shop rail has cards and the header shows the app name.
   await expect(page.locator('.shop-rail .card').first()).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('[data-page-title]')).toHaveText('Coupon Book');
+  await expect(page.locator('[data-page-title]')).toHaveText('쿠폰북');
 
   // Use the first card's pass. Count passes deduct one session immediately;
   // amount passes open an entry sheet — fill an amount and confirm. Either way

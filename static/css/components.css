@@ -75,14 +75,21 @@
   white-space: nowrap;
 }
 .card-quick-use {
-  min-width: 52px;
-  height: 30px;
+  min-width: 56px;
+  height: 36px;
+  /* Visual 36px; the ::after extends the touch area to 44px. */
+  position: relative;
   border-radius: var(--radius-md);
   background: var(--bg-hover);
   border: 1px solid var(--border-strong);
   color: var(--text-primary);
   font-size: 0.78rem;
   font-weight: 850;
+}
+.card-quick-use::after {
+  content: '';
+  position: absolute;
+  inset: -4px -2px;
 }
 .card-quick-use:disabled {
   opacity: 0.45;
