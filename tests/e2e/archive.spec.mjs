@@ -49,9 +49,10 @@ test('archive: 보관, 되돌리기, 꺼내기와 삭제가 사용 내역을 보
   await freshDemo(page);
   await openHub(page);
 
-  // Create a real usage log before archiving.
-  await page.getByRole('button', { name: '사용하기' }).click();
-  await page.locator('.popup-footer').getByRole('button', { name: '사용' }).click();
+  // Create a real usage log before archiving. The sample cafe is a collect
+  // board, so its use is a stamp.
+  await page.getByRole('button', { name: '도장 찍기' }).click();
+  await page.locator('.popup-footer').getByRole('button', { name: '찍기' }).click();
   await expect(page.locator('#toast.active')).toBeVisible();
   const hubId = await page.evaluate(async () => new Promise((resolve) => {
     const req = indexedDB.open('CouponBookDB');

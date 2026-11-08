@@ -4,13 +4,14 @@
 
 import { h, clear } from '../core/h.js';
 import { shopCard, emptyState } from '../ui/components.js';
-import { filterShops, sortShops, isAmountKind, expiryBucket, EXPIRY_BUCKET_LABEL } from '../domain.js';
+import { filterShops, sortShops, expiryBucket, EXPIRY_BUCKET_LABEL } from '../domain.js';
 import { CATEGORIES, getCategoryIcon } from '../data/skins.js';
 import { showToast } from '../ui/toast.js';
 
 const STATUS_TABS = [
   ['all', '전체'], ['active', '이용 중'], ['expiring', '임박'],
-  ['completed', '소진'], ['expired', '만료'], ['archived', '보관함']
+  // '완료' covers a spent pass (소진) and a full stamp board (완성) alike.
+  ['completed', '완료'], ['expired', '만료'], ['archived', '보관함']
 ];
 const SORTS = [
   ['smart', '추천순'], ['expiry', '사용기한순'], ['remaining', '남은 양 적은 순'],
@@ -143,9 +144,7 @@ export function render(ctx) {
       }
       grid.appendChild(shopCard(shop, {
         onOpen: () => router.navigate('detail', { id: shop.id }),
-        onQuickUse: (s) => isAmountKind(s)
-          ? actions.promptUse(s)
-          : actions.usePass(s.id, { count: 1, note: '목록에서 빠른 사용' })
+        onQuickUse: (s) => actions.quickUse(s, { note: '목록에서 빠른 사용' })
       }));
     });
   }

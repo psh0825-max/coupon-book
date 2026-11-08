@@ -189,6 +189,11 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-ripple);
 }
+/* Collect model: stamps fill from the start; empty slots wait with a dashed rim
+   (full strength, unlike a torn-off SPENT ticket) and the next one is ringed. */
+.stamp-board.collect .stamp.empty {
+  border-style: dashed;
+}
 .stamp.next::after {
   content: "";
   position: absolute;

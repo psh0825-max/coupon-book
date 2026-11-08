@@ -3,7 +3,7 @@
 
 import { h } from '../core/h.js';
 import { shopCard, summaryCard, adBanner, nearbyCard, emptyState } from '../ui/components.js';
-import { stats, priorityShop, usableShops, couponStatus, progressPercent, isArchived, isAmountKind, needsBackupNudge } from '../domain.js';
+import { stats, priorityShop, usableShops, couponStatus, progressPercent, isArchived, isRewardReady, needsBackupNudge } from '../domain.js';
 import { getCurrentPosition, haversine } from '../services/location.js';
 import { showToast } from '../ui/toast.js';
 
@@ -36,9 +36,11 @@ export function render(ctx) {
     ? h('div', { class: 'home-head' },
         h('div', null,
           h('h1', null, '내 이용권'),
-          h('p', null, usable.length
-            ? `${usable[0].name} 이용권을 가장 먼저 챙기세요.`
-            : '잔액과 만료일을 한눈에 확인하세요.')
+          h('p', null, !usable.length
+            ? '잔액과 만료일을 한눈에 확인하세요.'
+            : isRewardReady(usable[0])
+              ? `${usable[0].name} 도장판이 다 찼어요. 보상을 받으세요.`
+              : `${usable[0].name} 이용권을 가장 먼저 챙기세요.`)
         ),
         h('button', {
           class: 'btn btn-primary btn-sm',
@@ -64,7 +66,7 @@ export function render(ctx) {
         summaryCard(s.totalShops, '이용권', 'var(--text-primary)'),
         summaryCard(`${s.monthUses}회`, '이번 달 사용', 'var(--accent)'),
         summaryCard(s.expiringCount, '만료 임박', 'var(--warning)'),
-        summaryCard(s.completedCount, '소진', 'var(--success)')
+        summaryCard(s.completedCount, '완료', 'var(--success)')
       )
     : null;
 
@@ -150,10 +152,9 @@ export function render(ctx) {
     usable.slice(0, 10).forEach((shop) => {
       rail.appendChild(shopCard(shop, {
         onOpen: () => router.navigate('detail', { id: shop.id }),
-        // Amount passes need an entry sheet; count passes fast-path one session.
-        onQuickUse: (sh) => isAmountKind(sh)
-          ? actions.promptUse(sh)
-          : actions.usePass(sh.id, { count: 1, note: '홈에서 빠른 사용' })
+        // Amount passes need an entry sheet; count passes fast-path one session;
+        // a collect board takes one stamp (or offers a new board when full).
+        onQuickUse: (sh) => actions.quickUse(sh, { note: '홈에서 빠른 사용' })
       }));
     });
   }

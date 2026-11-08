@@ -39,6 +39,13 @@ export function isArchived(shop) { return Number.isFinite(shop?.archivedAt); }
 // same count arithmetic and only differs in how it is presented.
 export function isCouponKind(shop) { return !!shop && shop.kind === 'coupon'; }
 export function isCountKind(shop) { return !isAmountKind(shop); }
+// 'collect' (적립형 도장판) reads a plain count pass the other way round: the
+// stored usedCoupons is how many stamps have been collected, so the board fills
+// up instead of emptying. The arithmetic is unchanged; only the wording and the
+// board's direction differ. Amount passes and coupons are never collect boards.
+export function isCollectMode(shop) {
+  return !!shop && !isAmountKind(shop) && !isCouponKind(shop) && shop.mode === 'collect';
+}
 
 /** generic total (won for amount, sessions for count) */
 export function passTotal(shop) {
@@ -57,6 +64,23 @@ export function remainingValue(shop) {
 
 export function isCompleted(shop) {
   return passTotal(shop) > 0 && passUsed(shop) >= passTotal(shop);
+}
+
+/** A full collect board that is still in the wallet: the reward is waiting. */
+export function isRewardReady(shop) {
+  return isCollectMode(shop) && isCompleted(shop) && !isArchived(shop);
+}
+
+/**
+ * boardLogs(shop, logs) -> logs of the current board, newest first.
+ * Starting a new board resets usedCoupons but keeps the old stamps' logs as
+ * history; undo must only ever reach back to stamps on the board on screen.
+ */
+export function boardLogs(shop, logs) {
+  const since = Number.isFinite(shop?.boardStartedAt) ? shop.boardStartedAt : -Infinity;
+  return (logs || [])
+    .filter((l) => l.shopId === shop?.id && Number(l.usedAt) >= since)
+    .sort((a, b) => b.usedAt - a.usedAt);
 }
 
 export function isExpired(shop) {
@@ -100,19 +124,22 @@ export function remainingCount(shop) {
   return remainingValue(shop);
 }
 
-/** remaining as display text: amount -> '850,000원'; count -> '8회' */
+/** remaining as display text: amount -> '850,000원'; count -> '8회'; collect -> '3칸' (empty slots) */
 export function remainingLabel(shop) {
-  return isAmountKind(shop) ? formatWon(remainingValue(shop)) : `${remainingValue(shop)}회`;
+  if (isAmountKind(shop)) return formatWon(remainingValue(shop));
+  return isCollectMode(shop) ? `${remainingValue(shop)}칸` : `${remainingValue(shop)}회`;
 }
 
-/** total as display text: amount -> '1,000,000원'; count -> '10회' */
+/** total as display text: amount -> '1,000,000원'; count -> '10회'; collect -> '10칸' */
 export function totalLabel(shop) {
-  return isAmountKind(shop) ? formatWon(passTotal(shop)) : `${passTotal(shop)}회`;
+  if (isAmountKind(shop)) return formatWon(passTotal(shop));
+  return isCollectMode(shop) ? `${passTotal(shop)}칸` : `${passTotal(shop)}회`;
 }
 
-/** used as display text: amount -> '150,000원'; count -> '2회' */
+/** used as display text: amount -> '150,000원'; count -> '2회'; collect -> '7개' (stamps) */
 export function usedLabel(shop) {
-  return isAmountKind(shop) ? formatWon(passUsed(shop)) : `${passUsed(shop)}회`;
+  if (isAmountKind(shop)) return formatWon(passUsed(shop));
+  return isCollectMode(shop) ? `${passUsed(shop)}개` : `${passUsed(shop)}회`;
 }
 
 export function progressPercent(shop) {
@@ -124,8 +151,10 @@ export function progressPercent(shop) {
 /** { key, label, className, score } — lower score = higher priority. */
 export function couponStatus(shop) {
   if (isArchived(shop)) return { key: 'archived', label: '보관됨', className: 'neutral', score: 1000 };
-  // A used-up paid pass is depleted ('소진'), not a prize to redeem.
-  if (isCompleted(shop)) return { key: 'done', label: '소진', className: 'success', score: 0 };
+  const collect = isCollectMode(shop);
+  // A used-up paid pass is depleted ('소진'), not a prize to redeem. A full
+  // collect board is the opposite: the reward is ready.
+  if (isCompleted(shop)) return { key: 'done', label: collect ? '완성' : '소진', className: 'success', score: 0 };
   const days = daysUntil(shop.expiresAt);
   const remaining = remainingValue(shop);
   if (days !== null && days < 0) {
@@ -136,9 +165,12 @@ export function couponStatus(shop) {
     return { key: 'urgent', label, className: 'danger', score: 20 + days };
   }
   const total = passTotal(shop);
-  const lowBalance = isAmountKind(shop)
-    ? (total > 0 && remaining <= total * 0.2)
-    : remaining <= 2;
+  // Few empty slots left on a collect board is good news, not a warning.
+  const lowBalance = collect
+    ? false
+    : isAmountKind(shop)
+      ? (total > 0 && remaining <= total * 0.2)
+      : remaining <= 2;
   if (lowBalance) {
     const label = isAmountKind(shop) ? `${formatWon(remaining)} 남음` : `${remaining}회 남음`;
     return { key: 'low', label, className: 'warning', score: 40 + Math.min(remaining, 9) };
@@ -146,7 +178,7 @@ export function couponStatus(shop) {
   if (days !== null && days <= 30) {
     return { key: 'soon', label: `만료 D-${days}`, className: 'warning', score: 60 + days };
   }
-  return { key: 'neutral', label: '이용 중', className: 'neutral', score: 100 + Math.min(remaining, 99) };
+  return { key: 'neutral', label: collect ? '모으는 중' : '이용 중', className: 'neutral', score: 100 + Math.min(remaining, 99) };
 }
 
 export function formatExpiry(dateStr) {
@@ -164,8 +196,15 @@ export function priorityShop(shops) {
   return sortShops(active, 'attention')[0];
 }
 
+/**
+ * Passes worth a tap right now. A full collect board stays here, first: it is
+ * what the user shows at the counter to get the reward, so it must not vanish
+ * from home the moment the last stamp lands.
+ */
 export function usableShops(shops) {
-  return sortShops((shops || []).filter((s) => !isArchived(s) && !isExpired(s) && !isCompleted(s)), 'smart');
+  const sorted = sortShops((shops || []).filter((s) =>
+    !isArchived(s) && !isExpired(s) && (!isCompleted(s) || isCollectMode(s))), 'smart');
+  return [...sorted.filter(isRewardReady), ...sorted.filter((s) => !isRewardReady(s))];
 }
 
 export function sortShops(shops, sortKey = 'smart') {
