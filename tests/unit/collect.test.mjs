@@ -53,6 +53,24 @@ test('normalizeShop: bad board fields fall back safely', () => {
   assert.equal(s.completedBoards, 0);
 });
 
+test('normalizeShop: an iOS stamp card (kind stamp) reads as a collect board', () => {
+  const s = normalizeShop({ name: '허브', kind: 'stamp', totalCoupons: 10, usedCoupons: 7 });
+  assert.equal(s.kind, 'count');
+  assert.equal(s.mode, 'collect');
+  assert.equal(s.usedCoupons, 7);
+  assert.equal(isCollectMode(s), true);
+});
+
+test('backup from the iOS build restores its stamp card as a collect board', () => {
+  const parsed = parseBackup(JSON.stringify({
+    version: 3, app: 'coupon-book',
+    shops: [{ id: 'ios-1', name: '허브', kind: 'stamp', totalCoupons: 10, usedCoupons: 7, createdAt: 1, updatedAt: 2 }],
+    logs: []
+  }));
+  assert.equal(parsed.shops[0].mode, 'collect');
+  assert.equal(remainingLabel(parsed.shops[0]), '3칸');
+});
+
 test('backup round trip keeps a collect board', () => {
   const parsed = parseBackup(JSON.stringify({
     shops: [{ ...board({ id: 'shop-c', boardStartedAt: 500, completedBoards: 1 }), createdAt: 1, updatedAt: 2 }],

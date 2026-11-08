@@ -55,6 +55,10 @@ function numOrNull(value) {
 export function normalizeShop(raw = {}) {
   // Records predating the pass-kind concept have no `kind`; treat them as 'count'.
   const kind = (raw.kind === 'amount' || raw.kind === 'coupon') ? raw.kind : 'count';
+  // The iOS 2.x build (feature/ios-release) stores a stamp card as kind 'stamp'
+  // with the same counts (usedCoupons = stamps collected). Read it as a
+  // collecting count pass so a backup made on iPhone restores as a stamp card.
+  const collect = kind === 'count' && (raw.mode === 'collect' || raw.kind === 'stamp');
   const total = clampInt(raw.totalCoupons, 1, 1000, 10);
   const used = clampInt(raw.usedCoupons, 0, total, 0);
   const totalAmount = clampInt(raw.totalAmount, 0, 100000000, 0); // up to 1억 KRW
@@ -84,7 +88,7 @@ export function normalizeShop(raw = {}) {
     // 적립형 도장판: only a plain count pass can be read as collecting. The
     // stored counts mean the same thing either way (usedCoupons goes up), so
     // switching mode never rewrites them.
-    mode: kind === 'count' && raw.mode === 'collect' ? 'collect' : null,
+    mode: collect ? 'collect' : null,
     // When the board on screen was started (new board resets usedCoupons;
     // older stamps' logs stay as history) and how many boards were filled.
     boardStartedAt: Number.isFinite(raw.boardStartedAt) ? raw.boardStartedAt : null,
