@@ -474,7 +474,9 @@ export function render(ctx, params = {}) {
       if (!ok) return;
       showToast(isEdit ? '저장되었어요' : '추가되었어요');
       router.navigate('home');
-      if (!params.id) await actions.maybeShowFirstBackupHint();
+      if (!params.id && !(await actions.maybeOfferReminders(data))) {
+        await actions.maybeShowFirstBackupHint();
+      }
     } finally {
       saving = false;
       submitBtn.disabled = false;
