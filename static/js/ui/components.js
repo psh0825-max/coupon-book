@@ -4,17 +4,33 @@
 import { h, icon, frag } from '../core/h.js';
 import {
   couponStatus, remainingValue, progressPercent, formatExpiry, isCompleted,
-  isAmountKind, isCountKind, passTotal, passUsed, remainingLabel, totalLabel, usedLabel, isArchived, isCouponKind} from '../domain.js';
+  isAmountKind, isCountKind, passTotal, passUsed, remainingLabel, totalLabel, usedLabel, isArchived, isCouponKind,
+  isCollectMode } from '../domain.js';
 import { formatDate, formatRelative, formatWon } from '../services/format.js';
 import { SKINS, getCategoryIcon } from '../data/skins.js';
 import { illust } from './art.js';
 
-/** stampBoard(total, used) — depletion model: VALID tickets cluster at the start
- *  and disappear (become SPENT) as `used` grows. The next ticket to be torn off
- *  is highlighted. */
-export function stampBoard(total, used) {
-  const remaining = Math.max(0, total - used);
+/** stampBoard(total, used, { collect }) — two readings of the same counts.
+ *  Depletion (default): VALID tickets cluster at the start and disappear
+ *  (become SPENT) as `used` grows; the next ticket to be torn off is highlighted.
+ *  Collect: `used` stamps are filled from the start and the board fills up; the
+ *  next empty slot is highlighted. */
+export function stampBoard(total, used, { collect = false } = {}) {
   const stamps = [];
+  if (collect) {
+    const filled = Math.min(total, Math.max(0, used));
+    for (let i = 0; i < total; i++) {
+      const on = i < filled;
+      const classes = ['stamp', on ? 'valid' : 'empty'];
+      if (i === filled) classes.push('next'); // next slot to be stamped
+      stamps.push(h('div', { class: classes.join(' ') }, on ? icon('check') : null));
+    }
+    return h('div', {
+      class: 'stamp-board collect',
+      attrs: { role: 'img', 'aria-label': `도장 ${filled}/${total}` }
+    }, stamps);
+  }
+  const remaining = Math.max(0, total - used);
   for (let i = 0; i < total; i++) {
     const valid = i < remaining;
     const classes = ['stamp', valid ? 'valid' : 'spent'];
@@ -29,29 +45,38 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
   const status = couponStatus(shop);
   const percent = progressPercent(shop);
   const complete = isCompleted(shop) || remainingValue(shop) <= 0;
+  const collect = isCollectMode(shop);
   const categoryText = shop.category + (shop.expiresAt ? ` · ${formatExpiry(shop.expiresAt)}` : '');
 
+  // A full collect board is not a dead end like a spent pass: the button turns
+  // into the way to start the next board (the caller confirms first).
+  const quickLabel = collect ? (complete ? '새 판' : '도장 찍기') : '사용';
+  const quickDisabled = complete && !collect;
   const quickUse = isArchived(shop) ? null : h('button', {
     class: 'card-quick-use',
     attrs: {
       type: 'button', 'data-action': 'quick-use',
-      'aria-label': `${shop.name} 이용권 사용`,
-      disabled: complete ? '' : null
+      'aria-label': collect
+        ? `${shop.name} ${complete ? '새 도장판 시작' : '도장 찍기'}`
+        : `${shop.name} 이용권 사용`,
+      disabled: quickDisabled ? '' : null
     },
     on: {
-      click: () => { if (!complete) onQuickUse?.(shop); }
+      click: () => { if (!quickDisabled) onQuickUse?.(shop); }
     }
-  }, '사용');
+  }, quickLabel);
 
   // A coupon's worth is the benefit it states; the remaining count already sits in
   // the progress row right above, so repeating it here would waste the line.
-  const hintText = complete
-    ? '모두 사용했어요'
-    : (isCouponKind(shop) && shop.benefit)
-      ? shop.benefit
-      : isAmountKind(shop)
-        ? `${remainingLabel(shop)} 남아있어요`
-        : `${remainingValue(shop)}회 남았어요`;
+  const hintText = collect
+    ? (complete ? '도장판 완성! 가게에서 보상을 받으세요' : `${remainingValue(shop)}개 더 모으면 완성`)
+    : complete
+      ? '모두 사용했어요'
+      : (isCouponKind(shop) && shop.benefit)
+        ? shop.benefit
+        : isAmountKind(shop)
+          ? `${remainingLabel(shop)} 남아있어요`
+          : `${remainingValue(shop)}회 남았어요`;
 
   // Stamp board only makes sense for a count pass with a small, countable total.
   const showStamps = isCountKind(shop) && passTotal(shop) <= 30;
@@ -73,8 +98,9 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
     ),
     h('div', { class: 'card-body' },
       h('div', { class: 'card-progress-meta' },
-        h('span', null, `${percent}%`),
-        h('span', null, `${remainingLabel(shop)} 남음`)
+        h('span', null, collect ? `도장 ${passUsed(shop)}/${passTotal(shop)}` : `${percent}%`),
+        // The hint below already says how many stamps are left on a collect board.
+        h('span', null, collect ? `${percent}%` : `${remainingLabel(shop)} 남음`)
       ),
       h('div', { class: 'progress-bar' },
         h('div', {
@@ -83,7 +109,7 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
         })
       ),
       h('div', { class: `reward-hint${complete ? ' done' : ''}` }, hintText),
-      showStamps ? stampBoard(passTotal(shop), passUsed(shop)) : null
+      showStamps ? stampBoard(passTotal(shop), passUsed(shop), { collect }) : null
     )
   );
 
@@ -93,7 +119,11 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
   },
     cardMain,
     h('div', { class: 'card-footer' },
-      h('span', null, shop.phone ? shop.phone : `${usedLabel(shop)} / ${totalLabel(shop)} 사용`),
+      h('span', null, shop.phone
+        ? shop.phone
+        : collect
+          ? (shop.completedBoards ? `완성한 판 ${shop.completedBoards}개` : '적립형 도장판')
+          : `${usedLabel(shop)} / ${totalLabel(shop)} 사용`),
       quickUse
     )
   );
@@ -111,11 +141,12 @@ export function summaryCard(value, label, accent) {
   );
 }
 
-/** timelineItem(log, shopName) — usage history row. */
-export function timelineItem(log, shopName) {
+/** timelineItem(log, shopName, { collect }) — usage history row. A stamp on a
+ *  collect board is recorded like a use (count) but reads as a stamp. */
+export function timelineItem(log, shopName, { collect = false } = {}) {
   const deduct = log.amount != null
     ? `${formatWon(log.amount)} 사용`
-    : log.count != null ? `${log.count}회 사용` : null;
+    : log.count != null ? (collect ? `도장 ${log.count}개` : `${log.count}회 사용`) : null;
   return h('div', { class: 'timeline-item success' },
     h('div', { class: 'timeline-dot' }),
     h('div', { class: 'timeline-time' }, `${formatDate(log.usedAt)} · ${formatRelative(log.usedAt)}`),

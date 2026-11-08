@@ -2,6 +2,7 @@
 
 import { h } from '../core/h.js';
 import { timelineItem, emptyState } from '../ui/components.js';
+import { isCollectMode } from '../domain.js';
 
 export function render(ctx) {
   const { store } = ctx;
@@ -23,7 +24,7 @@ export function render(ctx) {
   const timeline = h('div', { class: 'timeline' });
   logs.forEach((log) => {
     const shop = shops.find((s) => s.id === log.shopId);
-    timeline.appendChild(timelineItem(log, shop ? shop.name : '알 수 없는 업체'));
+    timeline.appendChild(timelineItem(log, shop ? shop.name : '알 수 없는 업체', { collect: isCollectMode(shop) }));
   });
   root.appendChild(timeline);
   return root;

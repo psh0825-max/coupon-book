@@ -37,7 +37,8 @@ export function render(ctx, params = {}) {
   // seconds. Pristine add form only — hidden once a template/renew prefill is set.
   if (!isEdit && !params.prefill) {
     const TEMPLATES = [
-      { label: '☕ 카페 도장판 10칸', prefill: { category: '카페', kind: 'count', totalCoupons: 10 } },
+      // A cafe card is collected, not spent: it starts empty and fills up.
+      { label: '☕ 카페 도장판 10칸', prefill: { category: '카페', kind: 'count', mode: 'collect', totalCoupons: 10 } },
       { label: '💆 마사지 10회권', prefill: { category: '마사지', kind: 'count', totalCoupons: 10 } },
       { label: '🧘 찜질방 회수권', prefill: { category: '찜질방', kind: 'count', totalCoupons: 10 } },
       { label: '💳 금액권 10만원', prefill: { category: '기타', kind: 'amount', totalAmount: 100000 } },
@@ -151,12 +152,17 @@ export function render(ctx, params = {}) {
   );
   form.appendChild(field('카테고리', 'f-category', catSelect));
 
-  // ── pass kind: 횟수권 (count) vs 금액권 (amount) ──
+  // ── pass kind: 도장판 (count, collecting) / 횟수권 (count) / 금액권 / 쿠폰 ──
+  // 도장판 is a count pass read the other way round (mode 'collect'): the same
+  // usedCoupons, shown as stamps collected instead of sessions spent.
   let kind = src && (src.kind === 'amount' || src.kind === 'coupon') ? src.kind : 'count';
-  const segCount = h('button', { class: kind === 'count' ? 'active' : '', attrs: { type: 'button', 'aria-pressed': kind === 'count' ? 'true' : 'false' } }, '횟수권');
-  const segAmount = h('button', { class: kind === 'amount' ? 'active' : '', attrs: { type: 'button', 'aria-pressed': kind === 'amount' ? 'true' : 'false' } }, '금액권');
-  const segCoupon = h('button', { class: kind === 'coupon' ? 'active' : '', attrs: { type: 'button', 'aria-pressed': kind === 'coupon' ? 'true' : 'false' } }, '쿠폰');
-  const seg = h('div', { class: 'seg', attrs: { role: 'group', 'aria-label': '이용권 종류' } }, segCount, segAmount, segCoupon);
+  let collect = kind === 'count' && !!src && src.mode === 'collect';
+  const segButton = (label) => h('button', { attrs: { type: 'button', 'aria-pressed': 'false' } }, label);
+  const segStamp = segButton('도장판');
+  const segCount = segButton('횟수권');
+  const segAmount = segButton('금액권');
+  const segCoupon = segButton('쿠폰');
+  const seg = h('div', { class: 'seg', attrs: { role: 'group', 'aria-label': '이용권 종류' } }, segStamp, segCount, segAmount, segCoupon);
   form.appendChild(h('div', { class: 'form-group' },
     h('label', null, '이용권 종류'),
     seg
@@ -167,15 +173,15 @@ export function render(ctx, params = {}) {
   const usedInput = h('input', { id: 'f-used', attrs: { type: 'number', name: 'usedCoupons', min: '0', max: '1000', value: isEdit ? String(shop.usedCoupons || 0) : '0' } });
   const counter = h('span', { class: 'stamp-counter', id: 'f-stamp-counter' }, '0 / 10');
   const previewBoard = h('div', { class: 'stamp-board stamp-preview', id: 'f-stamp-preview' });
+  const totalLabelEl = h('label', { attrs: { for: 'f-total' } }, '총 횟수(회)');
+  const usedLabelEl = h('label', { attrs: { for: 'f-used' }, style: { margin: '0' } }, '현재 사용 횟수');
+  const usedHint = h('p', { class: 'field-hint' }, '이미 사용한 횟수가 있다면 현재 사용 횟수를 입력하세요.');
   const countGroup = h('div', { id: 'count-fields' },
-    field('총 횟수(회)', 'f-total', totalInput),
+    h('div', { class: 'form-group' }, totalLabelEl, totalInput),
     h('div', { class: 'form-group' },
-      h('div', { class: 'stamp-preview-head' },
-        h('label', { attrs: { for: 'f-used' }, style: { margin: '0' } }, '현재 사용 횟수'),
-        counter
-      ),
+      h('div', { class: 'stamp-preview-head' }, usedLabelEl, counter),
       usedInput,
-      h('p', { class: 'field-hint' }, '이미 사용한 횟수가 있다면 현재 사용 횟수를 입력하세요.'),
+      usedHint,
       previewBoard
     )
   );
@@ -221,7 +227,7 @@ export function render(ctx, params = {}) {
     const used = Math.max(0, Math.min(parseInt(usedInput.value) || 0, total));
     counter.textContent = `${used} / ${total}`;
     clear(previewBoard);
-    previewBoard.appendChild(stampBoard(total, used));
+    previewBoard.appendChild(stampBoard(total, used, { collect }));
   }
   totalInput.addEventListener('input', renderPreview);
   usedInput.addEventListener('input', renderPreview);
@@ -382,10 +388,16 @@ export function render(ctx, params = {}) {
   form.appendChild(more);
 
   function applyKind() {
-    [[segCount, 'count'], [segAmount, 'amount'], [segCoupon, 'coupon']].forEach(([el, k]) => {
-      el.classList.toggle('active', kind === k);
-      el.setAttribute('aria-pressed', kind === k ? 'true' : 'false');
+    const uiKind = kind === 'count' && collect ? 'stamp' : kind;
+    [[segStamp, 'stamp'], [segCount, 'count'], [segAmount, 'amount'], [segCoupon, 'coupon']].forEach(([el, k]) => {
+      el.classList.toggle('active', uiKind === k);
+      el.setAttribute('aria-pressed', uiKind === k ? 'true' : 'false');
     });
+    totalLabelEl.textContent = collect ? '도장 칸 수' : '총 횟수(회)';
+    usedLabelEl.textContent = collect ? '지금까지 모은 도장' : '현재 사용 횟수';
+    usedHint.textContent = collect
+      ? '이미 찍은 도장이 있다면 개수를 입력하세요. 판을 다 채우면 새 판을 시작할 수 있어요.'
+      : '이미 사용한 횟수가 있다면 현재 사용 횟수를 입력하세요.';
     countGroup.hidden = kind !== 'count';
     amountGroup.hidden = kind !== 'amount';
     couponGroup.hidden = kind !== 'coupon';
@@ -402,9 +414,10 @@ export function render(ctx, params = {}) {
     if (kind === 'count') renderPreview();
     else if (kind === 'amount') renderAmountPreview();
   }
-  segCount.addEventListener('click', () => { kind = 'count'; applyKind(); });
-  segAmount.addEventListener('click', () => { kind = 'amount'; applyKind(); });
-  segCoupon.addEventListener('click', () => { kind = 'coupon'; applyKind(); });
+  segStamp.addEventListener('click', () => { kind = 'count'; collect = true; applyKind(); });
+  segCount.addEventListener('click', () => { kind = 'count'; collect = false; applyKind(); });
+  segAmount.addEventListener('click', () => { kind = 'amount'; collect = false; applyKind(); });
+  segCoupon.addEventListener('click', () => { kind = 'coupon'; collect = false; applyKind(); });
 
   form.appendChild(h('div', { class: 'form-spacer' }));
   const submitBtn = h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'submit' } }, isEdit ? '저장하기' : '추가하기');
@@ -438,9 +451,12 @@ export function render(ctx, params = {}) {
     // Count mode only: if the entered total is below the current used count,
     // saving would clamp (and lose) sessions — confirm before proceeding.
     if (kind !== 'amount' && usedRaw > total) {
+      const stamps = kind === 'count' && collect;
       const proceed = await showConfirm({
-        title: '사용 횟수 조정',
-        message: `총 횟수(${total})가 현재 사용(${usedRaw})보다 적어 사용 횟수가 ${total}회로 줄어듭니다. 계속할까요?`,
+        title: stamps ? '모은 도장 조정' : '사용 횟수 조정',
+        message: stamps
+          ? `도장 칸(${total})이 모은 도장(${usedRaw})보다 적어 모은 도장이 ${total}개로 줄어듭니다. 계속할까요?`
+          : `총 횟수(${total})가 현재 사용(${usedRaw})보다 적어 사용 횟수가 ${total}회로 줄어듭니다. 계속할까요?`,
         confirmLabel: '계속',
         danger: true
       });
@@ -454,6 +470,7 @@ export function render(ctx, params = {}) {
       name: nameInput.value.trim(),
       category: catSelect.value,
       kind,
+      mode: kind === 'count' && collect ? 'collect' : null,
       totalCoupons: total,
       usedCoupons: used,
       totalAmount,
