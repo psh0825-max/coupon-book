@@ -52,7 +52,7 @@ export function render(ctx) {
       metric(s.totalShops, '이용권'),
       metric(`${s.monthUses}회`, '이번 달 사용'),
       metric(s.expiringCount, '만료 임박'),
-      metric(s.completedCount, '소진')
+      metric(s.completedCount, '완료')
     )
   );
 

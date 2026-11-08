@@ -5,7 +5,8 @@ import { h } from '../core/h.js';
 import { stampBoard, timelineItem, adBanner } from '../ui/components.js';
 import {
   couponStatus, remainingValue, progressPercent, formatExpiry,
-  isArchived, isAmountKind, passTotal, passUsed, totalLabel, usedLabel, remainingLabel
+  isArchived, isAmountKind, passTotal, passUsed, totalLabel, usedLabel, remainingLabel,
+  isCollectMode, boardLogs
 } from '../domain.js';
 import { mapViewUrl } from '../services/maps.js';
 import { renderQR, renderBarcode, copyCode } from '../services/codes.js';
@@ -26,10 +27,13 @@ export function render(ctx, params = {}) {
   const amount = isAmountKind(shop);
   const depleted = remaining <= 0;
   const archived = isArchived(shop);
+  const collect = isCollectMode(shop);
+  // Undo reaches only the board on screen (see domain.boardLogs).
+  const undoable = boardLogs(shop, logs).length > 0;
 
   const stat = (value, label) => {
     const text = String(value);
-    const unit = text.endsWith('원') || text.endsWith('회') ? text.slice(-1) : null;
+    const unit = /[원회칸개]$/.test(text) ? text.slice(-1) : null;
     const number = unit ? text.slice(0, -1) : text;
     return h('div', { class: 'stat' },
       h('div', { class: `num${number.length > 9 ? ' num--long' : ''}` },
@@ -73,9 +77,9 @@ export function render(ctx, params = {}) {
       h('div', { class: 'address' }, `${shop.address || '주소 없음'} · ${shop.category}`)
     ),
     h('div', { class: 'stats' },
-      stat(totalLabel(shop), amount ? '총 금액' : '총 횟수'),
-      stat(usedLabel(shop), '사용'),
-      stat(remainingLabel(shop), '남음')
+      stat(totalLabel(shop), amount ? '총 금액' : collect ? '도장 칸' : '총 횟수'),
+      stat(usedLabel(shop), collect ? '모은 도장' : '사용'),
+      stat(remainingLabel(shop), collect ? '남은 칸' : '남음')
     )
   ));
 
@@ -96,13 +100,15 @@ export function render(ctx, params = {}) {
 
   root.appendChild(h('div', { class: 'progress-wrap' },
     h('div', { class: 'progress-meta' },
-      h('span', null, `${percent}% 사용`),
+      h('span', null, collect ? `${percent}% 모음` : `${percent}% 사용`),
       h('span', null, `${remainingLabel(shop)} 남음`)
     ),
     h('div', { class: 'progress-bar' },
       h('div', { class: `progress-fill${percent >= 100 ? ' success' : ''}`, style: { width: `${percent}%` } })
     ),
-    depleted ? h('div', { class: 'reward-hint done' }, '모두 사용했어요') : null
+    depleted
+      ? h('div', { class: 'reward-hint done' }, collect ? '도장판 완성! 가게에서 보상을 받으세요' : '모두 사용했어요')
+      : null
   ));
 
   if (shop.image) root.appendChild(buildGifticonPanel(shop.image, shop.name));
@@ -111,26 +117,38 @@ export function render(ctx, params = {}) {
   // The header's 총/사용/남음 stats already carry every number on this screen, so
   // neither the balance block nor the board header restates them.
   if (!amount) {
-    root.appendChild(h('div', { class: 'stamp-head' }, h('span', null, '이용 현황')));
-    // Depleting ticket board only when small/countable; large passes show just the block.
-    if (passTotal(shop) <= 30) root.appendChild(stampBoard(passTotal(shop), passUsed(shop)));
+    root.appendChild(h('div', { class: 'stamp-head' },
+      h('span', null, collect ? '도장판' : '이용 현황'),
+      collect && shop.completedBoards ? h('strong', null, `완성 ${shop.completedBoards}판`) : null
+    ));
+    // Ticket board only when small/countable; large passes show just the block.
+    if (passTotal(shop) <= 30) root.appendChild(stampBoard(passTotal(shop), passUsed(shop), { collect }));
   }
 
+  // A full collect board is not finished business: its main action becomes the
+  // next board, and 보관하기 stays available either way.
+  const primary = collect && depleted
+    ? h('button', {
+        class: 'btn btn-primary btn-block', attrs: { type: 'button' },
+        on: { click: () => actions.offerNewBoard(shop) }
+      }, '새 판 시작')
+    : h('button', {
+        class: 'btn btn-primary btn-block',
+        attrs: { type: 'button', disabled: depleted ? '' : null },
+        on: { click: () => actions.promptUse(shop) }
+      }, collect ? '도장 찍기' : '사용하기');
+
   if (!archived) root.appendChild(h('div', { class: 'detail-actions' },
-    h('button', {
-      class: 'btn btn-primary btn-block',
-      attrs: { type: 'button', disabled: depleted ? '' : null },
-      on: { click: () => actions.promptUse(shop) }
-    }, '사용하기'),
+    primary,
     h('button', { class: 'btn btn-secondary', attrs: { type: 'button' }, on: { click: () => router.navigate('add', { id: shop.id }) } }, '편집'),
     h('button', {
       class: 'btn btn-secondary',
-      attrs: { type: 'button', disabled: logs.length === 0 ? '' : null },
+      attrs: { type: 'button', disabled: undoable ? null : '' },
       on: { click: () => actions.undoLastCoupon(shop.id) }
-    }, '사용 취소')
+    }, collect ? '도장 취소' : '사용 취소')
   ));
 
-  if (!archived && !depleted) root.querySelector('.detail-actions').appendChild(h('button', {
+  if (!archived && (!depleted || collect)) root.querySelector('.detail-actions').appendChild(h('button', {
     class: 'btn btn-secondary', attrs: { type: 'button' }, on: { click: () => actions.archiveShop(shop.id) }
   }, '보관하기'));
 
@@ -139,7 +157,7 @@ export function render(ctx, params = {}) {
   // rubbish. An attached image is the marker — you attach one *because* the item is
   // a gifticon — so it decides the order. Until now only 재구매 was offered and
   // deleting meant 편집 → scroll to the bottom → 이용권 삭제 → 확인.
-  if (!archived && depleted) {
+  if (!archived && depleted && !collect) {
     const isGifticon = !!shop.image;
     const discard = h('button', {
       class: `btn ${isGifticon ? 'btn-primary' : 'btn-secondary'} btn-block`,
@@ -173,6 +191,7 @@ export function render(ctx, params = {}) {
           lng: shop.lng ?? null,
           skin: shop.skin || 'midnight',
           kind: shop.kind || 'count',
+          mode: shop.mode || null,
           totalCoupons: shop.totalCoupons,
           totalAmount: shop.totalAmount
         } }) }
@@ -190,7 +209,7 @@ export function render(ctx, params = {}) {
   if (logs.length === 0) {
     timeline.appendChild(h('div', { class: 'field-hint' }, '아직 사용 내역이 없어요'));
   } else {
-    logs.forEach((log) => timeline.appendChild(timelineItem(log, shop.name)));
+    logs.forEach((log) => timeline.appendChild(timelineItem(log, shop.name, { collect })));
   }
   root.appendChild(timeline);
 

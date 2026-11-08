@@ -7,7 +7,9 @@ import { createKeyedLock } from './core/keyed-lock.js';
 import { h, clear } from './core/h.js';
 
 import { Shops, Logs, Settings, seedDemoData, clearAll } from './data/repo.js';
-import { remainingValue, remainingLabel, isArchived, isAmountKind, isExpired } from './domain.js';
+import {
+  remainingValue, remainingLabel, isArchived, isAmountKind, isExpired, isCollectMode, passTotal, passUsed, boardLogs
+} from './domain.js';
 import { formatWon, groupDigits, parseNumber } from './services/format.js';
 
 import { setNotifySettings, startLocationWatch, stopLocationWatch } from './services/location.js';
@@ -17,7 +19,7 @@ import {
 } from './services/pwa.js';
 import { exportData as backupExport, restoreBackup } from './services/backup.js';
 import { requestPersistentStorage } from './services/storage.js';
-import { haptic } from './services/fx.js';
+import { haptic, celebrate } from './services/fx.js';
 import { mountAds } from './services/ads.js';
 import { resetPresentation } from './services/presentation.js';
 
@@ -122,9 +124,12 @@ function reportSaveError(err) {
 }
 
 function confirmExpiredUse(shop, action) {
+  const collect = isCollectMode(shop);
   showSheet({
-    title: '만료된 이용권이에요',
-    body: `${shop.name} 이용권은 유효기간이 지났어요. 가게에서 사용을 확인했다면 기록할 수 있어요.`,
+    title: collect ? '만료된 도장판이에요' : '만료된 이용권이에요',
+    body: collect
+      ? `${shop.name} 도장판은 유효기간이 지났어요. 가게에서 확인했다면 도장을 찍을 수 있어요.`
+      : `${shop.name} 이용권은 유효기간이 지났어요. 가게에서 사용을 확인했다면 기록할 수 있어요.`,
     actions: [
       { id: 'cancel', label: '취소', className: 'btn-secondary' },
       action
@@ -135,19 +140,23 @@ function confirmExpiredUse(shop, action) {
 // ── Actions ──────────────────────────────────────────────────────────────────
 const actions = {
   // Kind-aware "use": deduct won (amount pass) or sessions (count pass). A used-up
-  // paid pass is depleted, not a prize — no confetti/reward here.
+  // paid pass is depleted, not a prize — no confetti/reward there. A collect
+  // board records a stamp the same way (usedCoupons goes up) and a full board
+  // is the prize, so that one gets the celebration.
   async usePass(shopId, opts = {}) {
     return passLock.run(shopId, async () => {
       const shop = store.getState().shops.find((s) => s.id === shopId);
       if (!shop) return;
       if (isArchived(shop)) return;
+      const collect = isCollectMode(shop);
       if (remainingValue(shop) <= 0) {
-        showToast('남은 이용권이 없어요', 'danger');
+        if (collect) actions.offerNewBoard(shop);
+        else showToast('남은 이용권이 없어요', 'danger');
         return;
       }
       if (isExpired(shop) && !opts.confirmExpired) {
         confirmExpiredUse(shop, {
-          id: 'use', label: '그래도 사용', className: 'btn-primary',
+          id: 'use', label: collect ? '그래도 찍기' : '그래도 사용', className: 'btn-primary',
           onClick: () => actions.usePass(shopId, { ...opts, confirmExpired: true })
         });
         return;
@@ -174,7 +183,22 @@ const actions = {
       const depleted = remainingValue(updated) <= 0;
       // One-tap undo on the toast: quick uses shouldn't need detail + confirm.
       const undo = { actionLabel: '되돌리기', onAction: () => actions.undoLastCoupon(shopId, { confirm: false }) };
-      if (depleted) {
+      if (collect) {
+        if (depleted) {
+          haptic('heavy');
+          celebrate();
+          // The toast sits above the sheet layer, so a mis-tapped last stamp can
+          // be taken back while the completion sheet is still open.
+          showToast(`도장판 완성 · ${passTotal(updated)}개를 다 모았어요`, 'success', {
+            actionLabel: '되돌리기',
+            onAction: () => { closeOverlay(); undo.onAction(); }
+          });
+          actions.offerNewBoard(updated, { justCompleted: true });
+        } else {
+          haptic('light');
+          showToast(`도장 ${passUsed(updated)}/${passTotal(updated)} · ${remainingLabel(updated)} 남음`, 'success', undo);
+        }
+      } else if (depleted) {
         haptic('medium');
         showToast('이용권을 모두 사용했어요', 'success', undo);
       } else {
@@ -185,16 +209,28 @@ const actions = {
     });
   },
 
+  // Card button: one tap does the common thing for each kind. An amount pass
+  // needs an entry sheet; a count pass or a collect board takes one session or
+  // one stamp; a full collect board asks before starting the next one.
+  quickUse(shop, { note } = {}) {
+    if (!shop) return;
+    if (isAmountKind(shop)) return actions.promptUse(shop);
+    if (isCollectMode(shop) && remainingValue(shop) <= 0) return actions.offerNewBoard(shop);
+    return actions.usePass(shop.id, { count: 1, note });
+  },
+
   // Opens an accessible use-entry sheet, then delegates to usePass.
   promptUse(shop, opts = {}) {
     if (!shop) return;
+    const collect = isCollectMode(shop);
     if (remainingValue(shop) <= 0) {
-      showToast('남은 이용권이 없어요', 'danger');
+      if (collect) actions.offerNewBoard(shop);
+      else showToast('남은 이용권이 없어요', 'danger');
       return;
     }
     if (isExpired(shop) && !opts.confirmExpired) {
       confirmExpiredUse(shop, {
-        id: 'use', label: '그래도 사용', className: 'btn-primary', close: false,
+        id: 'use', label: collect ? '그래도 찍기' : '그래도 사용', className: 'btn-primary', close: false,
         onClick: () => actions.promptUse(shop, { confirmExpired: true })
       });
       return;
@@ -245,16 +281,17 @@ const actions = {
         attrs: { type: 'number', inputmode: 'numeric', min: '1', max: String(remaining), value: '1' }
       });
       showSheet({
-        title: '횟수 사용',
+        title: collect ? '도장 찍기' : '횟수 사용',
         body: h('div', null,
-          h('label', { class: 'field-label', attrs: { for: 'use-count' } }, '사용 횟수'),
+          h('label', { class: 'field-label', attrs: { for: 'use-count' } }, collect ? '찍을 도장 수' : '사용 횟수'),
           countInput,
+          collect ? h('p', { class: 'field-hint' }, `${remainingLabel(shop)} 남았어요`) : null,
           memoInput
         ),
         actions: [
           { id: 'cancel', label: '취소', className: 'btn-secondary' },
           {
-            id: 'confirm', label: '사용', className: 'btn-primary',
+            id: 'confirm', label: collect ? '찍기' : '사용', className: 'btn-primary',
             onClick: () => actions.usePass(shop.id, { count: Number(countInput.value) || 1, note: memoInput.value.trim(), confirmExpired: true })
           }
         ]
@@ -264,9 +301,13 @@ const actions = {
 
   async undoLastCoupon(shopId, { confirm = true } = {}) {
     if (confirm) {
+      const cur = store.getState().shops.find((s) => s.id === shopId);
+      const collect = isCollectMode(cur);
       const ok = await showConfirm({
-        title: '사용 기록 취소',
-        message: '마지막 이용권 사용 기록을 취소하고 사용량을 되돌릴까요?',
+        title: collect ? '도장 취소' : '사용 기록 취소',
+        message: collect
+          ? '마지막으로 찍은 도장을 취소할까요?'
+          : '마지막 이용권 사용 기록을 취소하고 사용량을 되돌릴까요?',
         confirmLabel: '되돌리기'
       });
       if (!ok) return;
@@ -274,9 +315,9 @@ const actions = {
     return passLock.run(shopId, async () => {
       const shop = store.getState().shops.find((s) => s.id === shopId);
       if (!shop) return;
-      const logs = (store.getState().logs || [])
-        .filter((l) => l.shopId === shopId)
-        .sort((a, b) => b.usedAt - a.usedAt);
+      // Only uses on the current board: after 새 판 시작 the old stamps stay as
+      // history and must not be "undone" off a board that no longer shows them.
+      const logs = boardLogs(shop, store.getState().logs);
       if (!logs.length) return;
       const last = logs[0];
       // Restore exactly what the last use deducted (falls back to one session for
@@ -291,7 +332,70 @@ const actions = {
         return;
       }
       await refresh();
-      showToast('마지막 사용 기록을 취소했어요');
+      showToast(isCollectMode(shop) ? '마지막 도장을 취소했어요' : '마지막 사용 기록을 취소했어요');
+    });
+  },
+
+  // A full collect board: explain the reward and offer the next board. Shown
+  // right after the last stamp and again from the card's '새 판' button.
+  offerNewBoard(shop, { justCompleted = false } = {}) {
+    if (!shop || !isCollectMode(shop)) return;
+    showSheet({
+      title: justCompleted ? '🎉 도장판 완성!' : '도장판이 다 찼어요',
+      body: h('p', null, justCompleted
+        ? `도장 ${passTotal(shop)}개를 다 모았어요. 가게에서 보상을 받은 뒤 새 판을 시작하세요.`
+        : '가게에서 보상을 받으셨다면 새 판을 시작하세요. 지금까지 찍은 도장 기록은 사용 내역에 남아요.'),
+      actions: [
+        { id: 'later', label: '나중에', className: 'btn-secondary' },
+        { id: 'new', label: '새 판 시작', className: 'btn-primary', onClick: () => actions.startNewBoard(shop.id) }
+      ]
+    });
+  },
+
+  // Empties the board for the next round. The stamps' logs stay as history;
+  // boardStartedAt fences them off from undo. The toast can put the full board back.
+  async startNewBoard(shopId) {
+    return passLock.run(shopId, async () => {
+      const shop = store.getState().shops.find((s) => s.id === shopId);
+      if (!shop || !isCollectMode(shop) || remainingValue(shop) > 0) return;
+      const prev = {
+        usedCoupons: shop.usedCoupons,
+        boardStartedAt: shop.boardStartedAt ?? null,
+        completedBoards: shop.completedBoards || 0
+      };
+      try {
+        await Shops.update({
+          ...shop, usedCoupons: 0, boardStartedAt: Date.now(), completedBoards: prev.completedBoards + 1
+        });
+      } catch (err) {
+        reportSaveError(err);
+        return;
+      }
+      await refresh();
+      resyncServices();
+      haptic('light');
+      showToast('새 도장판을 시작했어요', 'success', {
+        actionLabel: '되돌리기',
+        onAction: () => passLock.run(shopId, async () => {
+          const cur = store.getState().shops.find((s) => s.id === shopId);
+          if (!cur) return;
+          // A stamp already on the new board would be orphaned by putting the
+          // full board back, so only an untouched new board can be undone.
+          if ((cur.usedCoupons || 0) > 0) {
+            showToast('새 판에 도장을 찍어서 되돌릴 수 없어요', 'danger');
+            return;
+          }
+          try {
+            await Shops.update({ ...cur, ...prev });
+          } catch (err) {
+            reportSaveError(err);
+            return;
+          }
+          await refresh();
+          resyncServices();
+          showToast('완성한 도장판으로 되돌렸어요');
+        })
+      });
     });
   },
 

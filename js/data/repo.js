@@ -81,6 +81,14 @@ export function normalizeShop(raw = {}) {
     totalAmount,
     usedAmount,
     archivedAt: Number.isFinite(raw.archivedAt) ? raw.archivedAt : null,
+    // 적립형 도장판: only a plain count pass can be read as collecting. The
+    // stored counts mean the same thing either way (usedCoupons goes up), so
+    // switching mode never rewrites them.
+    mode: kind === 'count' && raw.mode === 'collect' ? 'collect' : null,
+    // When the board on screen was started (new board resets usedCoupons;
+    // older stamps' logs stay as history) and how many boards were filled.
+    boardStartedAt: Number.isFinite(raw.boardStartedAt) ? raw.boardStartedAt : null,
+    completedBoards: clampInt(raw.completedBoards, 0, 100000, 0),
     skin
   };
   if (raw.id != null) shop.id = raw.id;
@@ -204,7 +212,7 @@ function localDateOffset(now, days) {
 export function demoShops(now = new Date()) {
   return [
     { name: '안양 스타 마사지', category: '마사지', address: '경기도 안양시 동안구 시민대로 1234', phone: '031-000-1200', expiresAt: localDateOffset(now, 180), memo: '100만원 충전권, 15만원 사용', lat: 37.4012, lng: 126.9523, kind: 'amount', totalAmount: 1000000, usedAmount: 150000, skin: 'sage' },
-    { name: '허브 커피 로스터스', category: '카페', address: '경기도 안양시 동안구 관악로 56', phone: '031-000-3400', expiresAt: localDateOffset(now, 40), memo: '원두 구매도 스탬프 적립 가능', lat: 37.4025, lng: 126.9530, totalCoupons: 12, skin: 'espresso' },
+    { name: '허브 커피 로스터스', category: '카페', address: '경기도 안양시 동안구 관악로 56', phone: '031-000-3400', expiresAt: localDateOffset(now, 40), memo: '원두 구매도 스탬프 적립 가능', lat: 37.4025, lng: 126.9530, mode: 'collect', totalCoupons: 12, usedCoupons: 7, skin: 'espresso' },
     { name: '태양 찜질방', category: '찜질방', address: '경기도 안양시 만안구 성남대로 789', phone: '031-000-5600', expiresAt: localDateOffset(now, 6), memo: '주말 입장권은 쿠폰 제외 여부 확인', lat: 37.4000, lng: 126.9510, totalCoupons: 8, skin: 'sage' }
   ];
 }
