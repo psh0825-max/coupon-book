@@ -356,9 +356,41 @@ const actions = {
     }
   },
 
+  // Returns true when the sheet was shown, so the caller shows at most one
+  // sheet per save.
+  async maybeOfferReminders(shop) {
+    const st = store.getState();
+    if (!shop?.expiresAt || st.settings.remindersEnabled || st.settings.remindersOffered) return false;
+    // On the very first item this takes the backup hint's slot; the hint moves
+    // to the next add instead of stacking a second sheet on this one.
+    const deferBackup = (st.shops || []).length === 1 && !st.settings.backupHinted;
+    await Settings.set('remindersOffered', true);
+    if (deferBackup) await Settings.set('backupHintDeferred', true);
+    store.setState((s) => ({
+      settings: { ...s.settings, remindersOffered: true, ...(deferBackup ? { backupHintDeferred: true } : {}) }
+    }));
+    showSheet({
+      title: '만료 알림을 켤까요?',
+      body: h('p', null, '만료일이 다가오면 D-7 / D-3 / D-1에 미리 알려드려요. 설정에서 언제든 끌 수 있어요.'),
+      actions: [
+        { id: 'later', label: '나중에', className: 'btn-secondary' },
+        {
+          id: 'on', label: '알림 켜기', className: 'btn-primary',
+          onClick: async () => {
+            const { permission } = await actions.toggleReminders(true);
+            if (permission === 'granted') showToast('만료 알림이 켜졌어요', 'success');
+            else showToast('알림 권한이 차단돼 앱 실행 중에만 알려드려요', 'danger');
+          }
+        }
+      ]
+    });
+    return true;
+  },
+
   async maybeShowFirstBackupHint() {
     const st = store.getState();
-    if ((st.shops || []).length !== 1 || st.settings.backupHinted) return;
+    const firstItem = (st.shops || []).length === 1 || st.settings.backupHintDeferred;
+    if (!firstItem || st.settings.backupHinted) return;
     await Settings.set('backupHinted', true);
     store.setState((s) => ({ settings: { ...s.settings, backupHinted: true } }));
     showSheet({
