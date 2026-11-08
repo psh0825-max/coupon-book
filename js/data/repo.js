@@ -15,6 +15,10 @@ export const DEFAULTS = {
   reminderMarkers: {},
   onboarded: false,
   backupHinted: false,
+  // Expiry reminders are offered once, right after the first item with an
+  // expiry date is added. The "직접 추가" onboarding path never asked.
+  remindersOffered: false,
+  backupHintDeferred: false,
   lastBackupAt: null,
   backupNudgeDismissedAt: null
 };
