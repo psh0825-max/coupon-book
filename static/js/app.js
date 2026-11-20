@@ -1,3 +1,4 @@
+import { appLanguage, localizeShell, t as tr } from './core/i18n.js';
 // app.js — bootstrap. Wires store + router + actions and injects them as ctx into
 // every view. The only module that knows about all layers at once.
 
@@ -82,17 +83,17 @@ function onGeofence(notifyList) {
         h('h4', null, shop.name),
         h('p', null, `${shop.address || ''}${distance != null ? ` · ${Math.round(distance)}m` : ''}`)
       ),
-      h('div', { class: 'badge badge-accent' }, `${remainingLabel(shop)} 남음`)
+      h('div', { class: 'badge badge-accent' }, tr("{0} 남음", (remainingLabel(shop))))
     ))
   );
-  showSheet({ title: '근처 가게 방문 감지', body: list });
+  showSheet({ title: tr("근처 가게 방문 감지"), body: list });
 }
 
 function onReminderDue(shop, info) {
   if (info.type === 'lowbalance') {
-    showToast(`${shop.name} · 잔액 ${formatWon(info.remaining)} 남음`, 'danger');
+    showToast(tr("{0} · 잔액 {1} 남음", (shop.name), (formatWon(info.remaining))), 'danger');
   } else {
-    showToast(`${shop.name} · ${info.days === 0 ? '오늘 만료' : 'D-' + info.days} 만료 임박`, 'danger');
+    showToast(tr("{0} · {1} 만료 임박", (shop.name), (info.days === 0 ? '오늘 만료' : 'D-' + info.days)), 'danger');
   }
 }
 
@@ -100,11 +101,11 @@ function onReminderDue(shop, info) {
 // posts SKIP_WAITING and the controllerchange handler reloads the page once.
 function onUpdateAvailable(reg) {
   showSheet({
-    title: '업데이트',
-    body: '새 버전이 준비됐어요. 새로고침하면 적용돼요.',
+    title: tr("업데이트"),
+    body: tr("새 버전이 준비됐어요. 새로고침하면 적용돼요."),
     actions: [
-      { id: 'later', label: '나중에', className: 'btn-secondary' },
-      { id: 'reload', label: '새로고침', className: 'btn-primary', onClick: () => applyUpdate(reg) }
+      { id: 'later', label: tr("나중에"), className: 'btn-secondary' },
+      { id: 'reload', label: tr("새로고침"), className: 'btn-primary', onClick: () => applyUpdate(reg) }
     ]
   });
 }
@@ -114,8 +115,8 @@ const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
 function saveErrorMessage(err) {
   return err && (err.name === 'QuotaExceededError' || /quota/i.test(String(err.message)))
-    ? '저장 공간이 부족해서 저장하지 못했어요. 필요 없는 기프티콘 이미지를 지우고 다시 시도해 주세요.'
-    : '저장하지 못했어요. 잠시 후 다시 시도해 주세요.';
+    ? tr("저장 공간이 부족해서 저장하지 못했어요. 필요 없는 기프티콘 이미지를 지우고 다시 시도해 주세요.")
+    : tr("저장하지 못했어요. 잠시 후 다시 시도해 주세요.");
 }
 
 function reportSaveError(err) {
@@ -126,12 +127,12 @@ function reportSaveError(err) {
 function confirmExpiredUse(shop, action) {
   const collect = isCollectMode(shop);
   showSheet({
-    title: collect ? '만료된 도장판이에요' : '만료된 이용권이에요',
+    title: collect ? tr("만료된 도장판이에요") : tr("만료된 이용권이에요"),
     body: collect
-      ? `${shop.name} 도장판은 유효기간이 지났어요. 가게에서 확인했다면 도장을 찍을 수 있어요.`
-      : `${shop.name} 이용권은 유효기간이 지났어요. 가게에서 사용을 확인했다면 기록할 수 있어요.`,
+      ? tr("{0} 도장판은 유효기간이 지났어요. 가게에서 확인했다면 도장을 찍을 수 있어요.", (shop.name))
+      : tr("{0} 이용권은 유효기간이 지났어요. 가게에서 사용을 확인했다면 기록할 수 있어요.", (shop.name)),
     actions: [
-      { id: 'cancel', label: '취소', className: 'btn-secondary' },
+      { id: 'cancel', label: tr("취소"), className: 'btn-secondary' },
       action
     ]
   });
@@ -151,12 +152,12 @@ const actions = {
       const collect = isCollectMode(shop);
       if (remainingValue(shop) <= 0) {
         if (collect) actions.offerNewBoard(shop);
-        else showToast('남은 이용권이 없어요', 'danger');
+        else showToast(tr("남은 이용권이 없어요"), 'danger');
         return;
       }
       if (isExpired(shop) && !opts.confirmExpired) {
         confirmExpiredUse(shop, {
-          id: 'use', label: collect ? '그래도 찍기' : '그래도 사용', className: 'btn-primary',
+          id: 'use', label: collect ? tr("그래도 찍기") : tr("그래도 사용"), className: 'btn-primary',
           onClick: () => actions.usePass(shopId, { ...opts, confirmExpired: true })
         });
         return;
@@ -182,28 +183,28 @@ const actions = {
       await refresh();
       const depleted = remainingValue(updated) <= 0;
       // One-tap undo on the toast: quick uses shouldn't need detail + confirm.
-      const undo = { actionLabel: '되돌리기', onAction: () => actions.undoLastCoupon(shopId, { confirm: false }) };
+      const undo = { actionLabel: tr("되돌리기"), onAction: () => actions.undoLastCoupon(shopId, { confirm: false }) };
       if (collect) {
         if (depleted) {
           haptic('heavy');
           celebrate();
           // The toast sits above the sheet layer, so a mis-tapped last stamp can
           // be taken back while the completion sheet is still open.
-          showToast(`도장판 완성 · ${passTotal(updated)}개를 다 모았어요`, 'success', {
-            actionLabel: '되돌리기',
+          showToast(tr("도장판 완성 · {0}개를 다 모았어요", (passTotal(updated))), 'success', {
+            actionLabel: tr("되돌리기"),
             onAction: () => { closeOverlay(); undo.onAction(); }
           });
           actions.offerNewBoard(updated, { justCompleted: true });
         } else {
           haptic('light');
-          showToast(`도장 ${passUsed(updated)}/${passTotal(updated)} · ${remainingLabel(updated)} 남음`, 'success', undo);
+          showToast(tr("도장 {0}/{1} · {2} 남음", (passUsed(updated)), (passTotal(updated)), (remainingLabel(updated))), 'success', undo);
         }
       } else if (depleted) {
         haptic('medium');
-        showToast('이용권을 모두 사용했어요', 'success', undo);
+        showToast(tr("이용권을 모두 사용했어요"), 'success', undo);
       } else {
         haptic('light');
-        showToast(`사용 완료 · ${remainingLabel(updated)} 남음`, 'success', undo);
+        showToast(tr("사용 완료 · {0} 남음", (remainingLabel(updated))), 'success', undo);
       }
       resyncServices();
     });
@@ -225,12 +226,12 @@ const actions = {
     const collect = isCollectMode(shop);
     if (remainingValue(shop) <= 0) {
       if (collect) actions.offerNewBoard(shop);
-      else showToast('남은 이용권이 없어요', 'danger');
+      else showToast(tr("남은 이용권이 없어요"), 'danger');
       return;
     }
     if (isExpired(shop) && !opts.confirmExpired) {
       confirmExpiredUse(shop, {
-        id: 'use', label: collect ? '그래도 찍기' : '그래도 사용', className: 'btn-primary', close: false,
+        id: 'use', label: collect ? tr("그래도 찍기") : tr("그래도 사용"), className: 'btn-primary', close: false,
         onClick: () => actions.promptUse(shop, { confirmExpired: true })
       });
       return;
@@ -238,13 +239,13 @@ const actions = {
     const remaining = remainingValue(shop);
     const memoInput = h('textarea', {
       class: 'memo-input', id: 'use-memo',
-      attrs: { rows: '2', placeholder: '메모 (선택)' }
+      attrs: { rows: '2', placeholder: tr("메모 (선택)") }
     });
 
     if (isAmountKind(shop)) {
       const amountInput = h('input', {
         id: 'use-amount',
-        attrs: { type: 'text', inputmode: 'numeric', placeholder: '예: 30,000' }
+        attrs: { type: 'text', inputmode: 'numeric', placeholder: tr("예: 30,000") }
       });
       amountInput.addEventListener('input', () => { amountInput.value = groupDigits(amountInput.value); });
       const chipValues = [10000, 30000, 50000, 100000];
@@ -256,21 +257,21 @@ const actions = {
         h('button', {
           class: 'chip', attrs: { type: 'button' },
           on: { click: () => { amountInput.value = groupDigits(remaining); } }
-        }, '전액')
+        }, tr("전액"))
       );
       showSheet({
-        title: '금액 사용',
+        title: tr("금액 사용"),
         body: h('div', null,
-          h('label', { class: 'field-label', attrs: { for: 'use-amount' } }, '사용 금액(원)'),
+          h('label', { class: 'field-label', attrs: { for: 'use-amount' } }, tr("사용 금액(원)")),
           amountInput,
           chips,
-          h('div', { class: 'amount-preview' }, `남은 금액: ${formatWon(remaining)}`),
+          h('div', { class: 'amount-preview' }, tr("남은 금액: {0}", (formatWon(remaining)))),
           memoInput
         ),
         actions: [
-          { id: 'cancel', label: '취소', className: 'btn-secondary' },
+          { id: 'cancel', label: tr("취소"), className: 'btn-secondary' },
           {
-            id: 'confirm', label: '사용', className: 'btn-primary',
+            id: 'confirm', label: tr("사용"), className: 'btn-primary',
             onClick: () => actions.usePass(shop.id, { amount: parseNumber(amountInput.value), note: memoInput.value.trim(), confirmExpired: true })
           }
         ]
@@ -281,17 +282,17 @@ const actions = {
         attrs: { type: 'number', inputmode: 'numeric', min: '1', max: String(remaining), value: '1' }
       });
       showSheet({
-        title: collect ? '도장 찍기' : '횟수 사용',
+        title: collect ? tr("도장 찍기") : tr("횟수 사용"),
         body: h('div', null,
-          h('label', { class: 'field-label', attrs: { for: 'use-count' } }, collect ? '찍을 도장 수' : '사용 횟수'),
+          h('label', { class: 'field-label', attrs: { for: 'use-count' } }, collect ? tr("찍을 도장 수") : tr("사용 횟수")),
           countInput,
-          collect ? h('p', { class: 'field-hint' }, `${remainingLabel(shop)} 남았어요`) : null,
+          collect ? h('p', { class: 'field-hint' }, tr("{0} 남았어요", (remainingLabel(shop)))) : null,
           memoInput
         ),
         actions: [
-          { id: 'cancel', label: '취소', className: 'btn-secondary' },
+          { id: 'cancel', label: tr("취소"), className: 'btn-secondary' },
           {
-            id: 'confirm', label: collect ? '찍기' : '사용', className: 'btn-primary',
+            id: 'confirm', label: collect ? tr("찍기") : tr("사용"), className: 'btn-primary',
             onClick: () => actions.usePass(shop.id, { count: Number(countInput.value) || 1, note: memoInput.value.trim(), confirmExpired: true })
           }
         ]
@@ -304,11 +305,11 @@ const actions = {
       const cur = store.getState().shops.find((s) => s.id === shopId);
       const collect = isCollectMode(cur);
       const ok = await showConfirm({
-        title: collect ? '도장 취소' : '사용 기록 취소',
+        title: collect ? tr("도장 취소") : tr("사용 기록 취소"),
         message: collect
-          ? '마지막으로 찍은 도장을 취소할까요?'
-          : '마지막 이용권 사용 기록을 취소하고 사용량을 되돌릴까요?',
-        confirmLabel: '되돌리기'
+          ? tr("마지막으로 찍은 도장을 취소할까요?")
+          : tr("마지막 이용권 사용 기록을 취소하고 사용량을 되돌릴까요?"),
+        confirmLabel: tr("되돌리기")
       });
       if (!ok) return;
     }
@@ -332,7 +333,7 @@ const actions = {
         return;
       }
       await refresh();
-      showToast(isCollectMode(shop) ? '마지막 도장을 취소했어요' : '마지막 사용 기록을 취소했어요');
+      showToast(isCollectMode(shop) ? tr("마지막 도장을 취소했어요") : tr("마지막 사용 기록을 취소했어요"));
     });
   },
 
@@ -341,13 +342,13 @@ const actions = {
   offerNewBoard(shop, { justCompleted = false } = {}) {
     if (!shop || !isCollectMode(shop)) return;
     showSheet({
-      title: justCompleted ? '🎉 도장판 완성!' : '도장판이 다 찼어요',
+      title: justCompleted ? tr("🎉 도장판 완성!") : tr("도장판이 다 찼어요"),
       body: h('p', null, justCompleted
-        ? `도장 ${passTotal(shop)}개를 다 모았어요. 가게에서 보상을 받은 뒤 새 판을 시작하세요.`
-        : '가게에서 보상을 받으셨다면 새 판을 시작하세요. 지금까지 찍은 도장 기록은 사용 내역에 남아요.'),
+        ? tr("도장 {0}개를 다 모았어요. 가게에서 보상을 받은 뒤 새 판을 시작하세요.", (passTotal(shop)))
+        : tr("가게에서 보상을 받으셨다면 새 판을 시작하세요. 지금까지 찍은 도장 기록은 사용 내역에 남아요.")),
       actions: [
-        { id: 'later', label: '나중에', className: 'btn-secondary' },
-        { id: 'new', label: '새 판 시작', className: 'btn-primary', onClick: () => actions.startNewBoard(shop.id) }
+        { id: 'later', label: tr("나중에"), className: 'btn-secondary' },
+        { id: 'new', label: tr("새 판 시작"), className: 'btn-primary', onClick: () => actions.startNewBoard(shop.id) }
       ]
     });
   },
@@ -374,15 +375,15 @@ const actions = {
       await refresh();
       resyncServices();
       haptic('light');
-      showToast('새 도장판을 시작했어요', 'success', {
-        actionLabel: '되돌리기',
+      showToast(tr("새 도장판을 시작했어요"), 'success', {
+        actionLabel: tr("되돌리기"),
         onAction: () => passLock.run(shopId, async () => {
           const cur = store.getState().shops.find((s) => s.id === shopId);
           if (!cur) return;
           // A stamp already on the new board would be orphaned by putting the
           // full board back, so only an untouched new board can be undone.
           if ((cur.usedCoupons || 0) > 0) {
-            showToast('새 판에 도장을 찍어서 되돌릴 수 없어요', 'danger');
+            showToast(tr("새 판에 도장을 찍어서 되돌릴 수 없어요"), 'danger');
             return;
           }
           try {
@@ -393,7 +394,7 @@ const actions = {
           }
           await refresh();
           resyncServices();
-          showToast('완성한 도장판으로 되돌렸어요');
+          showToast(tr("완성한 도장판으로 되돌렸어요"));
         })
       });
     });
@@ -435,8 +436,8 @@ const actions = {
       await Shops.update({ ...cur, archivedAt: Date.now() });
       await refresh();
       resyncServices();
-      showToast('보관함으로 옮겼어요', 'success', {
-        actionLabel: '되돌리기', onAction: () => actions.unarchiveShop(id)
+      showToast(tr("보관함으로 옮겼어요"), 'success', {
+        actionLabel: tr("되돌리기"), onAction: () => actions.unarchiveShop(id)
       });
       return true;
     } catch (err) {
@@ -452,7 +453,7 @@ const actions = {
       await Shops.update({ ...cur, archivedAt: null });
       await refresh();
       resyncServices();
-      showToast('보관함에서 꺼냈어요');
+      showToast(tr("보관함에서 꺼냈어요"));
       return true;
     } catch (err) {
       reportSaveError(err);
@@ -474,16 +475,16 @@ const actions = {
       settings: { ...s.settings, remindersOffered: true, ...(deferBackup ? { backupHintDeferred: true } : {}) }
     }));
     showSheet({
-      title: '만료 알림을 켤까요?',
-      body: h('p', null, '만료일이 다가오면 D-7 / D-3 / D-1에 미리 알려드려요. 설정에서 언제든 끌 수 있어요.'),
+      title: tr("만료 알림을 켤까요?"),
+      body: h('p', null, tr("만료일이 다가오면 D-7 / D-3 / D-1에 미리 알려드려요. 설정에서 언제든 끌 수 있어요.")),
       actions: [
-        { id: 'later', label: '나중에', className: 'btn-secondary' },
+        { id: 'later', label: tr("나중에"), className: 'btn-secondary' },
         {
-          id: 'on', label: '알림 켜기', className: 'btn-primary',
+          id: 'on', label: tr("알림 켜기"), className: 'btn-primary',
           onClick: async () => {
             const { permission } = await actions.toggleReminders(true);
-            if (permission === 'granted') showToast('만료 알림이 켜졌어요', 'success');
-            else showToast('알림 권한이 차단돼 앱 실행 중에만 알려드려요', 'danger');
+            if (permission === 'granted') showToast(tr("만료 알림이 켜졌어요"), 'success');
+            else showToast(tr("알림 권한이 차단돼 앱 실행 중에만 알려드려요"), 'danger');
           }
         }
       ]
@@ -498,11 +499,11 @@ const actions = {
     await Settings.set('backupHinted', true);
     store.setState((s) => ({ settings: { ...s.settings, backupHinted: true } }));
     showSheet({
-      title: '백업을 권장해요',
-      body: h('p', null, '이용권 정보는 이 기기에만 저장돼요. 기기를 바꾸거나 앱을 지우면 사라질 수 있어요. JSON으로 백업해 두면 안전해요.'),
+      title: tr("백업을 권장해요"),
+      body: h('p', null, tr("이용권 정보는 이 기기에만 저장돼요. 기기를 바꾸거나 앱을 지우면 사라질 수 있어요. JSON으로 백업해 두면 안전해요.")),
       actions: [
-        { id: 'later', label: '나중에', className: 'btn-secondary' },
-        { id: 'backup', label: '지금 백업', className: 'btn-primary', onClick: () => actions.exportData() }
+        { id: 'later', label: tr("나중에"), className: 'btn-secondary' },
+        { id: 'backup', label: tr("지금 백업"), className: 'btn-primary', onClick: () => actions.exportData() }
       ]
     });
   },
@@ -556,7 +557,7 @@ const actions = {
     await backupExport();
     await Settings.set('lastBackupAt', Date.now());
     await refresh();
-    showToast('백업 파일이 다운로드되었어요');
+    showToast(tr("백업 파일이 다운로드되었어요"));
   },
 
   // Snooze the home backup banner (domain.needsBackupNudge honors the timestamp).
@@ -584,8 +585,8 @@ const actions = {
 
   async requestInstall() {
     const o = await promptInstall();
-    if (o === 'accepted') showToast('앱이 설치되었어요');
-    else if (o === 'unavailable') showToast('이미 설치되었거나 설치를 지원하지 않아요');
+    if (o === 'accepted') showToast(tr("앱이 설치되었어요"));
+    else if (o === 'unavailable') showToast(tr("이미 설치되었거나 설치를 지원하지 않아요"));
     return o;
   },
 
@@ -634,10 +635,10 @@ function renderBootError(err) {
     attrs: { role: 'alert' },
     style: 'max-width:340px;margin:auto;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center'
   },
-    h('h1', { style: 'font-size:1.3rem;font-weight:800' }, '앱을 시작할 수 없어요'),
+    h('h1', { style: 'font-size:1.3rem;font-weight:800' }, tr("앱을 시작할 수 없어요")),
     h('p', { style: 'color:var(--text-secondary);line-height:1.6;font-size:0.95rem' },
-      '저장소(브라우저 데이터)를 열 수 없어요. 시크릿/프라이빗 모드이거나 브라우저 저장소가 차단되어 있으면 이용이 어려울 수 있어요.'),
-    h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => location.reload() } }, '다시 시도')
+      tr("저장소(브라우저 데이터)를 열 수 없어요. 시크릿/프라이빗 모드이거나 브라우저 저장소가 차단되어 있으면 이용이 어려울 수 있어요.")),
+    h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => location.reload() } }, tr("다시 시도"))
   );
   clear(app).appendChild(h('div', { style: 'height:100%;display:flex;padding:24px;overflow:auto' }, card));
 }
@@ -652,6 +653,7 @@ window.addEventListener('unhandledrejection', (e) => { console.error('unhandledr
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 async function init() {
+  localizeShell();
   // Clear Android window flags left behind if a prior renderer was restarted.
   await resetPresentation();
   document.body.dataset.theme = 'light';
@@ -659,6 +661,10 @@ async function init() {
   initInstallPrompt();
 
   await refresh();
+  const notificationLanguage = appLanguage();
+  if (store.getState().settings.notificationLanguage !== notificationLanguage) {
+    Settings.set('notificationLanguage', notificationLanguage).catch(() => {});
+  }
   store.setState({ ready: true });
   resyncServices();
 
@@ -690,7 +696,7 @@ async function init() {
   if (shortcut) window.history.replaceState(null, '', window.location.pathname);
 
   const onboarded = store.getState().settings.onboarded;
-  if (onboarded && (shortcut === 'add' || shortcut === 'map')) {
+  if (onboarded && (shortcut === 'add' || shortcut === 'map' || shortcut === 'settings')) {
     router.navigate('home');       // sensible back target under the shortcut view
     router.navigate(shortcut);
   } else {

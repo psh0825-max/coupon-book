@@ -1,3 +1,4 @@
+import { appLanguage, t as tr } from '../core/i18n.js';
 // services/format.js — presentation formatting only (no business rules).
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -15,10 +16,10 @@ export function formatRelative(ts) {
   if (Number.isNaN(t)) return '';
   const diff = Date.now() - t;
   const MIN = 60000, HOUR = 3600000, DAY = 86400000;
-  if (diff < MIN) return '방금';
-  if (diff < HOUR) return `${Math.floor(diff / MIN)}분 전`;
-  if (diff < DAY) return `${Math.floor(diff / HOUR)}시간 전`;
-  if (diff < 7 * DAY) return `${Math.floor(diff / DAY)}일 전`;
+  if (diff < MIN) return tr("방금");
+  if (diff < HOUR) return tr("{0}분 전", (Math.floor(diff / MIN)));
+  if (diff < DAY) return tr("{0}시간 전", (Math.floor(diff / HOUR)));
+  if (diff < 7 * DAY) return tr("{0}일 전", (Math.floor(diff / DAY)));
   return formatDate(ts).split(' ')[0];
 }
 
@@ -33,8 +34,8 @@ export function formatDistance(m) {
 /** integer KRW with thousands separators + '원', e.g. 850000 -> '850,000원' */
 export function formatWon(n) {
   const v = Number(n);
-  if (!Number.isFinite(v)) return '0원';
-  return `${Math.round(v).toLocaleString('en-US')}원`;
+  const amount = Math.round(Number.isFinite(v) ? v : 0).toLocaleString('en-US');
+  return appLanguage() === 'ko' ? `${amount}원` : `₩${amount}`;
 }
 
 /** digits-only -> grouped, e.g. '1000000' -> '1,000,000', '' -> '' */

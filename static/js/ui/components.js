@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // ui/components.js — reusable presentational pieces. Return DOM Nodes built via h.
 // All status/expiry/progress math comes from domain.js (never recomputed here).
 
@@ -27,7 +28,7 @@ export function stampBoard(total, used, { collect = false } = {}) {
     }
     return h('div', {
       class: 'stamp-board collect',
-      attrs: { role: 'img', 'aria-label': `도장 ${filled}/${total}` }
+      attrs: { role: 'img', 'aria-label': tr("도장 {0}/{1}", (filled), (total)) }
     }, stamps);
   }
   const remaining = Math.max(0, total - used);
@@ -46,19 +47,19 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
   const percent = progressPercent(shop);
   const complete = isCompleted(shop) || remainingValue(shop) <= 0;
   const collect = isCollectMode(shop);
-  const categoryText = shop.category + (shop.expiresAt ? ` · ${formatExpiry(shop.expiresAt)}` : '');
+  const categoryText = tr(shop.category) + (shop.expiresAt ? ` · ${formatExpiry(shop.expiresAt)}` : '');
 
   // A full collect board is not a dead end like a spent pass: the button turns
   // into the way to start the next board (the caller confirms first).
-  const quickLabel = collect ? (complete ? '새 판' : '도장 찍기') : '사용';
+  const quickLabel = collect ? (complete ? tr("새 판") : tr("도장 찍기")) : tr("사용");
   const quickDisabled = complete && !collect;
   const quickUse = isArchived(shop) ? null : h('button', {
     class: 'card-quick-use',
     attrs: {
       type: 'button', 'data-action': 'quick-use',
       'aria-label': collect
-        ? `${shop.name} ${complete ? '새 도장판 시작' : '도장 찍기'}`
-        : `${shop.name} 이용권 사용`,
+        ? `${shop.name} ${complete ? tr("새 도장판 시작") : tr("도장 찍기")}`
+        : tr("{0} 이용권 사용", (shop.name)),
       disabled: quickDisabled ? '' : null
     },
     on: {
@@ -69,21 +70,21 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
   // A coupon's worth is the benefit it states; the remaining count already sits in
   // the progress row right above, so repeating it here would waste the line.
   const hintText = collect
-    ? (complete ? '도장판 완성! 가게에서 보상을 받으세요' : `${remainingValue(shop)}개 더 모으면 완성`)
+    ? (complete ? tr("도장판 완성! 가게에서 보상을 받으세요") : tr("{0}개 더 모으면 완성", (remainingValue(shop))))
     : complete
-      ? '모두 사용했어요'
+      ? tr("모두 사용했어요")
       : (isCouponKind(shop) && shop.benefit)
         ? shop.benefit
         : isAmountKind(shop)
-          ? `${remainingLabel(shop)} 남아있어요`
-          : `${remainingValue(shop)}회 남았어요`;
+          ? tr("{0} 남아있어요", (remainingLabel(shop)))
+          : tr("{0}회 남았어요", (remainingValue(shop)));
 
   // Stamp board only makes sense for a count pass with a small, countable total.
   const showStamps = isCountKind(shop) && passTotal(shop) <= 30;
 
   const cardMain = h('button', {
     class: 'card-main',
-    attrs: { type: 'button', 'aria-label': `${shop.name} ${status.label}, 상세 보기` },
+    attrs: { type: 'button', 'aria-label': tr("{0} {1}, 상세 보기", (shop.name), (status.label)) },
     on: { click: () => onOpen?.(shop) }
   },
     h('div', { class: 'card-header' },
@@ -98,9 +99,9 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
     ),
     h('div', { class: 'card-body' },
       h('div', { class: 'card-progress-meta' },
-        h('span', null, collect ? `도장 ${passUsed(shop)}/${passTotal(shop)}` : `${percent}%`),
+        h('span', null, collect ? tr("도장 {0}/{1}", (passUsed(shop)), (passTotal(shop))) : `${percent}%`),
         // The hint below already says how many stamps are left on a collect board.
-        h('span', null, collect ? `${percent}%` : `${remainingLabel(shop)} 남음`)
+        h('span', null, collect ? `${percent}%` : tr("{0} 남음", (remainingLabel(shop))))
       ),
       h('div', { class: 'progress-bar' },
         h('div', {
@@ -122,8 +123,8 @@ export function shopCard(shop, { onOpen, onQuickUse } = {}) {
       h('span', null, shop.phone
         ? shop.phone
         : collect
-          ? (shop.completedBoards ? `완성한 판 ${shop.completedBoards}개` : '적립형 도장판')
-          : `${usedLabel(shop)} / ${totalLabel(shop)} 사용`),
+          ? (shop.completedBoards ? tr("완성한 판 {0}개", (shop.completedBoards)) : tr("적립형 도장판"))
+          : tr("{0} / {1} 사용", (usedLabel(shop)), (totalLabel(shop)))),
       quickUse
     )
   );
@@ -145,8 +146,8 @@ export function summaryCard(value, label, accent) {
  *  collect board is recorded like a use (count) but reads as a stamp. */
 export function timelineItem(log, shopName, { collect = false } = {}) {
   const deduct = log.amount != null
-    ? `${formatWon(log.amount)} 사용`
-    : log.count != null ? (collect ? `도장 ${log.count}개` : `${log.count}회 사용`) : null;
+    ? tr("{0} 사용", (formatWon(log.amount)))
+    : log.count != null ? (collect ? tr("도장 {0}개", (log.count)) : tr("{0}회 사용", (log.count))) : null;
   return h('div', { class: 'timeline-item success' },
     h('div', { class: 'timeline-dot' }),
     h('div', { class: 'timeline-time' }, `${formatDate(log.usedAt)} · ${formatRelative(log.usedAt)}`),
@@ -167,7 +168,7 @@ export function nearbyCard(shop, distance, onClick) {
       h('h4', null, shop.name),
       h('p', null, `${shop.address || ''} · ${Math.round(distance)}m`)
     ),
-    h('div', { class: 'badge badge-accent' }, `${remainingLabel(shop)} 남음`)
+    h('div', { class: 'badge badge-accent' }, tr("{0} 남음", (remainingLabel(shop))))
   );
 }
 
@@ -176,13 +177,13 @@ export function adBanner({ slotId } = {}) {
   return h('div', {
     class: 'ad-banner',
     id: slotId || null,
-    attrs: { role: 'complementary', 'aria-label': '광고' }
+    attrs: { role: 'complementary', 'aria-label': tr("광고") }
   },
     h('span', { class: 'ad-badge' }, 'AD'),
     h('div', { class: 'ad-ico' }, icon('megaphone')),
     h('div', { class: 'ad-body' },
-      h('h4', null, '광고 영역'),
-      h('p', null, '무료 버전을 지원하는 광고가 표시됩니다')
+      h('h4', null, tr("광고 영역")),
+      h('p', null, tr("무료 버전을 지원하는 광고가 표시됩니다"))
     ),
     icon('chevron-right', { class: 'ad-chevron' })
   );
@@ -204,7 +205,7 @@ export function skinSelector(currentSkin, onSelect) {
       }
     },
       h('div', { class: 'swatch', style: { background: skin.color } }),
-      h('div', { class: 'name' }, skin.name),
+      h('div', { class: 'name' }, tr(skin.name)),
       h('div', { class: 'desc' }, skin.desc)
     );
     grid.appendChild(option);

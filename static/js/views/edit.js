@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // views/edit.js — add/edit shop form with live stamp preview, set-current-location,
 // skin selector, and delete (edit mode). All inputs have associated labels.
 
@@ -17,7 +18,7 @@ export function render(ctx, params = {}) {
   const isEdit = !!params.id;
   const shop = isEdit ? (st.shops || []).find((s) => s.id === params.id) : null;
   if (isEdit && !shop) {
-    showToast('이용권을 찾을 수 없어요', 'danger');
+    showToast(tr("이용권을 찾을 수 없어요"), 'danger');
     router.navigate('home');
     return h('div');
   }
@@ -38,17 +39,17 @@ export function render(ctx, params = {}) {
   if (!isEdit && !params.prefill) {
     const TEMPLATES = [
       // A cafe card is collected, not spent: it starts empty and fills up.
-      { label: '☕ 카페 도장판 10칸', prefill: { category: '카페', kind: 'count', mode: 'collect', totalCoupons: 10 } },
-      { label: '💆 마사지 10회권', prefill: { category: '마사지', kind: 'count', totalCoupons: 10 } },
-      { label: '🧘 찜질방 회수권', prefill: { category: '찜질방', kind: 'count', totalCoupons: 10 } },
-      { label: '💳 금액권 10만원', prefill: { category: '기타', kind: 'amount', totalAmount: 100000 } },
+      { label: tr("☕ 카페 도장판 10칸"), prefill: { category: '카페', kind: 'count', mode: 'collect', totalCoupons: 10 } },
+      { label: tr("💆 마사지 10회권"), prefill: { category: '마사지', kind: 'count', totalCoupons: 10 } },
+      { label: tr("🧘 찜질방 회수권"), prefill: { category: '찜질방', kind: 'count', totalCoupons: 10 } },
+      { label: tr("💳 금액권 10만원"), prefill: { category: '기타', kind: 'amount', totalAmount: 100000 } },
       // The app is named 쿠폰북 but had no one-tap path to a coupon: you had to pick
       // 횟수권 and change the count to 1 every time.
-      { label: '🎟️ 모바일 쿠폰 · 기프티콘', prefill: { category: '기타', kind: 'coupon', totalCoupons: 1 } }
+      { label: tr("🎟️ 모바일 쿠폰 · 기프티콘"), prefill: { category: '기타', kind: 'coupon', totalCoupons: 1 } }
     ];
     root.appendChild(h('div', { class: 'form-group' },
-      h('label', null, '빠른 시작'),
-      h('div', { class: 'use-chips', attrs: { role: 'group', 'aria-label': '빠른 시작 템플릿' } },
+      h('label', null, tr("빠른 시작")),
+      h('div', { class: 'use-chips', attrs: { role: 'group', 'aria-label': tr("빠른 시작 템플릿") } },
         TEMPLATES.map((t) => h('button', {
           class: 'chip', attrs: { type: 'button' },
           on: { click: () => router.navigate('add', { prefill: t.prefill }) }
@@ -63,7 +64,7 @@ export function render(ctx, params = {}) {
   // ── 매장 검색 (Kakao keyword search → auto-fill). Only when configured;
   // manual entry always works even if search is unavailable. ──
   if (placesConfigured()) {
-    const searchInput = h('input', { id: 'f-place-search', attrs: { type: 'search', name: 'placeSearch', autocomplete: 'off', placeholder: '예: 마사지, 스타벅스 — 내 주변 검색' } });
+    const searchInput = h('input', { id: 'f-place-search', attrs: { type: 'search', name: 'placeSearch', autocomplete: 'off', placeholder: tr("예: 마사지, 스타벅스 — 내 주변 검색") } });
     const results = h('div', { class: 'place-results', hidden: true });
 
     const showMessage = (cls, text) => {
@@ -75,7 +76,7 @@ export function render(ctx, params = {}) {
 
     const renderResults = (places) => {
       clear(results);
-      if (!places.length) { showMessage('place-empty', '검색 결과가 없어요'); return; }
+      if (!places.length) { showMessage('place-empty', tr("검색 결과가 없어요")); return; }
       for (const p of places) {
         const top = h('div', null,
           h('span', { class: 'pname' }, p.name),
@@ -100,7 +101,7 @@ export function render(ctx, params = {}) {
           more.open = true;
           hideResults();
           searchInput.value = '';
-          showToast('매장 정보를 불러왔어요');
+          showToast(tr("매장 정보를 불러왔어요"));
         });
         results.appendChild(row);
       }
@@ -110,7 +111,7 @@ export function render(ctx, params = {}) {
     let latestQuery = '';
     let debounceTimer = null;
     const runSearch = async (query) => {
-      showMessage('place-empty', '검색 중…');
+      showMessage('place-empty', tr("검색 중…"));
       let pos;
       try { pos = await getPositionIfGranted(); } catch (e) { pos = undefined; }
       try {
@@ -119,7 +120,7 @@ export function render(ctx, params = {}) {
         renderResults(places);
       } catch (e) {
         if (query !== latestQuery) return;
-        showMessage('place-empty', '검색을 사용할 수 없어요 (네트워크/도메인 확인)');
+        showMessage('place-empty', tr("검색을 사용할 수 없어요 (네트워크/도메인 확인)"));
       }
     };
     searchInput.addEventListener('input', () => {
@@ -131,16 +132,16 @@ export function render(ctx, params = {}) {
     });
 
     form.appendChild(h('div', { class: 'form-group place-search' },
-      h('label', { attrs: { for: 'f-place-search' } }, '매장 검색'),
+      h('label', { attrs: { for: 'f-place-search' } }, tr("매장 검색")),
       searchInput,
-      h('p', { class: 'place-hint' }, '이름으로 검색하면 주소·전화·위치를 자동으로 채워요. (내 위치 기준 가까운 순)'),
+      h('p', { class: 'place-hint' }, tr("이름으로 검색하면 주소·전화·위치를 자동으로 채워요. (내 위치 기준 가까운 순)")),
       results
     ));
   }
 
   // name
-  const nameInput = h('input', { id: 'f-name', attrs: { type: 'text', name: 'name', required: '', placeholder: '예: 안양 스타 마사지', value: hasInit ? (src.name || '') : '' } });
-  form.appendChild(field('매장 이름', 'f-name', nameInput));
+  const nameInput = h('input', { id: 'f-name', attrs: { type: 'text', name: 'name', required: '', placeholder: tr("예: 안양 스타 마사지"), value: hasInit ? (src.name || '') : '' } });
+  form.appendChild(field(tr("매장 이름"), 'f-name', nameInput));
 
   // category (shared across kinds)
   const catSelect = h('select', { id: 'f-category', attrs: { name: 'category' } },
@@ -150,7 +151,7 @@ export function render(ctx, params = {}) {
       attrs: { value: c, selected: (hasInit ? src.category === c : c === '기타') ? '' : null }
     }, c))
   );
-  form.appendChild(field('카테고리', 'f-category', catSelect));
+  form.appendChild(field(tr("카테고리"), 'f-category', catSelect));
 
   // ── pass kind: 도장판 (count, collecting) / 횟수권 (count) / 금액권 / 쿠폰 ──
   // 도장판 is a count pass read the other way round (mode 'collect'): the same
@@ -158,13 +159,13 @@ export function render(ctx, params = {}) {
   let kind = src && (src.kind === 'amount' || src.kind === 'coupon') ? src.kind : 'count';
   let collect = kind === 'count' && !!src && src.mode === 'collect';
   const segButton = (label) => h('button', { attrs: { type: 'button', 'aria-pressed': 'false' } }, label);
-  const segStamp = segButton('도장판');
-  const segCount = segButton('횟수권');
-  const segAmount = segButton('금액권');
-  const segCoupon = segButton('쿠폰');
-  const seg = h('div', { class: 'seg', attrs: { role: 'group', 'aria-label': '이용권 종류' } }, segStamp, segCount, segAmount, segCoupon);
+  const segStamp = segButton(tr("도장판"));
+  const segCount = segButton(tr("횟수권"));
+  const segAmount = segButton(tr("금액권"));
+  const segCoupon = segButton(tr("쿠폰"));
+  const seg = h('div', { class: 'seg', attrs: { role: 'group', 'aria-label': tr("이용권 종류") } }, segStamp, segCount, segAmount, segCoupon);
   form.appendChild(h('div', { class: 'form-group' },
-    h('label', null, '이용권 종류'),
+    h('label', null, tr("이용권 종류")),
     seg
   ));
 
@@ -173,9 +174,9 @@ export function render(ctx, params = {}) {
   const usedInput = h('input', { id: 'f-used', attrs: { type: 'number', name: 'usedCoupons', min: '0', max: '1000', value: isEdit ? String(shop.usedCoupons || 0) : '0' } });
   const counter = h('span', { class: 'stamp-counter', id: 'f-stamp-counter' }, '0 / 10');
   const previewBoard = h('div', { class: 'stamp-board stamp-preview', id: 'f-stamp-preview' });
-  const totalLabelEl = h('label', { attrs: { for: 'f-total' } }, '총 횟수(회)');
-  const usedLabelEl = h('label', { attrs: { for: 'f-used' }, style: { margin: '0' } }, '현재 사용 횟수');
-  const usedHint = h('p', { class: 'field-hint' }, '이미 사용한 횟수가 있다면 현재 사용 횟수를 입력하세요.');
+  const totalLabelEl = h('label', { attrs: { for: 'f-total' } }, tr("총 횟수(회)"));
+  const usedLabelEl = h('label', { attrs: { for: 'f-used' }, style: { margin: '0' } }, tr("현재 사용 횟수"));
+  const usedHint = h('p', { class: 'field-hint' }, tr("이미 사용한 횟수가 있다면 현재 사용 횟수를 입력하세요."));
   const countGroup = h('div', { id: 'count-fields' },
     h('div', { class: 'form-group' }, totalLabelEl, totalInput),
     h('div', { class: 'form-group' },
@@ -188,12 +189,12 @@ export function render(ctx, params = {}) {
   form.appendChild(countGroup);
 
   // ── AMOUNT fields: 총 금액 + 현재 사용 금액 + live 남은 금액 preview ──
-  const totalAmountInput = h('input', { id: 'f-total-amount', attrs: { type: 'text', name: 'totalAmount', inputmode: 'numeric', placeholder: '예: 1,000,000', value: hasInit && src.totalAmount ? groupDigits(src.totalAmount) : '' } });
+  const totalAmountInput = h('input', { id: 'f-total-amount', attrs: { type: 'text', name: 'totalAmount', inputmode: 'numeric', placeholder: tr("예: 1,000,000"), value: hasInit && src.totalAmount ? groupDigits(src.totalAmount) : '' } });
   const usedAmountInput = h('input', { id: 'f-used-amount', attrs: { type: 'text', name: 'usedAmount', inputmode: 'numeric', value: isEdit ? groupDigits(shop.usedAmount || 0) : '0' } });
-  const amountPreview = h('p', { class: 'amount-preview', id: 'f-amount-preview' }, '남은 금액: 0원');
+  const amountPreview = h('p', { class: 'amount-preview', id: 'f-amount-preview' }, tr("남은 금액: 0원"));
   const amountGroup = h('div', { id: 'amount-fields' },
-    field('총 금액(원)', 'f-total-amount', totalAmountInput),
-    field('현재 사용 금액(원)', 'f-used-amount', usedAmountInput),
+    field(tr("총 금액(원)"), 'f-total-amount', totalAmountInput),
+    field(tr("현재 사용 금액(원)"), 'f-used-amount', usedAmountInput),
     amountPreview
   );
   form.appendChild(amountGroup);
@@ -204,7 +205,7 @@ export function render(ctx, params = {}) {
   const benefitInput = h('input', {
     id: 'f-benefit',
     attrs: { type: 'text', name: 'benefit', maxlength: '60',
-             placeholder: '예: 10% 할인, 아메리카노 1잔, 3,000원 할인',
+             placeholder: tr("예: 10% 할인, 아메리카노 1잔, 3,000원 할인"),
              value: hasInit ? (src.benefit || '') : '' }
   });
   const couponTotalInput = h('input', {
@@ -214,11 +215,11 @@ export function render(ctx, params = {}) {
   });
   const couponGroup = h('div', { id: 'coupon-fields' },
     h('div', { class: 'form-group' },
-      h('label', { attrs: { for: 'f-benefit' } }, '혜택'),
+      h('label', { attrs: { for: 'f-benefit' } }, tr("혜택")),
       benefitInput,
-      h('p', { class: 'field-hint' }, '쿠폰을 쓰면 무엇을 받는지 적어 두세요. 목록과 상세에 그대로 표시돼요.')
+      h('p', { class: 'field-hint' }, tr("쿠폰을 쓰면 무엇을 받는지 적어 두세요. 목록과 상세에 그대로 표시돼요."))
     ),
-    field('매수', 'f-coupon-total', couponTotalInput)
+    field(tr("매수"), 'f-coupon-total', couponTotalInput)
   );
   form.appendChild(couponGroup);
 
@@ -235,7 +236,7 @@ export function render(ctx, params = {}) {
   function renderAmountPreview() {
     const total = parseNumber(totalAmountInput.value);
     const used = Math.min(parseNumber(usedAmountInput.value), total);
-    amountPreview.textContent = `남은 금액: ${formatWon(total - used)}`;
+    amountPreview.textContent = tr("남은 금액: {0}", (formatWon(total - used)));
   }
   // Reformat with thousands separators live; caret stays at end (acceptable for numeric entry).
   const liveGroup = (input) => {
@@ -248,7 +249,7 @@ export function render(ctx, params = {}) {
   // Expiry is one of the few fields worth setting for every pass, so it stays
   // with the core setup instead of being hidden with store details.
   const expiresInput = h('input', { id: 'f-expires', attrs: { type: 'date', name: 'expiresAt', value: isEdit ? (shop.expiresAt || '') : '' } });
-  form.appendChild(field('만료일', 'f-expires', expiresInput));
+  form.appendChild(field(tr("만료일"), 'f-expires', expiresInput));
 
   // Everything below is optional and lives one level away from the core setup.
   // Keep the groups themselves stable: applyKind only moves them, never clones
@@ -261,36 +262,36 @@ export function render(ctx, params = {}) {
   const moreContent = h('div', { class: 'form-more-content' });
   const more = h('details', { class: 'form-more', attrs: { open: moreHasValue ? '' : null } },
     h('summary', null,
-      h('span', { class: 'form-more-title' }, '더 입력하기 (선택)'),
+      h('span', { class: 'form-more-title' }, tr("더 입력하기 (선택)")),
       h('span', { class: 'form-more-hint' })
     ),
     moreContent
   );
 
   // address
-  const addressInput = h('input', { id: 'f-address', attrs: { type: 'text', name: 'address', placeholder: '주소를 입력하세요', value: hasInit ? (src.address || '') : '' } });
-  const addressGroup = field('주소', 'f-address', addressInput);
+  const addressInput = h('input', { id: 'f-address', attrs: { type: 'text', name: 'address', placeholder: tr("주소를 입력하세요"), value: hasInit ? (src.address || '') : '' } });
+  const addressGroup = field(tr("주소"), 'f-address', addressInput);
 
   // phone
-  const phoneInput = h('input', { id: 'f-phone', attrs: { type: 'tel', name: 'phone', placeholder: '예: 031-000-0000', value: hasInit ? (src.phone || '') : '' } });
-  const phoneGroup = field('전화번호', 'f-phone', phoneInput);
+  const phoneInput = h('input', { id: 'f-phone', attrs: { type: 'tel', name: 'phone', placeholder: tr("예: 031-000-0000"), value: hasInit ? (src.phone || '') : '' } });
+  const phoneGroup = field(tr("전화번호"), 'f-phone', phoneInput);
 
   // location
-  const latInput = h('input', { id: 'f-lat', attrs: { type: 'text', name: 'lat', placeholder: '위도', readonly: '', 'aria-label': '위도', value: hasInit && src.lat != null ? String(src.lat) : '' } });
-  const lngInput = h('input', { id: 'f-lng', attrs: { type: 'text', name: 'lng', placeholder: '경도', readonly: '', 'aria-label': '경도', value: hasInit && src.lng != null ? String(src.lng) : '' } });
-  const locBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, style: { 'margin-top': '8px' } }, '현재 위치로 설정');
+  const latInput = h('input', { id: 'f-lat', attrs: { type: 'text', name: 'lat', placeholder: tr("위도"), readonly: '', 'aria-label': tr("위도"), value: hasInit && src.lat != null ? String(src.lat) : '' } });
+  const lngInput = h('input', { id: 'f-lng', attrs: { type: 'text', name: 'lng', placeholder: tr("경도"), readonly: '', 'aria-label': tr("경도"), value: hasInit && src.lng != null ? String(src.lng) : '' } });
+  const locBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, style: { 'margin-top': '8px' } }, tr("현재 위치로 설정"));
   locBtn.addEventListener('click', async () => {
     try {
       const pos = await getCurrentPosition();
       latInput.value = pos.lat.toFixed(6);
       lngInput.value = pos.lng.toFixed(6);
-      showToast('현재 위치가 설정되었어요');
+      showToast(tr("현재 위치가 설정되었어요"));
     } catch (e) {
-      showToast('위치 정보를 가져올 수 없어요', 'danger');
+      showToast(tr("위치 정보를 가져올 수 없어요"), 'danger');
     }
   });
   const locationGroup = h('div', { class: 'form-group' },
-    h('label', { attrs: { for: 'f-lat' } }, '위치'),
+    h('label', { attrs: { for: 'f-lat' } }, tr("위치")),
     h('div', { class: 'form-row' }, latInput, lngInput),
     locBtn
   );
@@ -309,21 +310,21 @@ export function render(ctx, params = {}) {
     mountSkin(currentSkin);
   });
   const skinGroup = h('div', { class: 'form-group' },
-    h('label', null, '스킨 테마'),
+    h('label', null, tr("스킨 테마")),
     skinContainer
   );
 
   // memo
-  const memoInput = h('textarea', { id: 'f-memo', attrs: { name: 'memo', rows: '3', placeholder: '예: 평일 오전 할인, 주차 가능' } }, isEdit ? (shop.memo || '') : '');
-  const memoGroup = field('메모', 'f-memo', memoInput);
+  const memoInput = h('textarea', { id: 'f-memo', attrs: { name: 'memo', rows: '3', placeholder: tr("예: 평일 오전 할인, 주차 가능") } }, isEdit ? (shop.memo || '') : '');
+  const memoGroup = field(tr("메모"), 'f-memo', memoInput);
 
   // ── gifticon image (optional) ──
   // Event gifticons arrive as a screenshot; keeping it here means one place to
   // look at the counter. Attaching also tries to read the barcode out of the
   // image so the detail view can render a sharp one instead of the screenshot.
   let imageData = hasInit ? (src.image || '') : '';
-  const imgPreview = h('img', { class: 'gifticon-thumb', attrs: { alt: '첨부한 기프티콘 미리보기' } });
-  const imgClear = h('button', { class: 'btn btn-ghost btn-sm', attrs: { type: 'button' } }, '이미지 제거');
+  const imgPreview = h('img', { class: 'gifticon-thumb', attrs: { alt: tr("첨부한 기프티콘 미리보기") } });
+  const imgClear = h('button', { class: 'btn btn-ghost btn-sm', attrs: { type: 'button' } }, tr("이미지 제거"));
   const imgWrap = h('div', { class: 'gifticon-preview' }, imgPreview, imgClear);
   const imgInput = h('input', {
     id: 'f-gifticon', class: 'gifticon-input', attrs: { type: 'file', accept: 'image/*' }
@@ -333,10 +334,10 @@ export function render(ctx, params = {}) {
   // A label styled as a button opens the same picker and keeps the app's language.
   const imgPick = h('label', {
     class: 'btn btn-secondary btn-block gifticon-pick', attrs: { for: 'f-gifticon' }
-  }, '이미지 선택');
+  }, tr("이미지 선택"));
   const imgHint = h('p', { class: 'field-hint' }, supportsBarcodeScan()
-    ? '카카오톡 등에서 받은 기프티콘 캡처를 넣어 두세요. 바코드를 읽어 코드도 자동으로 채웁니다.'
-    : '카카오톡 등에서 받은 기프티콘 캡처를 넣어 두세요. 상세 화면에서 크게 볼 수 있어요.');
+    ? tr("카카오톡 등에서 받은 기프티콘 캡처를 넣어 두세요. 바코드를 읽어 코드도 자동으로 채웁니다.")
+    : tr("카카오톡 등에서 받은 기프티콘 캡처를 넣어 두세요. 상세 화면에서 크게 볼 수 있어요."));
 
   const syncImage = () => {
     const has = !!imageData;
@@ -347,7 +348,7 @@ export function render(ctx, params = {}) {
   imgInput.addEventListener('change', async (ev) => {
     const file = ev.target.files && ev.target.files[0];
     if (!file) return;
-    imgHint.textContent = '이미지를 처리하는 중...';
+    imgHint.textContent = tr("이미지를 처리하는 중...");
     try {
       // Android app picks can be content://-backed; decoding the File directly occasionally failed
       // on-device even though its bytes were readable, so decode an in-memory copy instead.
@@ -358,18 +359,18 @@ export function render(ctx, params = {}) {
       // Never overwrite a code the user typed — only fill an empty field.
       if (found && !codeInput.value.trim()) {
         codeInput.value = found;
-        showToast('바코드를 읽어 코드를 채웠어요');
+        showToast(tr("바코드를 읽어 코드를 채웠어요"));
       }
-      imgHint.textContent = '첨부했어요. 상세 화면에서 크게 볼 수 있어요.';
+      imgHint.textContent = tr("첨부했어요. 상세 화면에서 크게 볼 수 있어요.");
     } catch (err) {
       imgInput.value = '';
-      imgHint.textContent = '이미지를 읽을 수 없어요. 다른 파일로 시도해 주세요.';
+      imgHint.textContent = tr("이미지를 읽을 수 없어요. 다른 파일로 시도해 주세요.");
     }
   });
   syncImage();
 
   const imageGroup = h('div', { class: 'form-group' },
-    h('label', { attrs: { for: 'f-gifticon' } }, '기프티콘 이미지'),
+    h('label', { attrs: { for: 'f-gifticon' } }, tr("기프티콘 이미지")),
     imgInput,
     imgPick,
     imgWrap,
@@ -377,11 +378,11 @@ export function render(ctx, params = {}) {
   );
 
   // coupon code (optional) — shown as scannable barcode/QR on the detail page
-  const codeInput = h('input', { id: 'f-code', attrs: { type: 'text', name: 'code', placeholder: '예: 1234-5678-9012 (선택)', value: hasInit ? (src.code || '') : '' } });
+  const codeInput = h('input', { id: 'f-code', attrs: { type: 'text', name: 'code', placeholder: tr("예: 1234-5678-9012 (선택)"), value: hasInit ? (src.code || '') : '' } });
   const codeGroup = h('div', { class: 'form-group' },
-    h('label', { attrs: { for: 'f-code' } }, '쿠폰/멤버십 코드'),
+    h('label', { attrs: { for: 'f-code' } }, tr("쿠폰/멤버십 코드")),
     codeInput,
-    h('p', { class: 'field-hint' }, '이용권·멤버십 코드를 입력하면 상세 화면에서 바코드·QR로 크게 보여줘요.')
+    h('p', { class: 'field-hint' }, tr("이용권·멤버십 코드를 입력하면 상세 화면에서 바코드·QR로 크게 보여줘요."))
   );
 
   moreContent.append(addressGroup, phoneGroup, locationGroup, memoGroup, codeGroup, imageGroup, skinGroup);
@@ -393,17 +394,17 @@ export function render(ctx, params = {}) {
       el.classList.toggle('active', uiKind === k);
       el.setAttribute('aria-pressed', uiKind === k ? 'true' : 'false');
     });
-    totalLabelEl.textContent = collect ? '도장 칸 수' : '총 횟수(회)';
-    usedLabelEl.textContent = collect ? '지금까지 모은 도장' : '현재 사용 횟수';
+    totalLabelEl.textContent = collect ? tr("도장 칸 수") : tr("총 횟수(회)");
+    usedLabelEl.textContent = collect ? tr("지금까지 모은 도장") : tr("현재 사용 횟수");
     usedHint.textContent = collect
-      ? '이미 찍은 도장이 있다면 개수를 입력하세요. 판을 다 채우면 새 판을 시작할 수 있어요.'
-      : '이미 사용한 횟수가 있다면 현재 사용 횟수를 입력하세요.';
+      ? tr("이미 찍은 도장이 있다면 개수를 입력하세요. 판을 다 채우면 새 판을 시작할 수 있어요.")
+      : tr("이미 사용한 횟수가 있다면 현재 사용 횟수를 입력하세요.");
     countGroup.hidden = kind !== 'count';
     amountGroup.hidden = kind !== 'amount';
     couponGroup.hidden = kind !== 'coupon';
     more.querySelector('.form-more-hint').textContent = kind === 'coupon'
-      ? '주소 · 전화 · 위치 · 메모 · 테마'
-      : '주소 · 전화 · 위치 · 메모 · 코드 · 이미지 · 테마';
+      ? tr("주소 · 전화 · 위치 · 메모 · 테마")
+      : tr("주소 · 전화 · 위치 · 메모 · 코드 · 이미지 · 테마");
     if (kind === 'coupon') {
       form.insertBefore(imageGroup, more);
       form.insertBefore(codeGroup, more);
@@ -420,21 +421,21 @@ export function render(ctx, params = {}) {
   segCoupon.addEventListener('click', () => { kind = 'coupon'; collect = false; applyKind(); });
 
   form.appendChild(h('div', { class: 'form-spacer' }));
-  const submitBtn = h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'submit' } }, isEdit ? '저장하기' : '추가하기');
+  const submitBtn = h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'submit' } }, isEdit ? tr("저장하기") : tr("추가하기"));
   form.appendChild(submitBtn);
 
   if (isEdit) {
-    const delBtn = h('button', { class: 'btn btn-danger btn-block subtle-danger', attrs: { type: 'button' } }, '이용권 삭제');
+    const delBtn = h('button', { class: 'btn btn-danger btn-block subtle-danger', attrs: { type: 'button' } }, tr("이용권 삭제"));
     delBtn.addEventListener('click', async () => {
       const ok = await showConfirm({
-        title: '이용권 삭제',
-        message: '이 이용권과 연결된 사용 내역을 모두 삭제할까요? 이 작업은 되돌릴 수 없어요.',
-        confirmLabel: '삭제',
+        title: tr("이용권 삭제"),
+        message: tr("이 이용권과 연결된 사용 내역을 모두 삭제할까요? 이 작업은 되돌릴 수 없어요."),
+        confirmLabel: tr("삭제"),
         danger: true
       });
       if (!ok) return;
       if (!await actions.deleteShop(shop.id)) return;
-      showToast('삭제되었어요');
+      showToast(tr("삭제되었어요"));
       router.navigate('home');
     });
     form.appendChild(delBtn);
@@ -453,11 +454,11 @@ export function render(ctx, params = {}) {
     if (kind !== 'amount' && usedRaw > total) {
       const stamps = kind === 'count' && collect;
       const proceed = await showConfirm({
-        title: stamps ? '모은 도장 조정' : '사용 횟수 조정',
+        title: stamps ? tr("모은 도장 조정") : tr("사용 횟수 조정"),
         message: stamps
-          ? `도장 칸(${total})이 모은 도장(${usedRaw})보다 적어 모은 도장이 ${total}개로 줄어듭니다. 계속할까요?`
-          : `총 횟수(${total})가 현재 사용(${usedRaw})보다 적어 사용 횟수가 ${total}회로 줄어듭니다. 계속할까요?`,
-        confirmLabel: '계속',
+          ? tr("도장 칸({0})이 모은 도장({1})보다 적어 모은 도장이 {2}개로 줄어듭니다. 계속할까요?", (total), (usedRaw), (total))
+          : tr("총 횟수({0})가 현재 사용({1})보다 적어 사용 횟수가 {2}회로 줄어듭니다. 계속할까요?", (total), (usedRaw), (total)),
+        confirmLabel: tr("계속"),
         danger: true
       });
       if (!proceed) return;
@@ -491,7 +492,7 @@ export function render(ctx, params = {}) {
     try {
       const ok = await actions.saveShop(data, params.id);
       if (!ok) return;
-      showToast(isEdit ? '저장되었어요' : '추가되었어요');
+      showToast(isEdit ? tr("저장되었어요") : tr("추가되었어요"));
       router.navigate('home');
       if (!params.id && !(await actions.maybeOfferReminders(data))) {
         await actions.maybeShowFirstBackupHint();

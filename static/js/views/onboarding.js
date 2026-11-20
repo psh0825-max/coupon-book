@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // views/onboarding.js — accessible 3-step first-run intro. Local step state with
 // re-render of the card subtree. Skippable.
 
@@ -16,7 +17,7 @@ export function render(ctx) {
       class: 'btn btn-ghost onboarding-skip',
       attrs: { type: 'button' },
       on: { click: () => { actions.completeOnboarding(); router.navigate('home'); } }
-    }, '건너뛰기')
+    }, tr("건너뛰기"))
   ));
 
   const card = h('div', { class: 'card onboarding-card' });
@@ -34,16 +35,16 @@ export function render(ctx) {
   function renderFooter() {
     const footer = h('div', { class: 'onboarding-footer' });
     if (step > 0) {
-      footer.appendChild(h('button', { class: 'btn btn-ghost', attrs: { type: 'button' }, on: { click: () => { step -= 1; renderStep(); } } }, '이전'));
+      footer.appendChild(h('button', { class: 'btn btn-ghost', attrs: { type: 'button' }, on: { click: () => { step -= 1; renderStep(); } } }, tr("이전")));
     }
     if (step < 2) {
-      footer.appendChild(h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => { step += 1; renderStep(); } } }, '다음'));
+      footer.appendChild(h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => { step += 1; renderStep(); } } }, tr("다음")));
     } else {
       footer.appendChild(h('button', {
         class: 'btn btn-primary',
         attrs: { type: 'button' },
         on: { click: () => { actions.completeOnboarding(); router.navigate('home'); } }
-      }, '시작하기'));
+      }, tr("시작하기")));
     }
     return footer;
   }
@@ -51,30 +52,30 @@ export function render(ctx) {
   function renderStep() {
     clear(card);
     if (step === 0) {
-      card.appendChild(hero('WELCOME', '쿠폰북에 오신 걸 환영해요',
-        '쿠폰과 이용권을 한곳에서 관리하세요. 모든 정보는 이 기기에만 저장돼요.', 'h1', 'wallet'));
+      card.appendChild(hero('WELCOME', tr("쿠폰북에 오신 걸 환영해요"),
+        tr("쿠폰과 이용권을 한곳에서 관리하세요. 모든 정보는 이 기기에만 저장돼요."), 'h1', 'wallet'));
     } else if (step === 1) {
-      card.appendChild(hero('GET STARTED', '어떻게 시작할까요?',
-        '샘플 업체로 둘러보거나, 바로 내 이용권을 추가할 수 있어요.', 'h2', 'stamps'));
-      const sampleBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' } }, '샘플 보기');
+      card.appendChild(hero('GET STARTED', tr("어떻게 시작할까요?"),
+        tr("샘플 업체로 둘러보거나, 바로 내 이용권을 추가할 수 있어요."), 'h2', 'stamps'));
+      const sampleBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' } }, tr("샘플 보기"));
       sampleBtn.addEventListener('click', async () => { await actions.seedDemo(); step = 2; renderStep(); });
-      const addBtn = h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'button' } }, '직접 추가');
+      const addBtn = h('button', { class: 'btn btn-primary btn-block', attrs: { type: 'button' } }, tr("직접 추가"));
       addBtn.addEventListener('click', () => { actions.completeOnboarding(); router.navigate('add'); });
       card.appendChild(h('div', { class: 'onboarding-choices' }, sampleBtn, addBtn));
     } else {
-      card.appendChild(hero('STAY ON TRACK', '만료 알림을 받아보세요',
-        '이용권 만료가 다가오면 D-7 / D-3 / D-1에 알려드려요. 앱에서는 닫아 둬도 알림이 와요.', 'h2', 'bell'));
+      card.appendChild(hero('STAY ON TRACK', tr("만료 알림을 받아보세요"),
+        tr("이용권 만료가 다가오면 D-7 / D-3 / D-1에 알려드려요. 앱에서는 닫아 둬도 알림이 와요."), 'h2', 'bell'));
       const remindBtn = h('button', {
         class: 'btn btn-secondary btn-block',
         attrs: { type: 'button' }
-      }, '만료 알림 켜기');
+      }, tr("만료 알림 켜기"));
       remindBtn.addEventListener('click', async () => {
         const { permission } = await actions.toggleReminders(true);
         if (permission === 'granted') {
-          remindBtn.textContent = '만료 알림 켜짐';
-          showToast('만료 알림이 켜졌어요');
+          remindBtn.textContent = tr("만료 알림 켜짐");
+          showToast(tr("만료 알림이 켜졌어요"));
         } else {
-          showToast('알림 권한이 차단돼 앱 실행 중에만 알려드려요', 'danger');
+          showToast(tr("알림 권한이 차단돼 앱 실행 중에만 알려드려요"), 'danger');
         }
       });
       card.appendChild(remindBtn);

@@ -1,3 +1,4 @@
+import { languagePreference, setLanguagePreference, t as tr } from '../core/i18n.js';
 // views/settings.js — stats panel; 위치 알림 + 만료 알림 toggles; radius/delay;
 // reminderDays selector; install app; backup/restore; demo; clear-all; about.
 
@@ -42,27 +43,38 @@ export function render(ctx) {
   };
 
   const root = h('div');
+  const language = h('select', { id: 's-language', attrs: { name: 'language' } },
+    ...[['system', tr('기기 언어')], ['ko', '한국어'], ['en', 'English'], ['ja', '日本語']]
+      .map(([value, label]) => h('option', { attrs: { value } }, label)));
+  language.value = languagePreference();
+  language.addEventListener('change', () => {
+    setLanguagePreference(language.value);
+    const url = new URL(window.location.href);
+    url.searchParams.set('action', 'settings');
+    window.location.replace(url);
+  });
+  root.appendChild(card(h('label', { class: 'field-label', attrs: { for: 's-language' } }, tr('언어')), language));
   // ── stats panel ── (appended last: the home screen already carries these
   // numbers, and someone opening settings came to change a setting.)
   const statsPanel = h('section', { class: 'settings-panel' },
     h('div', { class: 'section-title' },
-      h('h3', null, '이용 현황')
+      h('h3', null, tr("이용 현황"))
     ),
     h('div', { class: 'metric-grid' },
-      metric(s.totalShops, '이용권'),
-      metric(`${s.monthUses}회`, '이번 달 사용'),
-      metric(s.expiringCount, '만료 임박'),
-      metric(s.completedCount, '완료')
+      metric(s.totalShops, tr("이용권")),
+      metric(tr("{0}회", (s.monthUses)), tr("이번 달 사용")),
+      metric(s.expiringCount, tr("만료 임박")),
+      metric(s.completedCount, tr("완료"))
     )
   );
 
   // ── (a) 위치 알림 ──
   root.appendChild(card(
     h('div', { class: 'toggle-row' },
-      h('div', { class: 'info' }, h('h4', null, '위치 알림'), h('p', null, '앱을 열어 둔 동안 등록한 가게 근처에 머물면 알려줘요')),
+      h('div', { class: 'info' }, h('h4', null, tr("위치 알림")), h('p', null, tr("앱을 열어 둔 동안 등록한 가게 근처에 머물면 알려줘요"))),
       makeToggle(settings.notifyEnabled, async (next) => {
         await actions.toggleNotify(next);
-        showToast(next ? '알림이 켜졌어요' : '알림이 꺼졌어요');
+        showToast(next ? tr("알림이 켜졌어요") : tr("알림이 꺼졌어요"));
       })
     )
   ));
@@ -71,7 +83,7 @@ export function render(ctx) {
   const reminderDays = Array.isArray(settings.reminderDays) ? [...settings.reminderDays] : [7, 3, 1];
   const daysWrap = h('div', {
     class: 'reminder-days',
-    attrs: { role: 'group', 'aria-label': '만료 알림일' }
+    attrs: { role: 'group', 'aria-label': tr("만료 알림일") }
   });
   const buildDayChips = () => {
     clear(daysWrap);
@@ -95,12 +107,12 @@ export function render(ctx) {
   buildDayChips();
   root.appendChild(card(
     h('div', { class: 'toggle-row' },
-      h('div', { class: 'info' }, h('h4', null, '만료 임박 알림'), h('p', null, '선택한 날짜 안에 들어오면 알려줘요. 만료 당일도 포함해요.')),
+      h('div', { class: 'info' }, h('h4', null, tr("만료 임박 알림")), h('p', null, tr("선택한 날짜 안에 들어오면 알려줘요. 만료 당일도 포함해요."))),
       makeToggle(settings.remindersEnabled, async (next) => {
         const { permission } = await actions.toggleReminders(next);
-        if (!next) showToast('만료 알림이 꺼졌어요');
-        else if (permission === 'granted') showToast('만료 알림이 켜졌어요');
-        else showToast('알림 권한이 차단돼 앱 실행 중에만 알려드려요', 'danger');
+        if (!next) showToast(tr("만료 알림이 꺼졌어요"));
+        else if (permission === 'granted') showToast(tr("만료 알림이 켜졌어요"));
+        else showToast(tr("알림 권한이 차단돼 앱 실행 중에만 알려드려요"), 'danger');
       })
     ),
     daysWrap
@@ -109,16 +121,16 @@ export function render(ctx) {
   // ── (c) radius / delay ──
   const radiusInput = h('input', { id: 's-radius', attrs: { type: 'number', value: String(settings.notifyRadius ?? 100), min: '10', max: '1000' } });
   const delayInput = h('input', { id: 's-delay', attrs: { type: 'number', value: String(settings.notifyDelay ?? 5), min: '0', max: '60' } });
-  const saveBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' } }, '알림 설정 저장');
+  const saveBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' } }, tr("알림 설정 저장"));
   saveBtn.addEventListener('click', async () => {
     const radius = parseInt(radiusInput.value) || 100;
     const delay = parseInt(delayInput.value) || 5;
     await actions.saveNotifySettings({ radius, delay });
-    showToast('알림 설정 저장 완료');
+    showToast(tr("알림 설정 저장 완료"));
   });
   root.appendChild(card(
-    h('div', { class: 'form-group' }, h('label', { attrs: { for: 's-radius' } }, '알림 반경 (미터)'), radiusInput),
-    h('div', { class: 'form-group' }, h('label', { attrs: { for: 's-delay' } }, '체류 시간 (분)'), delayInput),
+    h('div', { class: 'form-group' }, h('label', { attrs: { for: 's-radius' } }, tr("알림 반경 (미터)")), radiusInput),
+    h('div', { class: 'form-group' }, h('label', { attrs: { for: 's-delay' } }, tr("체류 시간 (분)")), delayInput),
     saveBtn
   ));
 
@@ -127,15 +139,15 @@ export function render(ctx) {
     if (pwa.canInstall()) {
       root.appendChild(card(
         h('div', { class: 'form-group' },
-          h('label', null, '앱 설치'),
-          h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, on: { click: () => actions.requestInstall() } }, '앱 설치')
+          h('label', null, tr("앱 설치")),
+          h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, on: { click: () => actions.requestInstall() } }, tr("앱 설치"))
         )
       ));
     } else if (pwa.isIos()) {
       root.appendChild(card(
         h('div', { class: 'form-group' },
-          h('label', null, '앱 설치'),
-          h('p', { class: 'field-hint' }, '공유 버튼 → 홈 화면에 추가 로 설치할 수 있어요')
+          h('label', null, tr("앱 설치")),
+          h('p', { class: 'field-hint' }, tr("공유 버튼 → 홈 화면에 추가 로 설치할 수 있어요"))
         )
       ));
     }
@@ -143,35 +155,35 @@ export function render(ctx) {
 
   // ── (d2) 데이터 보관 ──
   const fmtMB = (bytes) => (bytes / (1024 * 1024)).toFixed(1);
-  const storageStatus = h('p', { class: 'storage-status' }, '확인 중…');
+  const storageStatus = h('p', { class: 'storage-status' }, tr("확인 중…"));
   const storageActions = h('div', { class: 'form-group' });
   root.appendChild(card(
-    h('div', { class: 'info' }, h('h4', null, '데이터 보관'), storageStatus),
+    h('div', { class: 'info' }, h('h4', null, tr("데이터 보관")), storageStatus),
     storageActions,
-    h('p', { class: 'field-hint' }, '이용권 정보는 이 기기에만 저장돼요. 정기적으로 백업하세요.')
+    h('p', { class: 'field-hint' }, tr("이용권 정보는 이 기기에만 저장돼요. 정기적으로 백업하세요."))
   ));
   (async () => {
     const [persisted, est] = await Promise.all([isPersisted(), storageEstimate()]);
-    const usageText = est && est.usage ? ` · 사용 중 ${fmtMB(est.usage)} MB` : '';
+    const usageText = est && est.usage ? tr(" · 사용 중 {0} MB", (fmtMB(est.usage))) : '';
     if (persisted) {
-      storageStatus.textContent = `영구 보관: 켜짐 ✓${usageText}`;
+      storageStatus.textContent = tr("영구 보관: 켜짐 ✓{0}", (usageText));
       storageStatus.classList.add('ok');
     } else {
-      storageStatus.textContent = `영구 보관: 꺼짐${usageText}`;
+      storageStatus.textContent = tr("영구 보관: 꺼짐{0}", (usageText));
       const enableBtn = h('button', {
         class: 'btn btn-secondary btn-block',
         attrs: { type: 'button' },
         on: { click: async () => {
           const r = await requestPersistentStorage();
           showToast(
-            r === 'persisted' ? '영구 보관이 켜졌어요'
-              : r === 'denied' ? '브라우저가 허용하지 않았어요'
-                : '이 브라우저는 지원하지 않아요',
+            r === 'persisted' ? tr("영구 보관이 켜졌어요")
+              : r === 'denied' ? tr("브라우저가 허용하지 않았어요")
+                : tr("이 브라우저는 지원하지 않아요"),
             r === 'persisted' ? 'success' : 'danger'
           );
           ctx.router.navigate('settings');
         } }
-      }, '영구 보관 켜기');
+      }, tr("영구 보관 켜기"));
       storageActions.appendChild(enableBtn);
     }
   })();
@@ -184,15 +196,15 @@ export function render(ctx) {
     try {
       const parsed = parseBackup(await file.text());
       const skipped = parsed.skipped.shops + parsed.skipped.logs;
-      const message = `${parsed.exportedAt ? `${formatDate(parsed.exportedAt)}에 만든 ` : ''}백업의 이용권 ${parsed.shops.length}개 · 사용 내역 ${parsed.logs.length}건으로 바꿔요.`
-        + (shops.length ? ` 지금 이 기기에 있는 이용권 ${shops.length}개 · 내역 ${logs.length}건은 지워져요.` : '')
-        + (skipped > 0 ? ` 읽을 수 없는 항목 ${skipped}개는 건너뛰어요.` : '');
-      const ok = await showConfirm({ title: '백업으로 복원할까요?', confirmLabel: '복원하기', danger: true, message });
+      const message = tr("{0}백업의 이용권 {1}개 · 사용 내역 {2}건으로 바꿔요.", (parsed.exportedAt ? `${formatDate(parsed.exportedAt)}에 만든 ` : ''), (parsed.shops.length), (parsed.logs.length))
+        + (shops.length ? tr(" 지금 이 기기에 있는 이용권 {0}개 · 내역 {1}건은 지워져요.", (shops.length), (logs.length)) : '')
+        + (skipped > 0 ? tr(" 읽을 수 없는 항목 {0}개는 건너뛰어요.", (skipped)) : '');
+      const ok = await showConfirm({ title: tr("백업으로 복원할까요?"), confirmLabel: tr("복원하기"), danger: true, message });
       if (!ok) return;
       const sum = await actions.restoreData(parsed);
-      if (sum) showToast(`복원 완료 · 이용권 ${sum.shops}개, 내역 ${sum.logs}건`);
+      if (sum) showToast(tr("복원 완료 · 이용권 {0}개, 내역 {1}건", (sum.shops), (sum.logs)));
     } catch (err) {
-      showToast(err?.message || '백업을 복원하지 못했어요.', 'danger');
+      showToast(err?.message || tr("백업을 복원하지 못했어요."), 'danger');
     } finally {
       importInput.value = '';
     }
@@ -200,51 +212,51 @@ export function render(ctx) {
   root.appendChild(card(
     h('div', { class: 'settings-art' }, illust('backup')),
     h('div', { class: 'form-group' },
-      h('label', null, '백업 데이터'),
-      h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, on: { click: () => actions.exportData() } }, 'JSON 파일로 백업'),
+      h('label', null, tr("백업 데이터")),
+      h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' }, on: { click: () => actions.exportData() } }, tr("JSON 파일로 백업")),
       h('p', { class: 'field-hint' }, settings.lastBackupAt
-        ? `마지막 백업: ${formatDate(settings.lastBackupAt)}`
-        : '아직 백업한 적이 없어요')
+        ? tr("마지막 백업: {0}", (formatDate(settings.lastBackupAt)))
+        : tr("아직 백업한 적이 없어요"))
     ),
     h('div', { class: 'form-group' },
-      h('label', { attrs: { for: 's-import' } }, '복원 데이터'),
+      h('label', { attrs: { for: 's-import' } }, tr("복원 데이터")),
       importInput,
-      h('label', { class: 'btn btn-secondary btn-block gifticon-pick', attrs: { for: 's-import' } }, '백업 파일에서 복원')
+      h('label', { class: 'btn btn-secondary btn-block gifticon-pick', attrs: { for: 's-import' } }, tr("백업 파일에서 복원"))
     )
   ));
 
   // ── (f) 데모 / 초기화 ──
-  const demoBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' } }, '샘플 업체 추가');
+  const demoBtn = h('button', { class: 'btn btn-secondary btn-block', attrs: { type: 'button' } }, tr("샘플 업체 추가"));
   demoBtn.addEventListener('click', async () => {
     const added = await actions.seedDemo();
-    showToast(added ? `${added}개 샘플 업체를 추가했어요` : '이미 샘플 업체가 있어요');
+    showToast(added ? tr("{0}개 샘플 업체를 추가했어요", (added)) : tr("이미 샘플 업체가 있어요"));
   });
-  const clearBtn = h('button', { class: 'btn btn-danger btn-block', attrs: { type: 'button' } }, '모든 업체와 내역 삭제');
+  const clearBtn = h('button', { class: 'btn btn-danger btn-block', attrs: { type: 'button' } }, tr("모든 업체와 내역 삭제"));
   clearBtn.addEventListener('click', async () => {
     const ok = await showConfirm({
-      title: '전체 초기화',
-      message: '모든 업체와 사용 내역을 삭제할까요? 먼저 백업하는 걸 권장해요.',
-      confirmLabel: '초기화',
+      title: tr("전체 초기화"),
+      message: tr("모든 업체와 사용 내역을 삭제할까요? 먼저 백업하는 걸 권장해요."),
+      confirmLabel: tr("초기화"),
       danger: true
     });
     if (!ok) return;
     await actions.clearAll();
-    showToast('전체 데이터를 초기화했어요');
+    showToast(tr("전체 데이터를 초기화했어요"));
   });
   root.appendChild(card(
-    h('div', { class: 'form-group' }, h('label', null, '데모 데이터'), demoBtn),
-    h('div', { class: 'form-group' }, h('label', null, '전체 초기화'), clearBtn)
+    h('div', { class: 'form-group' }, h('label', null, tr("데모 데이터")), demoBtn),
+    h('div', { class: 'form-group' }, h('label', null, tr("전체 초기화")), clearBtn)
   ));
 
   // ── (g) about ──
   root.appendChild(h('p', { class: 'field-hint', style: { 'text-align': 'center', 'margin-top': '8px' } },
-    '쿠폰북 · LightOn Plus Lab 제품',
+    tr("쿠폰북 · LightOn Plus Lab 제품"),
     h('br'),
-    '이 기기에 저장되는 내 이용권·쿠폰 지갑',
+    tr("이 기기에 저장되는 내 이용권·쿠폰 지갑"),
     h('br'),
     h('a', { attrs: { href: 'https://lightonpluslab.com', target: '_blank', rel: 'noopener' } }, 'LightOn Plus Lab'),
     ' · ',
-    h('a', { attrs: { href: 'privacy.html', target: '_blank', rel: 'noopener' } }, '개인정보처리방침'),
+    h('a', { attrs: { href: 'privacy.html', target: '_blank', rel: 'noopener' } }, tr("개인정보처리방침")),
     h('br'),
     '© LightOn Plus Lab'));
 
