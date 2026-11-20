@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coupon-book-v45';
+const CACHE_NAME = 'coupon-book-v46';
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -20,6 +20,8 @@ const URLS_TO_CACHE = [
   './vendor/barcode/JsBarcode.all.min.js',
   './js/app.js',
   './js/core/h.js',
+  './js/core/i18n.js',
+  './js/core/messages.js',
   './js/core/store.js',
   './js/core/router.js',
   './js/core/keyed-lock.js',
@@ -187,8 +189,15 @@ async function checkExpiryInBackground() {
       const key = `cb_reminder:${shop.id}:${shop.expiresAt || 'none'}:t${threshold}`;
       if (markers[key] || notified >= 5) continue;
       const days = swDaysUntil(shop.expiresAt);
-      await self.registration.showNotification('쿠폰북', {
-        body: `${shop.name} · ${days === 0 ? '오늘 만료' : `D-${days}`} 만료 임박`,
+      const language = settings.notificationLanguage;
+      const labels = {
+        ko: ['쿠폰북', days === 0 ? '오늘 만료' : `D-${days} 만료 임박`],
+        en: ['Coupon Book', days === 0 ? 'Expires today' : `Expires in ${days} ${days === 1 ? 'day' : 'days'}`],
+        ja: ['Coupon Book', days === 0 ? '本日期限' : `あと${days}日で期限切れ`]
+      };
+      const [title, expiry] = Object.hasOwn(labels, language) ? labels[language] : labels.ko;
+      await self.registration.showNotification(title, {
+        body: `${shop.name} · ${expiry}`,
         icon: './icon-192.png',
         badge: './icon-192.png',
         tag: `expiry-${shop.id}-${swTodayKey()}`

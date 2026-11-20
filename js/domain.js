@@ -1,3 +1,4 @@
+import { t as tr } from './core/i18n.js';
 // domain.js — PURE business logic. The ONLY place coupon status/sort/filter/expiry
 // math lives. No DOM, no IndexedDB; reads Date.now() only.
 
@@ -105,11 +106,11 @@ export function expiryBucket(shop) {
 }
 
 export const EXPIRY_BUCKET_LABEL = {
-  expired: '기한 지남',
-  week: '7일 이내 만료',
-  month: '30일 이내 만료',
-  later: '그 이후',
-  none: '기한 없음'
+  expired: tr("기한 지남"),
+  week: tr("7일 이내 만료"),
+  month: tr("30일 이내 만료"),
+  later: tr("그 이후"),
+  none: tr("기한 없음")
 };
 
 export function isExpiringSoon(shop, within = 30) {
@@ -127,19 +128,19 @@ export function remainingCount(shop) {
 /** remaining as display text: amount -> '850,000원'; count -> '8회'; collect -> '3칸' (empty slots) */
 export function remainingLabel(shop) {
   if (isAmountKind(shop)) return formatWon(remainingValue(shop));
-  return isCollectMode(shop) ? `${remainingValue(shop)}칸` : `${remainingValue(shop)}회`;
+  return isCollectMode(shop) ? tr("{0}칸", (remainingValue(shop))) : tr("{0}회", (remainingValue(shop)));
 }
 
 /** total as display text: amount -> '1,000,000원'; count -> '10회'; collect -> '10칸' */
 export function totalLabel(shop) {
   if (isAmountKind(shop)) return formatWon(passTotal(shop));
-  return isCollectMode(shop) ? `${passTotal(shop)}칸` : `${passTotal(shop)}회`;
+  return isCollectMode(shop) ? tr("{0}칸", (passTotal(shop))) : tr("{0}회", (passTotal(shop)));
 }
 
 /** used as display text: amount -> '150,000원'; count -> '2회'; collect -> '7개' (stamps) */
 export function usedLabel(shop) {
   if (isAmountKind(shop)) return formatWon(passUsed(shop));
-  return isCollectMode(shop) ? `${passUsed(shop)}개` : `${passUsed(shop)}회`;
+  return isCollectMode(shop) ? tr("{0}개", (passUsed(shop))) : tr("{0}회", (passUsed(shop)));
 }
 
 export function progressPercent(shop) {
@@ -150,18 +151,18 @@ export function progressPercent(shop) {
 
 /** { key, label, className, score } — lower score = higher priority. */
 export function couponStatus(shop) {
-  if (isArchived(shop)) return { key: 'archived', label: '보관됨', className: 'neutral', score: 1000 };
+  if (isArchived(shop)) return { key: 'archived', label: tr("보관됨"), className: 'neutral', score: 1000 };
   const collect = isCollectMode(shop);
   // A used-up paid pass is depleted ('소진'), not a prize to redeem. A full
   // collect board is the opposite: the reward is ready.
-  if (isCompleted(shop)) return { key: 'done', label: collect ? '완성' : '소진', className: 'success', score: 0 };
+  if (isCompleted(shop)) return { key: 'done', label: collect ? tr("완성") : tr("소진"), className: 'success', score: 0 };
   const days = daysUntil(shop.expiresAt);
   const remaining = remainingValue(shop);
   if (days !== null && days < 0) {
-    return { key: 'expired', label: '만료됨', className: 'danger', score: 10 };
+    return { key: 'expired', label: tr("만료됨"), className: 'danger', score: 10 };
   }
   if (days !== null && days <= 7) {
-    const label = days === 0 ? '오늘 만료' : `만료 D-${days}`;
+    const label = days === 0 ? tr("오늘 만료") : tr("만료 D-{0}", (days));
     return { key: 'urgent', label, className: 'danger', score: 20 + days };
   }
   const total = passTotal(shop);
@@ -172,20 +173,20 @@ export function couponStatus(shop) {
       ? (total > 0 && remaining <= total * 0.2)
       : remaining <= 2;
   if (lowBalance) {
-    const label = isAmountKind(shop) ? `${formatWon(remaining)} 남음` : `${remaining}회 남음`;
+    const label = isAmountKind(shop) ? tr("{0} 남음", (formatWon(remaining))) : tr("{0}회 남음", (remaining));
     return { key: 'low', label, className: 'warning', score: 40 + Math.min(remaining, 9) };
   }
   if (days !== null && days <= 30) {
-    return { key: 'soon', label: `만료 D-${days}`, className: 'warning', score: 60 + days };
+    return { key: 'soon', label: tr("만료 D-{0}", (days)), className: 'warning', score: 60 + days };
   }
-  return { key: 'neutral', label: collect ? '모으는 중' : '이용 중', className: 'neutral', score: 100 + Math.min(remaining, 99) };
+  return { key: 'neutral', label: collect ? tr("모으는 중") : tr("이용 중"), className: 'neutral', score: 100 + Math.min(remaining, 99) };
 }
 
 export function formatExpiry(dateStr) {
   const days = daysUntil(dateStr);
-  if (days === null) return '만료 없음';
-  if (days < 0) return '만료됨';
-  if (days === 0) return '오늘 만료';
+  if (days === null) return tr("만료 없음");
+  if (days < 0) return tr("만료됨");
+  if (days === 0) return tr("오늘 만료");
   return `D-${days}`;
 }
 

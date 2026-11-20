@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // services/maps.js — Kakao Map URL links for both "지도" view and "길찾기".
 // Prefer precise lat/lng, then fall back to address search.
 
@@ -7,7 +8,7 @@ function hasCoord(v) {
 
 function placeName(shop) {
   const name = String(shop?.name || '').replaceAll(',', ' ').trim();
-  return name || '목적지';
+  return name || tr("목적지");
 }
 
 function address(shop) {

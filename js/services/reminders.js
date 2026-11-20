@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // services/reminders.js — expiry local reminders. Degrades gracefully when the
 // Notification API is unsupported or denied: always calls onDue so the app can
 // show an in-app badge/toast fallback.
@@ -102,7 +103,7 @@ function markFired(key) {
 }
 
 function expiryLabel(days) {
-  if (days === 0) return '오늘 만료';
+  if (days === 0) return tr("오늘 만료");
   return `D-${days}`;
 }
 
@@ -135,7 +136,7 @@ export function checkDueNow(shops, settings, onDue) {
     newMarkers[key] = Date.now();
 
     // Android's scheduled alarm owns OS notifications in the app shell.
-    if (!nativeAlarms) pushNotification('이용권 만료 임박', `${shop.name} · ${expiryLabel(days)}`, `cb_reminder:${shop.id}:${days}`);
+    if (!nativeAlarms) pushNotification(tr("이용권 만료 임박"), `${shop.name} · ${expiryLabel(days)}`, `cb_reminder:${shop.id}:${days}`);
     if (typeof onDue === 'function') onDue(shop, { type: 'expiry', days });
   }
 
@@ -146,7 +147,7 @@ export function checkDueNow(shops, settings, onDue) {
     markFired(key);
     const remaining = remainingValue(shop);
 
-    if (!nativeAlarms) pushNotification('잔액 임박', `${shop.name} · ${formatWon(remaining)} 남음`, `cb_balalert:${shop.id}`);
+    if (!nativeAlarms) pushNotification(tr("잔액 임박"), tr("{0} · {1} 남음", (shop.name), (formatWon(remaining))), `cb_balalert:${shop.id}`);
     if (typeof onDue === 'function') onDue(shop, { type: 'lowbalance', remaining });
   }
   if (Object.keys(newMarkers).length && typeof _persistMarkers === 'function') {
@@ -183,7 +184,7 @@ export function nativeReminderPlan(shops, settings, now = Date.now()) {
     for (const d of days) {
       const when = triggerTimeFor(shop.expiresAt, d);
       if (when != null && when > now) {
-        desired[reminderId(shop.id, d)] = { title: '이용권 만료 임박', body: `${shop.name} · ${expiryLabel(d)}`, when };
+        desired[reminderId(shop.id, d)] = { title: tr("이용권 만료 임박"), body: `${shop.name} · ${expiryLabel(d)}`, when };
       }
     }
   }

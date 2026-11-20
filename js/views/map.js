@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // views/map.js — Leaflet map of located shops: user marker + accuracy circle,
 // status-colored pins, floating selected-shop card, summary, nearby list.
 
@@ -36,15 +37,15 @@ export function render(ctx) {
 
   const root = h('div', { class: 'map-page' });
 
-  const locateBtn = h('button', { class: 'btn btn-primary', attrs: { type: 'button' } }, '내 위치');
+  const locateBtn = h('button', { class: 'btn btn-primary', attrs: { type: 'button' } }, tr("내 위치"));
   // The map is the content here, so the toolbar states the screen and gets out
   // of the way — the eyebrow and description cost ~120px of map.
   root.appendChild(h('div', { class: 'map-toolbar compact' },
-    h('h2', null, '내 주변 업체'),
+    h('h2', null, tr("내 주변 업체")),
     locateBtn
   ));
 
-  const mapEl = h('div', { id: 'coupon-map', class: 'coupon-map' }, h('div', { class: 'map-loading' }, '지도를 준비하는 중...'));
+  const mapEl = h('div', { id: 'coupon-map', class: 'coupon-map' }, h('div', { class: 'map-loading' }, tr("지도를 준비하는 중...")));
   const floatEl = h('div', { id: 'map-float', class: 'map-float', attrs: { hidden: '' } });
   root.appendChild(h('div', { class: 'coupon-map-wrap' }, mapEl, floatEl));
 
@@ -57,9 +58,9 @@ export function render(ctx) {
     clear(mapEl);
     mapEl.appendChild(emptyState({
       art: 'map',
-      title: '지도에 표시할 업체가 없어요',
-      desc: '업체 편집 화면에서 현재 위치를 저장하면 지도에 표시됩니다',
-      actions: [{ label: '업체 추가', className: 'btn-primary', onClick: () => router.navigate('add') }]
+      title: tr("지도에 표시할 업체가 없어요"),
+      desc: tr("업체 편집 화면에서 현재 위치를 저장하면 지도에 표시됩니다"),
+      actions: [{ label: tr("업체 추가"), className: 'btn-primary', onClick: () => router.navigate('add') }]
     }));
     return root;
   }
@@ -72,14 +73,14 @@ export function render(ctx) {
 async function drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, forceLocate = false }) {
   let userPos = null;
   let center = getShopsCenter(located);
-  let locationMessage = '등록 업체 중심으로 표시 중';
+  let locationMessage = tr("등록 업체 중심으로 표시 중");
 
   try {
     userPos = await getCurrentPosition();
     center = [userPos.lat, userPos.lng];
-    locationMessage = '현재 위치 기준';
+    locationMessage = tr("현재 위치 기준");
   } catch (e) {
-    if (forceLocate) showToast('현재 위치를 가져올 수 없어요', 'danger');
+    if (forceLocate) showToast(tr("현재 위치를 가져올 수 없어요"), 'danger');
   }
 
   if (_map) { _map.remove(); _map = null; _layer = null; }
@@ -97,7 +98,7 @@ async function drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, for
       radius: Math.max(35, userPos.accuracy || 60),
       color: '#77a8d8', fillColor: '#77a8d8', fillOpacity: 0.14, weight: 1
     }).addTo(_layer);
-    meMarker = Leaflet.marker([userPos.lat, userPos.lng], { icon: createMapIcon('me') }).addTo(_layer).bindPopup('현재 위치');
+    meMarker = Leaflet.marker([userPos.lat, userPos.lng], { icon: createMapIcon('me') }).addTo(_layer).bindPopup(tr("현재 위치"));
   }
 
   const nearby = located.map((shop) => {
@@ -116,12 +117,12 @@ async function drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, for
       ),
       h('div', { class: 'map-float-text' },
         h('strong', null, shop.name),
-        h('span', null, `${distance !== null ? formatDistance(distance) + ' · ' : ''}${remaining} 남음`)
+        h('span', null, tr("{0}{1} 남음", (distance !== null ? formatDistance(distance) + ' · ' : ''), (remaining)))
       )
     ));
     floatEl.appendChild(h('div', { class: 'map-float-actions' },
-      h('button', { class: 'btn btn-secondary', attrs: { type: 'button' }, on: { click: () => router.navigate('detail', { id: shop.id }) } }, '상세'),
-      dir ? h('a', { class: 'btn btn-primary', attrs: { href: dir, target: '_blank', rel: 'noopener' } }, '길찾기') : null
+      h('button', { class: 'btn btn-secondary', attrs: { type: 'button' }, on: { click: () => router.navigate('detail', { id: shop.id }) } }, tr("상세")),
+      dir ? h('a', { class: 'btn btn-primary', attrs: { href: dir, target: '_blank', rel: 'noopener' } }, tr("길찾기")) : null
     ));
   }
 
@@ -155,9 +156,9 @@ async function drawMap({ mapEl, floatEl, summaryEl, listEl, located, router, for
 
   const visibleNearby = nearby.filter((item) => item.distance === null || item.distance <= 3000);
   clear(summaryEl);
-  summaryEl.appendChild(h('div', null, h('strong', null, String(nearby.length)), h('span', null, '지도 표시 업체')));
-  summaryEl.appendChild(h('div', null, h('strong', null, String(visibleNearby.length)), h('span', null, userPos ? '3km 이내' : '목록 표시')));
-  summaryEl.appendChild(h('div', null, h('strong', null, locationMessage), h('span', null, userPos ? '위치 권한 허용됨' : '위치 권한 필요')));
+  summaryEl.appendChild(h('div', null, h('strong', null, String(nearby.length)), h('span', null, tr("지도 표시 업체"))));
+  summaryEl.appendChild(h('div', null, h('strong', null, String(visibleNearby.length)), h('span', null, userPos ? tr("3km 이내") : tr("목록 표시"))));
+  summaryEl.appendChild(h('div', null, h('strong', null, locationMessage), h('span', null, userPos ? tr("위치 권한 허용됨") : tr("위치 권한 필요"))));
 
   renderNearbyList(listEl, nearby, router);
 }
@@ -189,12 +190,12 @@ function renderNearbyList(listEl, nearby, router) {
       attrs: { type: 'button' },
       on: { click: () => router.navigate('detail', { id: shop.id }) }
     },
-      h('div', null, h('strong', null, shop.name), h('span', null, shop.address || shop.category)),
+      h('div', null, h('strong', null, shop.name), h('span', null, shop.address || tr(shop.category))),
       h('em', null, distance !== null ? formatDistance(distance) : status.label)
     );
     listEl.appendChild(h('div', { class: 'nearby-shop-row' },
       main,
-      dir ? h('a', { class: 'nearby-dir', attrs: { href: dir, target: '_blank', rel: 'noopener', 'aria-label': '길찾기' } }, '길찾기') : null
+      dir ? h('a', { class: 'nearby-dir', attrs: { href: dir, target: '_blank', rel: 'noopener', 'aria-label': tr("길찾기") } }, tr("길찾기")) : null
     ));
   });
 }

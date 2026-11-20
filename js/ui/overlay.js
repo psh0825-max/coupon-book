@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // ui/overlay.js — accessible bottom-sheet / modal. No inline onclick.
 // Provides: showSheet, showConfirm, closeOverlay, closeOverlayFromPop.
 // An open sheet pushes one history entry so the Android/TWA hardware back
@@ -48,7 +49,7 @@ export function showSheet({ title, body, actions = [], onClose } = {}) {
 
   const closeBtn = h('button', {
     class: 'btn btn-ghost',
-    attrs: { type: 'button', 'aria-label': '닫기' },
+    attrs: { type: 'button', 'aria-label': tr("닫기") },
     on: { click: () => closeOverlay() }
   }, icon('x', { size: 20 }));
 
@@ -124,10 +125,10 @@ export function showPresenter({ label, body, onOpen, onClose } = {}) {
   const prevFocus = document.activeElement;
   const closeBtn = h('button', {
     class: 'presenter-close', attrs: { type: 'button' }, on: { click: () => closeOverlay() }
-  }, '닫기');
+  }, tr("닫기"));
   const bodyNode = body instanceof Node ? body : h('div', null, body == null ? '' : String(body));
   const presenter = h('div', {
-    class: 'presenter', attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-label': label || '크게 보기' }
+    class: 'presenter', attrs: { role: 'dialog', 'aria-modal': 'true', 'aria-label': label || tr("크게 보기") }
   }, h('div', { class: 'presenter-content' }, bodyNode), closeBtn);
   const overlay = h('div', { id: 'overlay', class: 'overlay presenter-overlay' }, presenter);
 
@@ -153,7 +154,7 @@ export function showPresenter({ label, body, onOpen, onClose } = {}) {
 }
 
 /** showConfirm(...) -> Promise<boolean> built on showSheet. */
-export function showConfirm({ title, message, confirmLabel = '확인', danger = false } = {}) {
+export function showConfirm({ title, message, confirmLabel = tr("확인"), danger = false } = {}) {
   return new Promise((resolve) => {
     let answered = false;
     const settle = (value) => { if (!answered) { answered = true; resolve(value); } };
@@ -162,7 +163,7 @@ export function showConfirm({ title, message, confirmLabel = '확인', danger = 
       body: h('p', { class: 'confirm-message' }, message),
       onClose: () => settle(false),
       actions: [
-        { id: 'cancel', label: '취소', className: 'btn-secondary', onClick: () => settle(false) },
+        { id: 'cancel', label: tr("취소"), className: 'btn-secondary', onClick: () => settle(false) },
         {
           id: 'confirm',
           label: confirmLabel,

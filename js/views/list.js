@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // views/list.js — full coupon list: status tabs + category chips + search + sort
 // + 2-col grid. Live filtering re-renders only the grid subtree; the filter is
 // persisted via actions.setFilter so it survives navigation.
@@ -9,13 +10,13 @@ import { CATEGORIES, getCategoryIcon } from '../data/skins.js';
 import { showToast } from '../ui/toast.js';
 
 const STATUS_TABS = [
-  ['all', '전체'], ['active', '이용 중'], ['expiring', '임박'],
+  ['all', tr("전체")], ['active', tr("이용 중")], ['expiring', tr("임박")],
   // '완료' covers a spent pass (소진) and a full stamp board (완성) alike.
-  ['completed', '완료'], ['expired', '만료'], ['archived', '보관함']
+  ['completed', tr("완료")], ['expired', tr("만료")], ['archived', tr("보관함")]
 ];
 const SORTS = [
-  ['smart', '추천순'], ['expiry', '사용기한순'], ['remaining', '남은 양 적은 순'],
-  ['updated', '최근 수정'], ['name', '이름순']
+  ['smart', tr("추천순")], ['expiry', tr("사용기한순")], ['remaining', tr("남은 양 적은 순")],
+  ['updated', tr("최근 수정")], ['name', tr("이름순")]
 ];
 const SR_ONLY = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
 
@@ -69,14 +70,14 @@ export function render(ctx) {
       } }
     }, label));
   };
-  addChip('all', '전체');
-  Object.keys(CATEGORIES).forEach((c) => addChip(c, `${getCategoryIcon(c)} ${c}`));
+  addChip('all', tr("전체"));
+  Object.keys(CATEGORIES).forEach((c) => addChip(c, `${getCategoryIcon(c)} ${tr(c)}`));
   root.appendChild(chips);
 
   // ── search + sort ──
   const search = h('input', {
     id: 'list-search',
-    attrs: { type: 'search', placeholder: '업체 이름, 주소, 메모 검색', value: filter.query || '' }
+    attrs: { type: 'search', placeholder: tr("업체 이름, 주소, 메모 검색"), value: filter.query || '' }
   });
   search.addEventListener('input', (e) => {
     filter.query = e.target.value.trim();
@@ -94,9 +95,9 @@ export function render(ctx) {
     renderGrid();
   });
   root.appendChild(h('div', { class: 'home-tools' },
-    h('label', { attrs: { for: 'list-search' }, style: SR_ONLY }, '검색'),
+    h('label', { attrs: { for: 'list-search' }, style: SR_ONLY }, tr("검색")),
     search,
-    h('label', { attrs: { for: 'list-sort' }, style: SR_ONLY }, '정렬'),
+    h('label', { attrs: { for: 'list-sort' }, style: SR_ONLY }, tr("정렬")),
     sort
   ));
 
@@ -109,13 +110,13 @@ export function render(ctx) {
     if (shops.length === 0) {
       grid.appendChild(emptyState({
         art: 'ticket',
-        title: '등록된 이용권이 없어요',
-        desc: '하단 + 버튼을 눌러 처음 이용권을 등록해 보세요',
+        title: tr("등록된 이용권이 없어요"),
+        desc: tr("하단 + 버튼을 눌러 처음 이용권을 등록해 보세요"),
         actions: [
-          { label: '이용권 등록', className: 'btn-primary', onClick: () => router.navigate('add') },
-          { label: '샘플 보기', className: 'btn-secondary', onClick: async () => {
+          { label: tr("이용권 등록"), className: 'btn-primary', onClick: () => router.navigate('add') },
+          { label: tr("샘플 보기"), className: 'btn-secondary', onClick: async () => {
             const added = await actions.seedDemo();
-            showToast(added ? `${added}개 샘플 업체를 추가했어요` : '이미 샘플 업체가 있어요');
+            showToast(added ? tr("{0}개 샘플 업체를 추가했어요", (added)) : tr("이미 샘플 업체가 있어요"));
           } }
         ]
       }));
@@ -125,8 +126,8 @@ export function render(ctx) {
     if (filtered.length === 0) {
       grid.appendChild(emptyState({
         art: 'search',
-        title: '검색 결과가 없어요',
-        desc: '다른 키워드나 카테고리를 선택해 보세요'
+        title: tr("검색 결과가 없어요"),
+        desc: tr("다른 키워드나 카테고리를 선택해 보세요")
       }));
       return;
     }
@@ -144,7 +145,7 @@ export function render(ctx) {
       }
       grid.appendChild(shopCard(shop, {
         onOpen: () => router.navigate('detail', { id: shop.id }),
-        onQuickUse: (s) => actions.quickUse(s, { note: '목록에서 빠른 사용' })
+        onQuickUse: (s) => actions.quickUse(s, { note: tr("목록에서 빠른 사용") })
       }));
     });
   }
