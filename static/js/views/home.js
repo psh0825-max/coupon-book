@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // views/home.js — landing page: hero, summary stats, ad, priority panel,
 // nearby (if location on), horizontal shop rail, empty state.
 
@@ -35,38 +36,38 @@ export function render(ctx) {
   const head = hasShops
     ? h('div', { class: 'home-head' },
         h('div', null,
-          h('h1', null, '내 이용권'),
+          h('h1', null, tr("내 이용권")),
           h('p', null, !usable.length
-            ? '잔액과 만료일을 한눈에 확인하세요.'
+            ? tr("잔액과 만료일을 한눈에 확인하세요.")
             : isRewardReady(usable[0])
-              ? `${usable[0].name} 도장판이 다 찼어요. 보상을 받으세요.`
-              : `${usable[0].name} 이용권을 가장 먼저 챙기세요.`)
+              ? tr("{0} 도장판이 다 찼어요. 보상을 받으세요.", (usable[0].name))
+              : tr("{0} 이용권을 가장 먼저 챙기세요.", (usable[0].name)))
         ),
         h('button', {
           class: 'btn btn-primary btn-sm',
           attrs: { type: 'button' },
           on: { click: () => router.navigate('add') }
-        }, '추가')
+        }, tr("추가"))
       )
     : h('div', { class: 'product-hero' },
         h('div', null,
           h('div', { class: 'eyebrow' }, 'MEMBERSHIP & PASS WALLET'),
-          h('h1', null, '내 이용권을 한곳에서'),
-          h('p', null, '가지고 있는 횟수권·금액권을 등록해 잔액과 만료일을 한눈에 관리해요.')
+          h('h1', null, tr("내 이용권을 한곳에서")),
+          h('p', null, tr("가지고 있는 횟수권·금액권을 등록해 잔액과 만료일을 한눈에 관리해요."))
         ),
         h('button', {
           class: 'btn btn-primary',
           attrs: { type: 'button' },
           on: { click: () => router.navigate('add') }
-        }, '이용권 추가')
+        }, tr("이용권 추가"))
       );
 
   const summaryRow = hasShops
     ? h('div', { class: 'summary-row' },
-        summaryCard(s.totalShops, '이용권', 'var(--text-primary)'),
-        summaryCard(`${s.monthUses}회`, '이번 달 사용', 'var(--accent)'),
-        summaryCard(s.expiringCount, '만료 임박', 'var(--warning)'),
-        summaryCard(s.completedCount, '완료', 'var(--success)')
+        summaryCard(s.totalShops, tr("이용권"), 'var(--text-primary)'),
+        summaryCard(tr("{0}회", (s.monthUses)), tr("이번 달 사용"), 'var(--accent)'),
+        summaryCard(s.expiringCount, tr("만료 임박"), 'var(--warning)'),
+        summaryCard(s.completedCount, tr("완료"), 'var(--success)')
       )
     : null;
 
@@ -74,12 +75,12 @@ export function render(ctx) {
   const nudge = needsBackupNudge(shops, settings)
     ? h('div', { class: 'nudge-banner', attrs: { role: 'status' } },
         h('div', { class: 'nudge-text' },
-          h('strong', null, settings.lastBackupAt ? '백업한 지 오래됐어요' : '아직 백업하지 않았어요'),
-          h('p', null, '이용권 정보는 이 기기에만 저장돼요. 기기를 바꾸면 사라질 수 있어요.')
+          h('strong', null, settings.lastBackupAt ? tr("백업한 지 오래됐어요") : tr("아직 백업하지 않았어요")),
+          h('p', null, tr("이용권 정보는 이 기기에만 저장돼요. 기기를 바꾸면 사라질 수 있어요."))
         ),
         h('div', { class: 'nudge-actions' },
-          h('button', { class: 'btn btn-warning', attrs: { type: 'button' }, on: { click: () => actions.exportData() } }, '지금 백업'),
-          h('button', { class: 'btn btn-ghost', attrs: { type: 'button', 'aria-label': '백업 안내 닫기' }, on: { click: () => actions.dismissBackupNudge() } }, '나중에')
+          h('button', { class: 'btn btn-warning', attrs: { type: 'button' }, on: { click: () => actions.exportData() } }, tr("지금 백업")),
+          h('button', { class: 'btn btn-ghost', attrs: { type: 'button', 'aria-label': tr("백업 안내 닫기") }, on: { click: () => actions.dismissBackupNudge() } }, tr("나중에"))
         )
       )
     : null;
@@ -99,9 +100,9 @@ export function render(ctx) {
       on: { click: () => router.navigate('detail', { id: priority.id }) }
     },
       h('div', null,
-        h('div', { class: 'eyebrow' }, expired ? '확인이 필요해요' : 'NEXT BEST PASS'),
+        h('div', { class: 'eyebrow' }, expired ? tr("확인이 필요해요") : 'NEXT BEST PASS'),
         h('strong', null, priority.name),
-        h('span', null, `${status.label} · ${percent}% 진행`)
+        h('span', null, tr("{0} · {1}% 진행", (status.label), (percent)))
       ),
       h('div', { class: 'priority-meter', attrs: { 'aria-hidden': 'true' } },
         h('span', { style: { height: `${Math.max(8, percent)}%` } })
@@ -113,8 +114,8 @@ export function render(ctx) {
 
   const railHeader = hasShops
     ? h('div', { class: 'rail-header' },
-        h('div', null, h('h2', null, '바로 쓸 수 있는 이용권'), h('p', null, '옆으로 넘기며 확인하세요')),
-        h('button', { class: 'rail-more', attrs: { type: 'button' }, on: { click: () => router.navigate('list') } }, '모두보기 ›')
+        h('div', null, h('h2', null, tr("바로 쓸 수 있는 이용권")), h('p', null, tr("옆으로 넘기며 확인하세요"))),
+        h('button', { class: 'rail-more', attrs: { type: 'button' }, on: { click: () => router.navigate('list') } }, tr("모두보기 ›"))
       )
     : null;
 
@@ -123,15 +124,15 @@ export function render(ctx) {
     rail = h('div', { class: 'shop-rail is-empty' });
     rail.appendChild(emptyState({
       art: 'ticket',
-      title: '등록된 이용권이 없어요',
-      desc: '+ 버튼을 눌러 첫 이용권을 등록해 보세요',
+      title: tr("등록된 이용권이 없어요"),
+      desc: tr("+ 버튼을 눌러 첫 이용권을 등록해 보세요"),
       actions: [
-        { label: '이용권 추가', className: 'btn-primary', onClick: () => router.navigate('add') },
-        { label: '샘플 보기', className: 'btn-secondary', onClick: async () => {
+        { label: tr("이용권 추가"), className: 'btn-primary', onClick: () => router.navigate('add') },
+        { label: tr("샘플 보기"), className: 'btn-secondary', onClick: async () => {
           const added = await actions.seedDemo();
-          showToast(added ? `${added}개 샘플 업체를 추가했어요` : '이미 샘플 업체가 있어요');
+          showToast(added ? tr("{0}개 샘플 업체를 추가했어요", (added)) : tr("이미 샘플 업체가 있어요"));
         } }
-      ].concat(archivedCount ? [{ label: `보관함 보기 (${archivedCount})`, className: 'btn-secondary', onClick: () => {
+      ].concat(archivedCount ? [{ label: tr("보관함 보기 ({0})", (archivedCount)), className: 'btn-secondary', onClick: () => {
         actions.setFilter({ status: 'archived' });
         router.navigate('list');
       } }] : [])
@@ -142,10 +143,10 @@ export function render(ctx) {
       rail.classList.add('is-empty');
       rail.appendChild(emptyState({
         art: 'ticket',
-        title: '바로 쓸 수 있는 이용권이 없어요',
-        desc: '만료되거나 다 쓴 이용권은 모두보기에서 확인하세요',
+        title: tr("바로 쓸 수 있는 이용권이 없어요"),
+        desc: tr("만료되거나 다 쓴 이용권은 모두보기에서 확인하세요"),
         actions: [
-          { label: '모두보기', className: 'btn-secondary', onClick: () => router.navigate('list') }
+          { label: tr("모두보기"), className: 'btn-secondary', onClick: () => router.navigate('list') }
         ]
       }));
     }
@@ -154,7 +155,7 @@ export function render(ctx) {
         onOpen: () => router.navigate('detail', { id: shop.id }),
         // Amount passes need an entry sheet; count passes fast-path one session;
         // a collect board takes one stamp (or offers a new board when full).
-        onQuickUse: (sh) => actions.quickUse(sh, { note: '홈에서 빠른 사용' })
+        onQuickUse: (sh) => actions.quickUse(sh, { note: tr("홈에서 빠른 사용") })
       }));
     });
   }
@@ -185,8 +186,8 @@ async function populateNearby(area, shops, router) {
 
     if (!nearby.length || !area.isConnected) return;
     area.appendChild(h('div', { class: 'page-header', style: { 'margin-top': '4px' } },
-      h('h2', null, '지금 근처'),
-      h('p', null, '반경 500m 이내 가게')
+      h('h2', null, tr("지금 근처")),
+      h('p', null, tr("반경 500m 이내 가게"))
     ));
     const list = h('div', { id: 'nearby-list' });
     nearby.forEach(({ shop, distance }) => {

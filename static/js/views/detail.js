@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // views/detail.js — skinned header, quick actions, memo, progress, stamp board,
 // use/edit/undo actions, usage timeline, ad.
 
@@ -50,20 +51,20 @@ export function render(ctx, params = {}) {
     const remove = h('button', {
       class: 'btn btn-secondary', attrs: { type: 'button' }, on: { click: async () => {
         const ok = await showConfirm({
-          title: '이용권 삭제',
-          message: '이 이용권과 연결된 사용 내역을 모두 삭제할까요? 이 작업은 되돌릴 수 없어요.',
-          confirmLabel: '삭제',
+          title: tr("이용권 삭제"),
+          message: tr("이 이용권과 연결된 사용 내역을 모두 삭제할까요? 이 작업은 되돌릴 수 없어요."),
+          confirmLabel: tr("삭제"),
           danger: true
         });
         if (!ok || !await actions.deleteShop(shop.id)) return;
-        showToast('삭제되었어요');
+        showToast(tr("삭제되었어요"));
         router.navigate('home');
       } }
-    }, '삭제');
+    }, tr("삭제"));
     root.appendChild(h('div', { class: 'archive-banner', attrs: { role: 'status' } },
-      h('p', null, '보관된 이용권이에요 · 사용 내역은 그대로 남아 있어요'),
+      h('p', null, tr("보관된 이용권이에요 · 사용 내역은 그대로 남아 있어요")),
       h('div', { class: 'archive-banner-actions' },
-        h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => actions.unarchiveShop(shop.id) } }, '꺼내기'),
+        h('button', { class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => actions.unarchiveShop(shop.id) } }, tr("꺼내기")),
         remove
       )
     ));
@@ -74,40 +75,40 @@ export function render(ctx, params = {}) {
       h('div', { class: `detail-status ${status.className}` }, status.label),
       h('h2', null, shop.name),
       shop.benefit ? h('div', { class: 'benefit-line' }, shop.benefit) : null,
-      h('div', { class: 'address' }, `${shop.address || '주소 없음'} · ${shop.category}`)
+      h('div', { class: 'address' }, `${shop.address || tr("주소 없음")} · ${shop.category}`)
     ),
     h('div', { class: 'stats' },
-      stat(totalLabel(shop), amount ? '총 금액' : collect ? '도장 칸' : '총 횟수'),
-      stat(usedLabel(shop), collect ? '모은 도장' : '사용'),
-      stat(remainingLabel(shop), collect ? '남은 칸' : '남음')
+      stat(totalLabel(shop), amount ? tr("총 금액") : collect ? tr("도장 칸") : tr("총 횟수")),
+      stat(usedLabel(shop), collect ? tr("모은 도장") : tr("사용")),
+      stat(remainingLabel(shop), collect ? tr("남은 칸") : tr("남음"))
     )
   ));
 
   const phoneEl = shop.phone
-    ? h('a', { class: 'quick-action', attrs: { href: `tel:${shop.phone}` } }, '전화')
-    : h('span', { class: 'quick-action disabled' }, '전화');
+    ? h('a', { class: 'quick-action', attrs: { href: `tel:${shop.phone}` } }, tr("전화"))
+    : h('span', { class: 'quick-action disabled' }, tr("전화"));
   const mapUrl = mapViewUrl(shop);
   const mapEl = mapUrl
-    ? h('a', { class: 'quick-action', attrs: { href: mapUrl, target: '_blank', rel: 'noopener' } }, '지도')
-    : h('span', { class: 'quick-action disabled' }, '지도');
+    ? h('a', { class: 'quick-action', attrs: { href: mapUrl, target: '_blank', rel: 'noopener' } }, tr("지도"))
+    : h('span', { class: 'quick-action disabled' }, tr("지도"));
   root.appendChild(h('div', { class: 'detail-meta-grid' },
     phoneEl,
     mapEl,
-    h('div', { class: 'quick-action readonly' }, shop.expiresAt ? formatExpiry(shop.expiresAt) : '만료 없음')
+    h('div', { class: 'quick-action readonly' }, shop.expiresAt ? formatExpiry(shop.expiresAt) : tr("만료 없음"))
   ));
 
   if (shop.memo) root.appendChild(h('div', { class: 'note-panel' }, shop.memo));
 
   root.appendChild(h('div', { class: 'progress-wrap' },
     h('div', { class: 'progress-meta' },
-      h('span', null, collect ? `${percent}% 모음` : `${percent}% 사용`),
-      h('span', null, `${remainingLabel(shop)} 남음`)
+      h('span', null, collect ? tr("{0}% 모음", (percent)) : tr("{0}% 사용", (percent))),
+      h('span', null, tr("{0} 남음", (remainingLabel(shop))))
     ),
     h('div', { class: 'progress-bar' },
       h('div', { class: `progress-fill${percent >= 100 ? ' success' : ''}`, style: { width: `${percent}%` } })
     ),
     depleted
-      ? h('div', { class: 'reward-hint done' }, collect ? '도장판 완성! 가게에서 보상을 받으세요' : '모두 사용했어요')
+      ? h('div', { class: 'reward-hint done' }, collect ? tr("도장판 완성! 가게에서 보상을 받으세요") : tr("모두 사용했어요"))
       : null
   ));
 
@@ -118,8 +119,8 @@ export function render(ctx, params = {}) {
   // neither the balance block nor the board header restates them.
   if (!amount) {
     root.appendChild(h('div', { class: 'stamp-head' },
-      h('span', null, collect ? '도장판' : '이용 현황'),
-      collect && shop.completedBoards ? h('strong', null, `완성 ${shop.completedBoards}판`) : null
+      h('span', null, collect ? tr("도장판") : tr("이용 현황")),
+      collect && shop.completedBoards ? h('strong', null, tr("완성 {0}판", (shop.completedBoards))) : null
     ));
     // Ticket board only when small/countable; large passes show just the block.
     if (passTotal(shop) <= 30) root.appendChild(stampBoard(passTotal(shop), passUsed(shop), { collect }));
@@ -131,26 +132,26 @@ export function render(ctx, params = {}) {
     ? h('button', {
         class: 'btn btn-primary btn-block', attrs: { type: 'button' },
         on: { click: () => actions.offerNewBoard(shop) }
-      }, '새 판 시작')
+      }, tr("새 판 시작"))
     : h('button', {
         class: 'btn btn-primary btn-block',
         attrs: { type: 'button', disabled: depleted ? '' : null },
         on: { click: () => actions.promptUse(shop) }
-      }, collect ? '도장 찍기' : '사용하기');
+      }, collect ? tr("도장 찍기") : tr("사용하기"));
 
   if (!archived) root.appendChild(h('div', { class: 'detail-actions' },
     primary,
-    h('button', { class: 'btn btn-secondary', attrs: { type: 'button' }, on: { click: () => router.navigate('add', { id: shop.id }) } }, '편집'),
+    h('button', { class: 'btn btn-secondary', attrs: { type: 'button' }, on: { click: () => router.navigate('add', { id: shop.id }) } }, tr("편집")),
     h('button', {
       class: 'btn btn-secondary',
       attrs: { type: 'button', disabled: undoable ? null : '' },
       on: { click: () => actions.undoLastCoupon(shop.id) }
-    }, collect ? '도장 취소' : '사용 취소')
+    }, collect ? tr("도장 취소") : tr("사용 취소"))
   ));
 
   if (!archived && (!depleted || collect)) root.querySelector('.detail-actions').appendChild(h('button', {
     class: 'btn btn-secondary', attrs: { type: 'button' }, on: { click: () => actions.archiveShop(shop.id) }
-  }, '보관하기'));
+  }, tr("보관하기")));
 
   // A depleted pass has exactly two sensible ends, and which one leads depends on
   // what it is: a punch card gets re-bought at the same shop, a spent gifticon is
@@ -164,19 +165,19 @@ export function render(ctx, params = {}) {
       attrs: { type: 'button' },
       on: { click: async () => {
         const ok = await showConfirm({
-          title: isGifticon ? '기프티콘 삭제' : '이용권 삭제',
+          title: isGifticon ? tr("기프티콘 삭제") : tr("이용권 삭제"),
           message: isGifticon
-            ? '다 쓴 기프티콘과 첨부한 이미지를 삭제할까요? 이 작업은 되돌릴 수 없어요.'
-            : '이 이용권과 연결된 사용 내역을 모두 삭제할까요? 이 작업은 되돌릴 수 없어요.',
-          confirmLabel: '삭제',
+            ? tr("다 쓴 기프티콘과 첨부한 이미지를 삭제할까요? 이 작업은 되돌릴 수 없어요.")
+            : tr("이 이용권과 연결된 사용 내역을 모두 삭제할까요? 이 작업은 되돌릴 수 없어요."),
+          confirmLabel: tr("삭제"),
           danger: true
         });
         if (!ok) return;
         if (!await actions.deleteShop(shop.id)) return;
-        showToast('삭제되었어요');
+        showToast(tr("삭제되었어요"));
         router.navigate('home');
       } }
-    }, isGifticon ? '삭제' : '이용권 삭제');
+    }, isGifticon ? tr("삭제") : tr("이용권 삭제"));
 
     const reRegister = h('button', {
         class: `btn ${isGifticon ? 'btn-secondary' : 'btn-primary'} btn-block`,
@@ -195,19 +196,19 @@ export function render(ctx, params = {}) {
           totalCoupons: shop.totalCoupons,
           totalAmount: shop.totalAmount
         } }) }
-      }, '다시 등록 (재구매)');
+      }, tr("다시 등록 (재구매)"));
 
     const archive = h('button', {
       class: 'btn btn-secondary', attrs: { type: 'button' }, on: { click: () => actions.archiveShop(shop.id) }
-    }, '보관하기');
+    }, tr("보관하기"));
     root.appendChild(h('div', { class: 'detail-actions depleted-actions' },
       ...(isGifticon ? [discard, reRegister, archive] : [reRegister, discard, archive])));
   }
 
-  root.appendChild(h('div', { class: 'page-header', style: { 'margin-top': '24px' } }, h('h2', null, '사용 내역')));
+  root.appendChild(h('div', { class: 'page-header', style: { 'margin-top': '24px' } }, h('h2', null, tr("사용 내역"))));
   const timeline = h('div', { class: 'timeline' });
   if (logs.length === 0) {
-    timeline.appendChild(h('div', { class: 'field-hint' }, '아직 사용 내역이 없어요'));
+    timeline.appendChild(h('div', { class: 'field-hint' }, tr("아직 사용 내역이 없어요")));
   } else {
     logs.forEach((log) => timeline.appendChild(timelineItem(log, shop.name, { collect })));
   }
@@ -222,14 +223,14 @@ export function render(ctx, params = {}) {
 // The point of storing a gifticon is showing it at the counter, so the panel is a
 // tap target that opens the image full-screen — a thumbnail is never scannable.
 function buildGifticonPanel(image, name) {
-  const thumb = h('img', { class: 'gifticon-thumb', attrs: { src: image, alt: `${name} 기프티콘` } });
+  const thumb = h('img', { class: 'gifticon-thumb', attrs: { src: image, alt: tr("{0} 기프티콘", (name)) } });
   const open = h('button', {
     class: 'gifticon-open',
-    attrs: { type: 'button', 'aria-label': '기프티콘 크게 보기' },
+    attrs: { type: 'button', 'aria-label': tr("기프티콘 크게 보기") },
     on: { click: () => openGifticonViewer(image, name) }
-  }, thumb, h('span', { class: 'gifticon-open-hint' }, '탭하면 크게 볼 수 있어요'));
+  }, thumb, h('span', { class: 'gifticon-open-hint' }, tr("탭하면 크게 볼 수 있어요")));
 
-  return h('div', { class: 'gifticon-panel' }, h('h3', null, '기프티콘'), open);
+  return h('div', { class: 'gifticon-panel' }, h('h3', null, tr("기프티콘")), open);
 }
 
 // Full-screen, dark, focus-trapped viewer. Escape and the close button both exit;
@@ -237,10 +238,10 @@ function buildGifticonPanel(image, name) {
 // cashier scans does not close it.
 function openGifticonViewer(image, name) {
   const viewer = h('div', { class: 'gifticon-viewer' },
-    h('img', { attrs: { src: image, alt: `${name} 기프티콘` } }),
-    !controlsBrightness() ? h('p', { class: 'gifticon-viewer-hint' }, '화면 밝기를 최대로 올리면 더 잘 읽혀요') : null
+    h('img', { attrs: { src: image, alt: tr("{0} 기프티콘", (name)) } }),
+    !controlsBrightness() ? h('p', { class: 'gifticon-viewer-hint' }, tr("화면 밝기를 최대로 올리면 더 잘 읽혀요")) : null
   );
-  showPresenter({ label: `${name} 기프티콘`, body: viewer, onOpen: startPresenting, onClose: stopPresenting });
+  showPresenter({ label: tr("{0} 기프티콘", (name)), body: viewer, onOpen: startPresenting, onClose: stopPresenting });
 }
 
 function buildCodePanel(code) {
@@ -251,14 +252,14 @@ function buildCodePanel(code) {
 
   const copyBtn = h('button', {
     class: 'btn btn-secondary', attrs: { type: 'button' },
-    on: { click: async () => { await copyCode(code); showToast('코드를 복사했어요'); } }
-  }, '코드 복사');
+    on: { click: async () => { await copyCode(code); showToast(tr("코드를 복사했어요")); } }
+  }, tr("코드 복사"));
   const presentBtn = h('button', {
     class: 'btn btn-primary', attrs: { type: 'button' }, on: { click: () => openCodePresenter(code) }
-  }, '크게 보기');
+  }, tr("크게 보기"));
 
   return h('div', { class: 'coupon-code' },
-    h('h3', null, '쿠폰/멤버십 코드'),
+    h('h3', null, tr("쿠폰/멤버십 코드")),
     (qr || barcode) ? media : null,
     h('div', { class: 'coupon-code-text' }, code),
     h('div', { class: 'coupon-code-actions' }, presentBtn, copyBtn)
@@ -269,14 +270,14 @@ function openCodePresenter(code) {
   const qr = renderQR(code, { size: 260 });
   const barcode = renderBarcode(code);
   const body = h('div', { class: 'code-presenter' },
-    h('h2', null, '쿠폰/멤버십 코드'),
+    h('h2', null, tr("쿠폰/멤버십 코드")),
     h('div', { class: 'code-presenter-media' }, qr,
       h('div', { class: 'code-presenter-info' },
         barcode,
         h('div', { class: 'code-presenter-text' }, code),
-        !controlsBrightness() ? h('p', { class: 'presenter-hint' }, '화면 밝기를 최대로 올리면 더 잘 읽혀요') : null
+        !controlsBrightness() ? h('p', { class: 'presenter-hint' }, tr("화면 밝기를 최대로 올리면 더 잘 읽혀요")) : null
       )
     )
   );
-  showPresenter({ label: '쿠폰 코드 크게 보기', body, onOpen: startPresenting, onClose: stopPresenting });
+  showPresenter({ label: tr("쿠폰 코드 크게 보기"), body, onOpen: startPresenting, onClose: stopPresenting });
 }

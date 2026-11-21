@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // views/history.js — all usage logs timeline, empty state.
 
 import { h } from '../core/h.js';
@@ -15,8 +16,8 @@ export function render(ctx) {
   if (logs.length === 0) {
     root.appendChild(emptyState({
       icon: 'history',
-      title: '내역이 없어요',
-      desc: '이용권을 사용하면 여기에 기록됩니다'
+      title: tr("내역이 없어요"),
+      desc: tr("이용권을 사용하면 여기에 기록됩니다")
     }));
     return root;
   }
@@ -24,7 +25,7 @@ export function render(ctx) {
   const timeline = h('div', { class: 'timeline' });
   logs.forEach((log) => {
     const shop = shops.find((s) => s.id === log.shopId);
-    timeline.appendChild(timelineItem(log, shop ? shop.name : '알 수 없는 업체', { collect: isCollectMode(shop) }));
+    timeline.appendChild(timelineItem(log, shop ? shop.name : tr("알 수 없는 업체"), { collect: isCollectMode(shop) }));
   });
   root.appendChild(timeline);
   return root;

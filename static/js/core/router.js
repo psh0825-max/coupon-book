@@ -1,3 +1,4 @@
+import { t as tr } from './i18n.js';
 // core/router.js — view registry + browser-history-backed back stack. Owns
 // section visibility, nav active state, page title, back-button + FAB
 // visibility, scroll reset. Navigation pushes history state objects (URL never
@@ -7,14 +8,14 @@
 const ROOT_PAGES = ['home', 'history', 'map', 'settings'];
 
 const TITLES = {
-  home: '쿠폰북',
-  list: '내 이용권',
-  map: '주변 지도',
-  add: (p) => (p && p.id ? '이용권 편집' : '이용권 추가'),
-  detail: '상세',
-  settings: '설정',
-  history: '사용 내역',
-  onboarding: '시작하기'
+  home: tr("쿠폰북"),
+  list: tr("내 이용권"),
+  map: tr("주변 지도"),
+  add: (p) => (p && p.id ? tr("이용권 편집") : tr("이용권 추가")),
+  detail: tr("상세"),
+  settings: tr("설정"),
+  history: tr("사용 내역"),
+  onboarding: tr("시작하기")
 };
 
 /**

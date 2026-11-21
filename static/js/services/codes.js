@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // services/codes.js — zero-dep wrappers over the vendored QR/barcode globals
 // (window.qrcode, window.JsBarcode). Each renderer returns a DOM node and degrades
 // gracefully: any failure or missing global yields null so callers can fall back.
@@ -18,7 +19,7 @@ export function renderQR(text, { size = 180 } = {}) {
     svg.setAttribute('height', String(size));
     svg.setAttribute('shape-rendering', 'crispEdges');
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', `QR 코드: ${text}`);
+    svg.setAttribute('aria-label', tr("QR 코드: {0}", (text)));
 
     const bg = document.createElementNS(SVG_NS, 'rect');
     bg.setAttribute('x', '0');
@@ -55,7 +56,7 @@ export function renderBarcode(text) {
       format: 'CODE128', displayValue: false, margin: 0, height: 64, width: 2
     });
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', `바코드: ${text}`);
+    svg.setAttribute('aria-label', tr("바코드: {0}", (text)));
     return svg;
   } catch (e) {
     return null;

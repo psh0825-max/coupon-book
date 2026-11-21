@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // services/location.js — geolocation + dwell-based geofence.
 
 import { isArchived, isCompleted, isExpired } from '../domain.js';
@@ -153,7 +154,7 @@ export async function _checkLocation(shops, generation) {
   } catch (e) {
     if (!_warnedLocation) {
       _warnedLocation = true;
-      console.warn('위치 확인을 일시적으로 사용할 수 없어요:', e?.message || e);
+      console.warn(tr("위치 확인을 일시적으로 사용할 수 없어요:"), e?.message || e);
     }
   }
 }

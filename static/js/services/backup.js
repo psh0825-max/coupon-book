@@ -1,3 +1,4 @@
+import { t as tr } from '../core/i18n.js';
 // services/backup.js — JSON export and validate-then-replace restore.
 
 import { generateId, runTx } from '../data/db.js';
@@ -29,13 +30,13 @@ export function parseBackup(text) {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new Error('백업 파일을 읽을 수 없어요. JSON 백업 파일인지 확인해 주세요.');
+    throw new Error(tr("백업 파일을 읽을 수 없어요. JSON 백업 파일인지 확인해 주세요."));
   }
   if (!isPlainObject(data) || !Array.isArray(data.shops) || !Array.isArray(data.logs)) {
-    throw new Error('쿠폰북 백업 파일이 아니에요.');
+    throw new Error(tr("쿠폰북 백업 파일이 아니에요."));
   }
   if (data.shops.length > 5000 || data.logs.length > 20000) {
-    throw new Error('백업 파일이 너무 커요.');
+    throw new Error(tr("백업 파일이 너무 커요."));
   }
 
   const now = Date.now();
