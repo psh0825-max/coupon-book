@@ -352,6 +352,8 @@ const actions = {
         return;
       }
       await refresh();
+      // Undoing the use that finished a pass makes it active again: re-arm its alarms.
+      resyncServices();
       showToast(isCollectMode(shop) ? tr("마지막 도장을 취소했어요") : tr("마지막 사용 기록을 취소했어요"));
     });
   },
@@ -569,7 +571,8 @@ const actions = {
   async clearAll() {
     await clearAll();
     await refresh();
-    stopLocationWatch();
+    // Also cancels the native expiry alarms of the passes just removed.
+    resyncServices();
   },
 
   async exportData() {
