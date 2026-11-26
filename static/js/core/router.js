@@ -1,4 +1,5 @@
 import { t as tr } from './i18n.js';
+import { afterOwnPops } from './history-queue.js';
 // core/router.js — view registry + browser-history-backed back stack. Owns
 // section visibility, nav active state, page title, back-button + FAB
 // visibility, scroll reset. Navigation pushes history state objects (URL never
@@ -34,26 +35,34 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, 
 
   function navigate(name, params = {}) {
     if (!routes || !routes[name]) return;
-    const wasOverlay = !!(history.state && history.state.overlay);
-    if (wasOverlay) closeOverlays?.();
+    closeOverlays?.();
     currentName = name;
     currentParams = params || {};
     render();
-    // History sync: roots replace (depth 0, so back exits from a root); an open
-    // sheet's entry is reused in place; everything else pushes one level deeper.
+    // Written after any pop the app already started (a sheet closing right
+    // before this navigation), or it would land on the entry being popped.
+    afterOwnPops(() => syncHistory(name, params));
+  }
+
+  // Roots replace (depth 0, so back exits from a root); an open sheet's entry is
+  // reused in place; everything else pushes one level deeper.
+  function syncHistory(name, params) {
+    const state = history.state || {};
     if (!hasNavigated || ROOT_PAGES.includes(name)) {
       history.replaceState({ name, params, depth: 0 }, '');
       hasNavigated = true;
-    } else if (wasOverlay) {
-      history.replaceState({ name, params, depth: (history.state.depth || 0) }, '');
+    } else if (state.overlay) {
+      history.replaceState({ name, params, depth: (state.depth || 0) }, '');
     } else {
-      history.pushState({ name, params, depth: ((history.state && history.state.depth) || 0) + 1 }, '');
+      history.pushState({ name, params, depth: (state.depth || 0) + 1 }, '');
     }
   }
 
   function back() {
-    if (history.state && history.state.depth > 0) history.back();
-    else navigate('home');
+    afterOwnPops(() => {
+      if (history.state && history.state.depth > 0) history.back();
+      else navigate('home');
+    });
   }
 
   // Render a popped history entry without touching history. No-op when the

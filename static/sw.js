@@ -24,6 +24,7 @@ const URLS_TO_CACHE = [
   './js/core/messages.js',
   './js/core/store.js',
   './js/core/router.js',
+  './js/core/history-queue.js',
   './js/core/keyed-lock.js',
   './js/data/db.js',
   './js/data/skins.js',

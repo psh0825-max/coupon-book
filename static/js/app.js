@@ -5,6 +5,7 @@ import { appLanguage, localizeShell, t as tr } from './core/i18n.js';
 import { createStore } from './core/store.js';
 import { createRouter } from './core/router.js';
 import { createKeyedLock } from './core/keyed-lock.js';
+import { takeOwnPop } from './core/history-queue.js';
 import { h, clear } from './core/h.js';
 
 import { Shops, Logs, Settings, seedDemoData, clearAll } from './data/repo.js';
@@ -680,8 +681,9 @@ async function init() {
   if (backEl) backEl.addEventListener('click', () => router.back());
 
   // Hardware/browser back (TWA): close an open sheet first, then restore the
-  // popped route.
+  // popped route. Pops the app started itself (closing a sheet) render nothing.
   window.addEventListener('popstate', (e) => {
+    if (takeOwnPop()) return;
     if (closeOverlayFromPop()) return;
     router.restore(e.state);
   });
