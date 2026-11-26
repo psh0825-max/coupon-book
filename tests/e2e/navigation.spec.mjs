@@ -172,3 +172,26 @@ test('N9: deleting a pass from an edited form asks only the delete question', as
   expect(await page.locator('#overlay').count()).toBe(0);
   await expect(page.locator('#home .card-main', { hasText: '지울 이용권' })).toHaveCount(0);
 });
+
+// The Android shell calls window.__cbBack() before walking WebView history
+// back; true means the page is handling Back itself.
+test('N10: the shell back hook asks about a dirty form without touching history first', async ({ page }) => {
+  await openApp(page, app.base, { shops: [pass('기존 이용권')] });
+  await page.locator('[data-fab]').click();
+  expect(await page.evaluate(() => window.__cbBack?.() ?? null)).toBe(false); // clean form: shell goes back
+  await page.locator('#f-name').fill('쓰다 만 이용권');
+  const before = await page.evaluate(() => [history.length, history.state.name]);
+
+  expect(await page.evaluate(() => window.__cbBack())).toBe(true);
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toContainText('저장하지 않은 내용은 사라져요');
+  // Only the sheet's own entry was added; the form's entry was not popped and re-pushed.
+  expect(await page.evaluate(() => [history.length, history.state.name, !!history.state.overlay])).toEqual([before[0] + 1, 'add', true]);
+  // With the sheet open the shell's own back closes it.
+  expect(await page.evaluate(() => window.__cbBack())).toBe(false);
+
+  await sheet.getByRole('button', { name: '나가기' }).click();
+  await expect(page.locator('#home')).toHaveClass(/active/);
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => history.state.depth)).toBe(0);
+});

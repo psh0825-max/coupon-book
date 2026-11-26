@@ -120,8 +120,12 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays }
 history.go() is asynchronous, so every write the router and overlay make goes
 through `afterOwnPops`. Going to a root from a sub page pops back to the first
 entry (`goBackBy(depth)`) before replacing it, so Back from a root leaves the app.
-A form view can register `router.setLeaveGuard({ isDirty, confirm })`; Back on a
-dirty form re-pushes its entry and asks before leaving.
+A form view can register `router.setLeaveGuard({ isDirty, confirm })`; leaving a
+dirty form through navigate() or Back asks first. The Android shell calls
+`window.__cbBack()` on hardware Back before `webView.goBack()`; `true` means the
+page is asking, so nothing is popped. Browser Back has already popped the entry,
+so the router re-pushes it inside popstate; Chrome's history-manipulation
+intervention may let a later browser Back skip that entry (browser only).
 
 ### core/keyed-lock.js — per-key non-queuing async lock
 `createKeyedLock()` returns `run(key, fn)` and `isBusy(key)` with no dependencies.

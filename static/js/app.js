@@ -28,7 +28,7 @@ import { mountAds } from './services/ads.js';
 import { resetPresentation } from './services/presentation.js';
 
 import { showToast } from './ui/toast.js';
-import { showSheet, showConfirm, closeOverlay, closeOverlayFromPop } from './ui/overlay.js';
+import { showSheet, showConfirm, closeOverlay, closeOverlayFromPop, isOverlayOpen } from './ui/overlay.js';
 
 import * as Home from './views/home.js';
 import * as List from './views/list.js';
@@ -727,6 +727,12 @@ async function init() {
 
   // Hardware/browser back (TWA): close an open sheet first, then restore the
   // popped route. Pops the app started itself (closing a sheet) render nothing.
+  // The Android shell calls this on hardware Back before going back in WebView
+  // history: true means the page is handling it (asking about an unsaved form),
+  // so no entry is popped and re-pushed. With a sheet open the shell's own
+  // back closes the sheet as before.
+  window.__cbBack = () => !isOverlayOpen() && router.confirmBack();
+
   window.addEventListener('popstate', (e) => {
     if (takeOwnPop()) return;
     if (closeOverlayFromPop()) return;

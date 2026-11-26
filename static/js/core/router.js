@@ -92,18 +92,27 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, 
     leaveGuard = guard || null;
   }
 
-  // The pop already happened, so put the form's entry back while asking; leaving
-  // then goes back for real.
-  function holdForGuard() {
+  // Back before anything is popped (the Android shell asks via __cbBack):
+  // true when a dirty form is now asking; leaving then goes back for real.
+  function confirmBack() {
     const guard = leaveGuard;
-    if (!guard || !currentEntry || !guard.isDirty()) return false;
-    history.pushState(currentEntry, '');
+    if (!guard || !guard.isDirty()) return false;
     guard.confirm().then((leave) => {
       if (!leave || leaveGuard !== guard) return;
       leaveGuard = null;
-      afterOwnPops(() => history.back());
+      back();
     });
     return true;
+  }
+
+  // Browser Back has already popped the form's entry: put it back while asking.
+  // That pushState runs inside popstate without a user gesture, which Chrome's
+  // history intervention may let browser Back skip later; the app shell avoids
+  // this path by asking through confirmBack() first.
+  function holdForGuard() {
+    if (!leaveGuard || !currentEntry || !leaveGuard.isDirty()) return false;
+    history.pushState(currentEntry, '');
+    return confirmBack();
   }
 
   function back() {
@@ -195,7 +204,7 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, 
     }
   }
 
-  return { navigate, back, current, reload, restore, setLeaveGuard };
+  return { navigate, back, current, reload, restore, setLeaveGuard, confirmBack };
 }
 
 function replaceChildren(parent, node) {

@@ -221,6 +221,11 @@ function pushOverlayEntry() {
   }, '');
 }
 
+/** Whether a sheet or presenter is on screen. */
+export function isOverlayOpen() {
+  return !!activeState;
+}
+
 /**
  * closeOverlayFromPop() — popstate handler entry point: the history entry is
  * already gone, so close without popping again. Returns whether a sheet was

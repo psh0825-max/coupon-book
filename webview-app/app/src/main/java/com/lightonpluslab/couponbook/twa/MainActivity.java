@@ -60,7 +60,14 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
     private final OnBackPressedCallback backCallback = new OnBackPressedCallback(false) {
         @Override
         public void handleOnBackPressed() {
-            webView.goBack();
+            // The page answers first: true means it handles Back itself (it is asking
+            // about an unsaved form). Anything else, including pages without the hook
+            // (the offline page, an older cached web build), goes back as before.
+            webView.evaluateJavascript(
+                    "(function(){try{return !!(window.__cbBack&&window.__cbBack());}catch(e){return false;}})()",
+                    handled -> {
+                        if (!"true".equals(handled) && webView.canGoBack()) webView.goBack();
+                    });
         }
     };
 
