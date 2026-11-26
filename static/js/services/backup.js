@@ -98,14 +98,22 @@ export async function restoreBackup(parsed) {
   return { shops: parsed.shops.length, logs: parsed.logs.length };
 }
 
+// What the web can tell from the Android shell's saveText(). Shells since 2.0.10
+// return whether the file was written and show their own toast for it; 2.0.9
+// and older return nothing (undefined here), so that still counts as saved.
+export function nativeSaveOutcome(result) {
+  if (typeof result === 'boolean') return { saved: result, announced: true };
+  return { saved: true, announced: false };
+}
+
+// -> { saved, announced }: announced when the shell already told the user.
 export async function exportData() {
   const [shops, logs, settings] = await Promise.all([Shops.all(), Logs.all(), Settings.entries()]);
   const json = JSON.stringify({ version: 3, shops, logs, settings, exportedAt: Date.now() }, null, 2);
   const filename = `coupon-backup-${dateStamp()}.json`;
   const bridge = typeof window !== 'undefined' ? window.AndroidBridge : null;
   if (bridge && typeof bridge.saveText === 'function') {
-    bridge.saveText(filename, json);
-    return;
+    return nativeSaveOutcome(bridge.saveText(filename, json));
   }
   const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
   const a = document.createElement('a');
@@ -115,6 +123,7 @@ export async function exportData() {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return { saved: true, announced: false };
 }
 
 export async function importData(file) {

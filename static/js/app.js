@@ -590,11 +590,15 @@ const actions = {
     resyncServices();
   },
 
+  // A failed save in the app shell is not a backup: lastBackupAt stays, and the
+  // shell's own toast already said it failed.
   async exportData() {
-    await backupExport();
+    const { saved, announced } = await backupExport();
+    if (!saved) return false;
     await Settings.set('lastBackupAt', Date.now());
     await refresh();
-    showToast(tr("백업 파일이 다운로드되었어요"));
+    if (!announced) showToast(tr("백업 파일이 다운로드되었어요"));
+    return true;
   },
 
   // Snooze the home backup banner (domain.needsBackupNudge honors the timestamp).

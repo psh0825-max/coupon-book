@@ -70,3 +70,12 @@ test('설정과 exportedAt이 없는 이전 백업도 허용한다', () => {
   assert.deepEqual(result.settings, []);
   assert.equal(result.exportedAt, null);
 });
+
+// F6: the Android shell's saveText() result decides whether the backup counts.
+test('네이티브 백업 저장 결과: 실패는 백업으로 치지 않고, 결과를 주지 않는 이전 셸은 성공으로 본다', async () => {
+  const { nativeSaveOutcome } = await import('../../static/js/services/backup.js');
+  assert.deepEqual(nativeSaveOutcome(false), { saved: false, announced: true });
+  assert.deepEqual(nativeSaveOutcome(true), { saved: true, announced: true });
+  // 2.0.9 and older shells return void, which reaches the web as undefined.
+  assert.deepEqual(nativeSaveOutcome(undefined), { saved: true, announced: false });
+});
