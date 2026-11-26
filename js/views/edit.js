@@ -149,7 +149,7 @@ export function render(ctx, params = {}) {
       // A blank form used to land on the first key, 찜질방, for a gifticon or a
       // cafe card alike; 기타 is the neutral default.
       attrs: { value: c, selected: (hasInit ? src.category === c : c === '기타') ? '' : null }
-    }, c))
+    }, tr(c)))
   );
   form.appendChild(field(tr("카테고리"), 'f-category', catSelect));
 
@@ -436,12 +436,14 @@ export function render(ctx, params = {}) {
       if (!ok) return;
       if (!await actions.deleteShop(shop.id)) return;
       showToast(tr("삭제되었어요"));
+      discarded = true; // the pass is gone; its unsaved edits go with it
       router.navigate('home');
     });
     form.appendChild(delBtn);
   }
 
   let saving = false;
+  let discarded = false;
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (saving) return;
@@ -504,5 +506,25 @@ export function render(ctx, params = {}) {
   });
 
   applyKind();
+
+  // Leaving a form with unsaved input (Back, tabs, the add button, a template)
+  // asks before throwing it away; saving and deleting do not. The place search
+  // box and the file picker hold no pass data of their own.
+  const formSnapshot = () => JSON.stringify([
+    ...Array.from(form.querySelectorAll('input, select, textarea'))
+      .filter((el) => el.type !== 'file' && el.id !== 'f-place-search')
+      .map((el) => el.value),
+    kind, collect, currentSkin, imageData
+  ]);
+  const pristine = formSnapshot();
+  router.setLeaveGuard?.({
+    isDirty: () => !saving && !discarded && formSnapshot() !== pristine,
+    confirm: () => showConfirm({
+      title: tr("작성 중인 내용이 있어요"),
+      message: tr("저장하지 않은 내용은 사라져요. 그래도 나갈까요?"),
+      confirmLabel: tr("나가기"),
+      danger: true
+    })
+  });
   return root;
 }

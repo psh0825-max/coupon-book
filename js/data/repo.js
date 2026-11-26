@@ -5,6 +5,7 @@ import {
   generateId, getAll, get, put, del, getAllByIndex, clearStores, runTx
 } from './db.js';
 import { CATEGORIES, SKINS, getDefaultSkin } from './skins.js';
+import { t as tr } from '../core/i18n.js';
 
 export const DEFAULTS = {
   notifyEnabled: false,
@@ -213,11 +214,14 @@ function localDateOffset(now, days) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+// Sample names, addresses and memos are written in the app language at the
+// moment the samples are created; samples already saved are left as they are.
+// category stays the Korean key (it is data; views translate it for display).
 export function demoShops(now = new Date()) {
   return [
-    { name: '안양 스타 마사지', category: '마사지', address: '경기도 안양시 동안구 시민대로 1234', phone: '031-000-1200', expiresAt: localDateOffset(now, 180), memo: '100만원 충전권, 15만원 사용', lat: 37.4012, lng: 126.9523, kind: 'amount', totalAmount: 1000000, usedAmount: 150000, skin: 'sage' },
-    { name: '허브 커피 로스터스', category: '카페', address: '경기도 안양시 동안구 관악로 56', phone: '031-000-3400', expiresAt: localDateOffset(now, 40), memo: '원두 구매도 스탬프 적립 가능', lat: 37.4025, lng: 126.9530, mode: 'collect', totalCoupons: 12, usedCoupons: 7, skin: 'espresso' },
-    { name: '태양 찜질방', category: '찜질방', address: '경기도 안양시 만안구 성남대로 789', phone: '031-000-5600', expiresAt: localDateOffset(now, 6), memo: '주말 입장권은 쿠폰 제외 여부 확인', lat: 37.4000, lng: 126.9510, totalCoupons: 8, skin: 'sage' }
+    { name: tr('안양 스타 마사지'), category: '마사지', address: tr('경기도 안양시 동안구 시민대로 1234'), phone: '031-000-1200', expiresAt: localDateOffset(now, 180), memo: tr('100만원 충전권, 15만원 사용'), lat: 37.4012, lng: 126.9523, kind: 'amount', totalAmount: 1000000, usedAmount: 150000, skin: 'sage' },
+    { name: tr('허브 커피 로스터스'), category: '카페', address: tr('경기도 안양시 동안구 관악로 56'), phone: '031-000-3400', expiresAt: localDateOffset(now, 40), memo: tr('원두 구매도 스탬프 적립 가능'), lat: 37.4025, lng: 126.9530, mode: 'collect', totalCoupons: 12, usedCoupons: 7, skin: 'espresso' },
+    { name: tr('태양 찜질방'), category: '찜질방', address: tr('경기도 안양시 만안구 성남대로 789'), phone: '031-000-5600', expiresAt: localDateOffset(now, 6), memo: tr('주말 입장권은 쿠폰 제외 여부 확인'), lat: 37.4000, lng: 126.9510, totalCoupons: 8, skin: 'sage' }
   ];
 }
 

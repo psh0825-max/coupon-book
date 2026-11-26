@@ -5,12 +5,24 @@ import { t as tr } from '../core/i18n.js';
 // button closes the sheet instead of leaving the page.
 
 import { h, icon, clear } from '../core/h.js';
+import { afterOwnPops, goBackBy } from '../core/history-queue.js';
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
 let titleSeq = 0;
 let activeState = null; // { overlay, onClose, prevFocus, onKeydown }
+const closing = new Map(); // overlay -> { timer, finish } while it animates out
+
+// A new sheet must not share the page with one still animating out: two
+// dialogs (and two sets of buttons) would be in the DOM at once.
+function finishClosing() {
+  for (const { timer, finish } of closing.values()) {
+    clearTimeout(timer);
+    finish();
+  }
+  closing.clear();
+}
 
 function getFocusable(container) {
   return Array.from(container.querySelectorAll(FOCUSABLE))
@@ -43,6 +55,7 @@ export function showSheet({ title, body, actions = [], onClose } = {}) {
   // Tear down any previous overlay synchronously; keep its history entry —
   // the replacement sheet takes it over.
   closeOverlay(true, { keepHistory: true });
+  finishClosing();
 
   const titleId = `sheet-title-${++titleSeq}`;
   const prevFocus = document.activeElement;
@@ -93,13 +106,7 @@ export function showSheet({ title, body, actions = [], onClose } = {}) {
 
   // One history entry per open sheet (not per replacement) so hardware back
   // closes it. closeOverlay() pops the entry again.
-  if (!(history.state && history.state.overlay)) {
-    history.pushState({
-      ...(history.state || {}),
-      overlay: true,
-      depth: (((history.state && history.state.depth) || 0) + 1)
-    }, '');
-  }
+  afterOwnPops(pushOverlayEntry);
 
   const onKeydown = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); }
@@ -121,6 +128,7 @@ export function showSheet({ title, body, actions = [], onClose } = {}) {
 /** Full-screen counter presentation. Its backdrop deliberately does not dismiss. */
 export function showPresenter({ label, body, onOpen, onClose } = {}) {
   closeOverlay(true, { keepHistory: true });
+  finishClosing();
 
   const prevFocus = document.activeElement;
   const closeBtn = h('button', {
@@ -134,10 +142,7 @@ export function showPresenter({ label, body, onOpen, onClose } = {}) {
 
   document.body.appendChild(overlay);
   document.body.classList.add('overlay-open');
-  if (!(history.state && history.state.overlay)) {
-    history.pushState({ ...(history.state || {}), overlay: true,
-      depth: (((history.state && history.state.depth) || 0) + 1) }, '');
-  }
+  afterOwnPops(pushOverlayEntry);
   const onKeydown = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); }
     else trapFocus(presenter, e);
@@ -191,6 +196,7 @@ export function closeOverlay(immediate = false, { keepHistory = false } = {}) {
   overlay.classList.remove('active');
 
   const finish = () => {
+    closing.delete(overlay);
     overlay.remove();
     onClose?.();
     if (prevFocus && typeof prevFocus.focus === 'function') prevFocus.focus();
@@ -200,10 +206,24 @@ export function closeOverlay(immediate = false, { keepHistory = false } = {}) {
     clear(overlay);
     finish();
   } else {
-    setTimeout(finish, 400);
+    closing.set(overlay, { timer: setTimeout(finish, 400), finish });
   }
 
-  if (!keepHistory && history.state && history.state.overlay) history.back();
+  if (!keepHistory) afterOwnPops(() => { if (history.state && history.state.overlay) goBackBy(1); });
+}
+
+function pushOverlayEntry() {
+  if (history.state && history.state.overlay) return;
+  history.pushState({
+    ...(history.state || {}),
+    overlay: true,
+    depth: (((history.state && history.state.depth) || 0) + 1)
+  }, '');
+}
+
+/** Whether a sheet or presenter is on screen. */
+export function isOverlayOpen() {
+  return !!activeState;
 }
 
 /**

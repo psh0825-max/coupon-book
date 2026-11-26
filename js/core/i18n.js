@@ -25,12 +25,25 @@ export function setLanguagePreference(language) {
   else if (SUPPORTED.includes(language)) localStorage.setItem(STORAGE_KEY, language);
 }
 
+// Keys are the Korean text. 'text@@context' tells apart two uses of the same
+// Korean word (사용 as the Use button and as the Used label); Korean shows the
+// part before @@. {0|one|other} in a translation picks a plural form by {0}.
 export function t(key, ...values) {
+  // Callers pass data too (tr(shop.category)); a record without one must not
+  // break the page. Hand non-text back as is, as t() always did.
+  if (typeof key !== 'string') return key;
   const language = appLanguage();
-  const template = language === 'ko' ? key : (Object.hasOwn(messages, key) ? messages[key][language === 'en' ? 0 : 1] : key);
-  return values.length ? template.replace(/\{(\d+)\}/g, (match, index) => (
-    Number(index) < values.length ? String(values[Number(index)]) : match
-  )) : template;
+  const korean = key.split('@@')[0];
+  const template = language === 'ko' ? korean : (Object.hasOwn(messages, key) ? messages[key][language === 'en' ? 0 : 1] : korean);
+  if (!values.length) return template;
+  const value = (index) => values[Number(index)];
+  return template
+    .replace(/\{(\d+)\|([^|{}]*)\|([^{}]*)\}/g, (match, index, one, other) => (
+      Number(index) < values.length ? (Number(value(index)) === 1 ? one : other) : match
+    ))
+    .replace(/\{(\d+)\}/g, (match, index) => (
+      Number(index) < values.length ? String(value(index)) : match
+    ));
 }
 
 export function localizeShell() {

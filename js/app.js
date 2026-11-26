@@ -5,6 +5,7 @@ import { appLanguage, localizeShell, t as tr } from './core/i18n.js';
 import { createStore } from './core/store.js';
 import { createRouter } from './core/router.js';
 import { createKeyedLock } from './core/keyed-lock.js';
+import { takeOwnPop } from './core/history-queue.js';
 import { h, clear } from './core/h.js';
 
 import { Shops, Logs, Settings, seedDemoData, clearAll } from './data/repo.js';
@@ -14,7 +15,9 @@ import {
 import { formatWon, groupDigits, parseNumber } from './services/format.js';
 
 import { setNotifySettings, startLocationWatch, stopLocationWatch } from './services/location.js';
-import { syncReminders, ensurePermission } from './services/reminders.js';
+import {
+  syncReminders, ensurePermission, verifyReminderPermission, markRemindersConfirmed, flagRemindersForCheck
+} from './services/reminders.js';
 import {
   registerSW, applyUpdate, initInstallPrompt, canInstall, promptInstall, isStandalone, isIos
 } from './services/pwa.js';
@@ -25,7 +28,7 @@ import { mountAds } from './services/ads.js';
 import { resetPresentation } from './services/presentation.js';
 
 import { showToast } from './ui/toast.js';
-import { showSheet, showConfirm, closeOverlay, closeOverlayFromPop } from './ui/overlay.js';
+import { showSheet, showConfirm, closeOverlay, closeOverlayFromPop, isOverlayOpen } from './ui/overlay.js';
 
 import * as Home from './views/home.js';
 import * as List from './views/list.js';
@@ -93,8 +96,19 @@ function onReminderDue(shop, info) {
   if (info.type === 'lowbalance') {
     showToast(tr("{0} · 잔액 {1} 남음", (shop.name), (formatWon(info.remaining))), 'danger');
   } else {
-    showToast(tr("{0} · {1} 만료 임박", (shop.name), (info.days === 0 ? '오늘 만료' : 'D-' + info.days)), 'danger');
+    showToast(tr("{0} · {1} 만료 임박", (shop.name), (info.days === 0 ? tr("오늘 만료") : 'D-' + info.days)), 'danger');
   }
+}
+
+// Reminders a restore switched on without a way to notify (Android 13+): ask
+// once; if the answer is no, switch them off and say so. A no-op unless a
+// restore flagged the data (run again at boot in case the app closed mid-prompt).
+async function checkReminderPermission() {
+  if (await verifyReminderPermission(store.getState().settings) !== 'denied') return;
+  await Settings.set('remindersEnabled', false);
+  await refresh();
+  resyncServices();
+  showToast(tr("알림 권한이 없어 만료 알림을 껐어요. 설정에서 다시 켤 수 있어요."), 'danger');
 }
 
 // A new service worker is waiting. Offer an accessible refresh prompt; applying it
@@ -165,8 +179,10 @@ const actions = {
       const updated = { ...shop };
       let logFields;
       if (isAmountKind(shop)) {
-        const amt = clamp(Math.round(opts.amount), 1, remainingValue(shop));
-        if (!amt) return;
+        // Reject before clamping: an empty or 0 entry must not become a 1-won use.
+        const requested = Math.round(Number(opts.amount));
+        if (!(requested >= 1)) return;
+        const amt = clamp(requested, 1, remainingValue(shop));
         updated.usedAmount = (shop.usedAmount || 0) + amt;
         logFields = { amount: amt };
       } else {
@@ -247,7 +263,12 @@ const actions = {
         id: 'use-amount',
         attrs: { type: 'text', inputmode: 'numeric', placeholder: tr("예: 30,000") }
       });
-      amountInput.addEventListener('input', () => { amountInput.value = groupDigits(amountInput.value); });
+      const amountError = h('p', { class: 'field-hint field-error', attrs: { role: 'alert' } });
+      amountError.hidden = true;
+      amountInput.addEventListener('input', () => {
+        amountInput.value = groupDigits(amountInput.value);
+        amountError.hidden = true;
+      });
       const chipValues = [10000, 30000, 50000, 100000];
       const chips = h('div', { class: 'use-chips' },
         chipValues.map((v) => h('button', {
@@ -264,6 +285,7 @@ const actions = {
         body: h('div', null,
           h('label', { class: 'field-label', attrs: { for: 'use-amount' } }, tr("사용 금액(원)")),
           amountInput,
+          amountError,
           chips,
           h('div', { class: 'amount-preview' }, tr("남은 금액: {0}", (formatWon(remaining)))),
           memoInput
@@ -271,8 +293,18 @@ const actions = {
         actions: [
           { id: 'cancel', label: tr("취소"), className: 'btn-secondary' },
           {
-            id: 'confirm', label: tr("사용"), className: 'btn-primary',
-            onClick: () => actions.usePass(shop.id, { amount: parseNumber(amountInput.value), note: memoInput.value.trim(), confirmExpired: true })
+            id: 'confirm', label: tr("사용"), className: 'btn-primary', close: false,
+            onClick: () => {
+              const amount = parseNumber(amountInput.value);
+              if (amount <= 0) {
+                amountError.textContent = tr("사용할 금액을 입력해 주세요");
+                amountError.hidden = false;
+                amountInput.focus();
+                return;
+              }
+              actions.usePass(shop.id, { amount, note: memoInput.value.trim(), confirmExpired: true });
+              closeOverlay();
+            }
           }
         ]
       });
@@ -333,6 +365,8 @@ const actions = {
         return;
       }
       await refresh();
+      // Undoing the use that finished a pass makes it active again: re-arm its alarms.
+      resyncServices();
       showToast(isCollectMode(shop) ? tr("마지막 도장을 취소했어요") : tr("마지막 사용 기록을 취소했어요"));
     });
   },
@@ -527,7 +561,10 @@ const actions = {
 
   async toggleReminders(on) {
     let permission = 'granted';
-    if (on) permission = await ensurePermission();
+    if (on) {
+      permission = await ensurePermission();
+      markRemindersConfirmed();
+    }
     await Settings.set('remindersEnabled', on);
     await refresh();
     resyncServices();
@@ -550,14 +587,19 @@ const actions = {
   async clearAll() {
     await clearAll();
     await refresh();
-    stopLocationWatch();
+    // Also cancels the native expiry alarms of the passes just removed.
+    resyncServices();
   },
 
+  // A failed save in the app shell is not a backup: lastBackupAt stays, and the
+  // shell's own toast already said it failed.
   async exportData() {
-    await backupExport();
+    const { saved, announced } = await backupExport();
+    if (!saved) return false;
     await Settings.set('lastBackupAt', Date.now());
     await refresh();
-    showToast(tr("백업 파일이 다운로드되었어요"));
+    if (!announced) showToast(tr("백업 파일이 다운로드되었어요"));
+    return true;
   },
 
   // Snooze the home backup banner (domain.needsBackupNudge honors the timestamp).
@@ -571,6 +613,9 @@ const actions = {
       const sum = await restoreBackup(parsed);
       await refresh();
       resyncServices();
+      // The restored settings never went through this install's permission prompt.
+      flagRemindersForCheck();
+      checkReminderPermission().catch((err) => console.error(err));
       return sum;
     } catch (err) {
       reportSaveError(err);
@@ -611,7 +656,10 @@ const router = createRouter({
   routes,
   getCtx: () => ctx,
   onChange: () => mountAds(), // page-level Auto Ads; no-op while ads are off
-  closeOverlays: () => closeOverlay(true, { keepHistory: true })
+  closeOverlays: () => closeOverlay(true, { keepHistory: true }),
+  // Back can land on the detail/edit entry of a pass deleted since.
+  isAvailable: ({ name, params }) => !(['detail', 'add'].includes(name) && params.id)
+    || store.getState().shops.some((s) => s.id === params.id)
 });
 ctx.router = router; // views read ctx.router at render time — must be set before any navigate
 
@@ -667,6 +715,7 @@ async function init() {
   }
   store.setState({ ready: true });
   resyncServices();
+  checkReminderPermission().catch((err) => console.error(err));
 
   // Best-effort: ask the browser to keep IndexedDB durable so coupons aren't
   // silently evicted under storage pressure. Never await-block boot.
@@ -677,8 +726,15 @@ async function init() {
   if (backEl) backEl.addEventListener('click', () => router.back());
 
   // Hardware/browser back (TWA): close an open sheet first, then restore the
-  // popped route.
+  // popped route. Pops the app started itself (closing a sheet) render nothing.
+  // The Android shell calls this on hardware Back before going back in WebView
+  // history: true means the page is handling it (asking about an unsaved form),
+  // so no entry is popped and re-pushed. With a sheet open the shell's own
+  // back closes the sheet as before.
+  window.__cbBack = () => !isOverlayOpen() && router.confirmBack();
+
   window.addEventListener('popstate', (e) => {
+    if (takeOwnPop()) return;
     if (closeOverlayFromPop()) return;
     router.restore(e.state);
   });

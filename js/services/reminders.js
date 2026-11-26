@@ -50,6 +50,42 @@ export async function ensurePermission() {
   return 'unsupported';
 }
 
+// Set by a restore: its settings never went through this install's permission
+// prompt. Only that data is checked; an install whose user switched reminders on
+// with notifications off keeps the in-app-only reminders it chose.
+const CHECK_KEY = 'cb_reminders_check';
+
+export function flagRemindersForCheck() {
+  try { localStorage.setItem(CHECK_KEY, '1'); } catch (e) { /* best-effort */ }
+}
+
+/** The user decided in this install (toggle) or the check ran: nothing left to check. */
+export function markRemindersConfirmed() {
+  try { localStorage.removeItem(CHECK_KEY); } catch (e) { /* best-effort */ }
+}
+
+function remindersNeedCheck() {
+  try { return localStorage.getItem(CHECK_KEY) === '1'; } catch (e) { return false; }
+}
+
+// A restored backup can switch reminders on in an Android shell that was never
+// granted notification permission (Android 13+), and its remindersOffered flag
+// stops the app from offering again. Ask through the shell once; 'denied' tells
+// the caller to switch reminders off. 'skip' when there is nothing to check.
+// The flag stays until the answer arrives, so a prompt cut short by closing the
+// app is asked again at the next launch.
+export async function verifyReminderPermission(settings) {
+  if (!remindersNeedCheck()) return 'skip';
+  const bridge = typeof window !== 'undefined' ? window.AndroidBridge : null;
+  if (!settings || !settings.remindersEnabled || !bridge || typeof bridge.canNotify !== 'function') {
+    markRemindersConfirmed();
+    return 'skip';
+  }
+  const granted = bridge.canNotify() || (await ensurePermission()) === 'granted';
+  markRemindersConfirmed();
+  return granted ? 'granted' : 'denied';
+}
+
 // Post a system notification: the native bridge in the app shell (a bare WebView
 // has no Notification API), else the web Notification API when granted. The in-app
 // onDue toast fires regardless, so this is purely the OS-level surface.
