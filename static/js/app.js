@@ -96,7 +96,7 @@ function onReminderDue(shop, info) {
   if (info.type === 'lowbalance') {
     showToast(tr("{0} · 잔액 {1} 남음", (shop.name), (formatWon(info.remaining))), 'danger');
   } else {
-    showToast(tr("{0} · {1} 만료 임박", (shop.name), (info.days === 0 ? '오늘 만료' : 'D-' + info.days)), 'danger');
+    showToast(tr("{0} · {1} 만료 임박", (shop.name), (info.days === 0 ? tr("오늘 만료") : 'D-' + info.days)), 'danger');
   }
 }
 

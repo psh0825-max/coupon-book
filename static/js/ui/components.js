@@ -206,7 +206,7 @@ export function skinSelector(currentSkin, onSelect) {
     },
       h('div', { class: 'swatch', style: { background: skin.color } }),
       h('div', { class: 'name' }, tr(skin.name)),
-      h('div', { class: 'desc' }, skin.desc)
+      h('div', { class: 'desc' }, tr(skin.desc))
     );
     grid.appendChild(option);
   });

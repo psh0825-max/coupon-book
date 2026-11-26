@@ -73,12 +73,12 @@ export const messages = {
     "{0} · {1} — まず確認してください。"
   ],
   "{0} · {1} 남음": [
-    "{0} · {1} Remaining",
-    "{0} · {1} あと"
+    "{0} · {1} remaining",
+    "{0} · 残り{1}"
   ],
   "{0} · {1} 남음 · {2}%": [
-    "{0} · {1} Remaining · {2}%",
-    "{0} · {1} 余り · {2}%"
+    "{0} · {1} remaining · {2}%",
+    "{0} · 残り{1} · {2}%"
   ],
   "{0} · {1} 만료 임박": [
     "{0} · {1} Expiring Soon",
@@ -93,8 +93,8 @@ export const messages = {
     "{0}への経路"
   ],
   "{0} 남음": [
-    "{0} Remaining",
-    "{0} 未使用"
+    "{0} remaining",
+    "残り{0}"
   ],
   "{0} 사용": [
     "Use {0}",
@@ -109,19 +109,19 @@ export const messages = {
     "{0}, {1}, 詳細"
   ],
   "{0}{1} 남음": [
-    "{0}{1} Remaining",
-    "{0}{1} 未使用"
+    "{0}{1} remaining",
+    "{0}残り{1}"
   ],
   "{0}개": [
-    "{0} pieces",
+    "{0} {0|stamp|stamps}",
     "{0}個"
   ],
   "{0}개 더 모으면 보상": [
-    "Need {0} More to Get Reward",
-    "{0}個集めると報酬"
+    "{0} more for the reward",
+    "あと{0}個で特典"
   ],
   "{0}개 샘플 업체를 추가했어요": [
-    "Added {0} sample businesses",
+    "Added {0} sample {0|business|businesses}",
     "{0}個のサンプル店舗を追加しました"
   ],
   "{0}개 중 {1}개 {2}": [
@@ -133,23 +133,23 @@ export const messages = {
     "あと{0}個"
   ],
   "{0}분 전": [
-    "{0} minutes ago",
+    "{0} {0|minute|minutes} ago",
     "{0}分前"
   ],
   "{0}시간 전": [
-    "{0} hours ago",
+    "{0} {0|hour|hours} ago",
     "{0}時間前"
   ],
   "{0}일 전": [
-    "{0} days ago",
+    "{0} {0|day|days} ago",
     "{0}日前"
   ],
   "{0}회": [
-    "{0} times",
+    "{0} {0|use|uses}",
     "{0}回"
   ],
   "{0}회 남음": [
-    "{0} uses left",
+    "{0} {0|use|uses} left",
     "残り{0}回"
   ],
   "☕ 카페 도장판 10칸": [
@@ -246,7 +246,7 @@ export const messages = {
   ],
   "꺼짐 — 저장 공간 부족 시 삭제될 수 있어요{0}": [
     "· Off — May be deleted if storage is low{0}",
-    "· オフ — 儲けが足りない場合削除される可能性があります{0}"
+    "· オフ — 空き容量が少なくなると削除される場合があります{0}"
   ],
   "나의 기록": [
     "My Records",
@@ -345,8 +345,8 @@ export const messages = {
     "スタンプ"
   ],
   "도장 {0}개를 모두 모았어요 — 가게에서 보상을 받으세요": [
-    "Collected {0} stamps — receive reward at the store",
-    "道場 {0}個をすべて集めたよ — 店舗で報酬を受け取ってね"
+    "Collected all {0} stamps — claim your reward at the store",
+    "スタンプを{0}個すべて集めました — お店で特典を受け取ってください"
   ],
   "도장 개수": [
     "Number of stamps",
@@ -358,7 +358,7 @@ export const messages = {
   ],
   "도장 완료 · {0}개 더 모으면 보상": [
     "Stamp Completed · {0} more to get reward",
-    "スタンプ完了 · {0}個集まると報酬"
+    "スタンプ完了 · あと{0}個で特典"
   ],
   "도장 찍기": [
     "Add a stamp",
@@ -409,7 +409,7 @@ export const messages = {
     "登録店舗中心"
   ],
   "등록한 이용권 {0}개": [
-    "{0} saved passes",
+    "{0} saved {0|pass|passes}",
     "登録済みの利用券：{0}件"
   ],
   "로즈": [
@@ -453,7 +453,7 @@ export const messages = {
     "期限切れ"
   ],
   "만료 D-{0}": [
-    "Expires in {0} days",
+    "Expires in {0} {0|day|days}",
     "あと{0}日で期限切れ"
   ],
   "만료 {0}": [
@@ -517,8 +517,8 @@ export const messages = {
     "有効期限のクイック選択"
   ],
   "매장 검색 (선택)": [
-    "Store Search (Select)",
-    "店舗検索（選択）"
+    "Store search (optional)",
+    "店舗検索（任意）"
   ],
   "매장 정보를 불러왔어요": [
     "Store information has been loaded",
@@ -534,7 +534,7 @@ export const messages = {
   ],
   "메모 (선택)": [
     "Memo (optional)",
-    "メモ (選択)"
+    "メモ（任意）"
   ],
   "모두 모았어요. 가게에서 보상을 받으세요.": [
     "Claim your reward in store.",
@@ -594,7 +594,7 @@ export const messages = {
   ],
   "바코드·QR로 보여줄 코드 (선택)": [
     "Code to show with barcode·QR (optional)",
-    "バーコード・QRで表示するコード（選択）"
+    "バーコード・QRで表示するコード（任意）"
   ],
   "반경 500m 이내 가게": [
     "Stores within 500m radius",
@@ -702,11 +702,11 @@ export const messages = {
   ],
   "빠른 시작": [
     "Quick Start",
-    "素早く開始"
+    "クイックスタート"
   ],
   "빠른 시작 템플릿": [
     "Quick Start Template",
-    "素早く開始テンプレート"
+    "クイックスタートのテンプレート"
   ],
   "사용": [
     "Use",
@@ -897,8 +897,8 @@ export const messages = {
     "言語"
   ],
   "얼마 안 남은 순": [
-    "Not long remaining",
-    "近い順"
+    "Least remaining",
+    "残りが少ない順"
   ],
   "업데이트": [
     "Update",
@@ -925,12 +925,12 @@ export const messages = {
     "永久保存がオン"
   ],
   "옆으로 넘기며 확인하세요": [
-    "Swipe to confirm",
-    "確認のためにスワイプ"
+    "Swipe sideways to see more",
+    "横にスワイプして確認できます"
   ],
   "예: 031-000-0000": [
     "Example: 031-000-0000",
-    "例: 平日午前割引、駐車可能"
+    "例: 031-000-0000"
   ],
   "예: 1,000,000": [
     "Example: 1,000,000",
@@ -949,8 +949,8 @@ export const messages = {
     "例: 平日午前割引、駐車可能"
   ],
   "예: 허브 커피 로스터스": [
-    "Example: Hub Coffee Roasters",
-    "例: ヘブコーヒー・ロースター"
+    "Example: Herb Coffee Roasters",
+    "例: ハーブコーヒーロースターズ"
   ],
   "오늘": [
     "Today",
@@ -1017,7 +1017,7 @@ export const messages = {
     "位置確認は一時的に使用できません:"
   ],
   "위치가 저장된 가게 {0}곳": [
-    "{0} shops with saved locations",
+    "{0} {0|shop|shops} with saved locations",
     "位置情報を保存したお店：{0}件"
   ],
   "위치를 가져올 수 없어요. 위치 권한을 확인해 주세요.": [
@@ -1081,7 +1081,7 @@ export const messages = {
     "すでにインストール済みまたはインストールをサポートしていません"
   ],
   "이번 달 {0}회 사용": [
-    "Used {0} times this month",
+    "Used {0} {0|time|times} this month",
     "今月 {0}回使用"
   ],
   "이용 중": [
@@ -1089,8 +1089,8 @@ export const messages = {
     "利用中"
   ],
   "이용 현황": [
-    "Usage history",
-    "利用履歴"
+    "Usage overview",
+    "利用状況"
   ],
   "이용권": [
     "Pass",
@@ -1141,8 +1141,8 @@ export const messages = {
     "日"
   ],
   "임박": [
-    "Upcoming",
-    "間近"
+    "Expiring",
+    "期限間近"
   ],
   "자동 보관": [
     "Auto storage",
@@ -1309,16 +1309,16 @@ export const messages = {
     "合計 {0} · 使用 {1}"
   ],
   "총 {0}건": [
-    "Total {0} items",
+    "Total {0} {0|item|items}",
     "合計 {0}件"
   ],
   "총 {0}칸 · 적립 {1}개": [
-    "Total {0} cells · Accumulated {1} pieces",
-    "合計 {0} カン · 貯まる {1} 個"
+    "{0} {0|slot|slots} · {1} collected",
+    "全{0}枠 · {1}個集めました"
   ],
   "총 {0}칸이 현재 사용({1})보다 적어 사용 횟수가 {2}회로 줄어듭니다. 계속할까요?": [
-    "Total {0} slots are currently used ({1}), so the usage count will be reduced to {2} times. Continue?",
-    "現在使用中の{0}枠が{1}を下回るため、利用回数が{2}回に減ります。続けますか？"
+    "The {0} slots are fewer than the {1} already used, so the used count will drop to {2}. Continue?",
+    "合計{0}枠が現在の使用（{1}）より少ないため、使用回数が{2}回に減ります。続けますか？"
   ],
   "총 금액": [
     "Total Amount",
@@ -1326,7 +1326,7 @@ export const messages = {
   ],
   "총 금액 빠른 선택": [
     "Total Amount Quick Select",
-    "総金額の早選択"
+    "合計金額のクイック選択"
   ],
   "총 금액(원)": [
     "Total amount (KRW)",
@@ -1338,7 +1338,7 @@ export const messages = {
   ],
   "총 칸 수 빠른 선택": [
     "Total Stamps Quick Select",
-    "総カット数の早選択"
+    "枠数のクイック選択"
   ],
   "총 횟수": [
     "Total times",
@@ -1354,7 +1354,7 @@ export const messages = {
   ],
   "추가 정보 (선택)": [
     "Additional information (optional)",
-    "追加情報（選択）"
+    "追加情報（任意）"
   ],
   "추가되었어요": [
     "Added",
@@ -1402,7 +1402,7 @@ export const messages = {
   ],
   "켜짐 ✓ 브라우저가 데이터를 지우지 않아요{0}": [
     "· On ✓ Browser does not delete data{0}",
-    "· けいん ✓ ブラウザがデータを削除しません{0}"
+    "· オン ✓ ブラウザがデータを削除しません{0}"
   ],
   "코드 복사": [
     "Copy Code",
@@ -1557,12 +1557,12 @@ export const messages = {
     "🧘 サウナ利用券"
   ],
   " 읽을 수 없는 항목 {0}개는 건너뛰어요.": [
-    " {0} unread items are skipped.",
-    " 読み込めない項目{0}件はスキップします"
+    " {0} unreadable {0|item|items} will be skipped.",
+    " 読み込めない項目{0}件はスキップします。"
   ],
   " 지금 이 기기에 있는 이용권 {0}개 · 내역 {1}건은 지워져요.": [
-    " {0} coupons in this device · {1} records will be deleted.",
-    " 現在のこの端末にある利用券{0}枚・履歴{1}件は削除されます"
+    " The {0} {0|pass|passes} and {1} {1|record|records} now on this device will be erased.",
+    " この端末にある利用券{0}枚・履歴{1}件は削除されます。"
   ],
   "+ 버튼을 눌러 첫 이용권을 등록해 보세요": [
     "Tap the + button to register your first coupon.",
@@ -1570,11 +1570,11 @@ export const messages = {
   ],
   "30일 이내 만료": [
     "Expires within 30 days",
-    "30日以内有効"
+    "30日以内に期限切れ"
   ],
   "7일 이내 만료": [
     "Expires within 7 days",
-    "7日以内有効"
+    "7日以内に期限切れ"
   ],
   "{0} / {1} 사용": [
     "{0} / {1} used",
@@ -1594,15 +1594,15 @@ export const messages = {
   ],
   "{0} 남아있어요": [
     "{0} remaining",
-    "{0} 件残っています"
+    "残り{0}"
   ],
   "{0} 남았어요": [
     "{0} left",
-    "{0} 件残っています"
+    "残り{0}"
   ],
   "{0} 도장판은 유효기간이 지났어요. 가게에서 확인했다면 도장을 찍을 수 있어요.": [
     "{0} stamp card has expired. You can stamp it at the store if you've confirmed it.",
-    "{0} 枚のスタンプ券は有効期限が切れています。店舗で確認した場合はスタンプを押すことができます"
+    "{0}のスタンプカードは有効期限が切れています。お店で確認できた場合はスタンプを押せます。"
   ],
   "{0} 도장판이 다 찼어요. 보상을 받으세요.": [
     "{0} Stamp Card is full. Claim your reward.",
@@ -1621,23 +1621,19 @@ export const messages = {
     "{0}の利用券を最初に確認してください。"
   ],
   "{0}% 모음": [
-    "{0}% Collection",
-    "{0}% カタログ"
+    "{0}% collected",
+    "{0}% 達成"
   ],
   "{0}% 사용": [
     "Used {0}%",
     "{0}% 使用"
   ],
   "{0}개 더 모으면 완성": [
-    "Need {0} more to complete",
-    "{0}個で満了"
-  ],
-  "{0}백업의 이용권 {1}개 · 사용 내역 {2}건으로 바꿔요.": [
-    "Replace {0} Backup with {1} Vouchers · {2} Usage Records",
-    "{0}バックアップの利用券 {1}枚 · 使用履歴 {2}件に交換します。"
+    "{0} more to complete",
+    "あと{0}個で完成"
   ],
   "{0}칸": [
-    "{0} Stamps",
+    "{0} {0|slot|slots}",
     "{0}枠"
   ],
   "{0}회 남았어요": [
@@ -1645,7 +1641,7 @@ export const messages = {
     "{0}回残っています"
   ],
   "{0}회 사용": [
-    "Used {0} Times",
+    "Used {0} {0|time|times}",
     "{0}回使用"
   ],
   "가게에서 보상을 받으셨다면 새 판을 시작하세요. 지금까지 찍은 도장 기록은 사용 내역에 남아요.": [
@@ -1661,7 +1657,7 @@ export const messages = {
     "検索は利用できません (ネットワーク/ドメインの確認)"
   ],
   "경도": [
-    "Latitude",
+    "Longitude",
     "経度"
   ],
   "공유 버튼 → 홈 화면에 추가 로 설치할 수 있어요": [
@@ -1681,32 +1677,32 @@ export const messages = {
     "そのあと"
   ],
   "그래도 사용": [
-    "Still use",
-    "それでも使用"
+    "Use anyway",
+    "それでも使う"
   ],
   "그래도 찍기": [
-    "Still take a photo",
-    "それでも撮る"
+    "Stamp anyway",
+    "それでも押す"
   ],
   "근처 가게 방문 감지": [
     "Nearby store visit detection",
     "近隣店舗訪問検知"
   ],
   "기프티콘": [
-    "Gifticon",
-    "ギフトicon"
+    "Gift card",
+    "ギフト券"
   ],
   "기프티콘 삭제": [
-    "Delete Gifticon",
-    "ギフトicon削除"
+    "Delete gift card",
+    "ギフト券を削除"
   ],
   "기프티콘 이미지": [
-    "Gifticon Image",
-    "ギフトチョン画像"
+    "Gift card image",
+    "ギフト券の画像"
   ],
   "기프티콘 크게 보기": [
-    "View Gifticon",
-    "ギフトチョンを大きく表示"
+    "View gift card full screen",
+    "ギフト券を大きく表示"
   ],
   "기한 없음": [
     "No Expiry",
@@ -1717,8 +1713,8 @@ export const messages = {
     "有効期限切れ"
   ],
   "꺼내기": [
-    "Withdraw",
-    "取り出す"
+    "Unarchive",
+    "アーカイブ解除"
   ],
   "남은 양 적은 순": [
     "Remaining Amount (Lowest First)",
@@ -1741,12 +1737,12 @@ export const messages = {
     "履歴がありません"
   ],
   "다 쓴 기프티콘과 첨부한 이미지를 삭제할까요? 이 작업은 되돌릴 수 없어요.": [
-    "Delete the used Gifticons and attached images? This action cannot be undone.",
-    "使用済みギフトチョンと添付画像を削除しますか？この操作は元に戻せません。"
+    "Delete this used gift card and its attached image? This can't be undone.",
+    "使い終わったギフト券と添付画像を削除しますか？この操作は元に戻せません。"
   ],
   "더 입력하기 (선택)": [
     "Add More (Optional)",
-    "さらに入力する（選択）"
+    "さらに入力する（任意）"
   ],
   "데모 데이터": [
     "Demo Data",
@@ -1761,11 +1757,11 @@ export const messages = {
     "スタンプ {0}/{1}"
   ],
   "도장 {0}/{1} · {2} 남음": [
-    "Stamps {0}/{1} · {2} Remaining",
-    "スタンプ {0}/{1} · {2} 未集め"
+    "Stamps {0}/{1} · {2} left",
+    "スタンプ {0}/{1} · 残り{2}"
   ],
   "도장 {0}개": [
-    "Stamps {0} Collected",
+    "{0} {0|stamp|stamps}",
     "スタンプ {0}個"
   ],
   "도장 {0}개를 다 모았어요. 가게에서 보상을 받은 뒤 새 판을 시작하세요.": [
@@ -1778,7 +1774,7 @@ export const messages = {
   ],
   "도장 칸({0})이 모은 도장({1})보다 적어 모은 도장이 {2}개로 줄어듭니다. 계속할까요?": [
     "Stamp slots ({0}) are fewer than collected stamps ({1}), so collected stamps will be reduced to {2}. Continue?",
-    "スタンプ枠({0})が集めたスタンプ({1})より少ないので、集めたスタンプが{2}個減ります。続けますか？"
+    "スタンプ枠({0})が集めたスタンプ({1})より少ないため、集めたスタンプが{2}個に減ります。続けますか？"
   ],
   "도장판 완성 · {0}개를 다 모았어요": [
     "Stamp Book Completed · {0} Collected",
@@ -1817,8 +1813,8 @@ export const messages = {
     "有効期限通知がオフになりました"
   ],
   "만료되거나 다 쓴 이용권은 모두보기에서 확인하세요": [
-    "Check all expired or fully used coupons in 'All View'",
-    "有効期限切れまたは使い切った利用権は「すべて表示」で確認してください"
+    "Find expired or used-up passes under View all",
+    "期限切れや使い切った利用券は「すべて見る」で確認できます"
   ],
   "만료된 도장판이에요": [
     "Expired stamp card",
@@ -1837,8 +1833,8 @@ export const messages = {
     "有効期限が近くなるとD-7 / D-3 / D-1に事前に通知します。いつでも設定からオフにできます"
   ],
   "매수": [
-    "Purchase",
-    "購入"
+    "Quantity",
+    "枚数"
   ],
   "매장 검색": [
     "Store search",
@@ -1885,11 +1881,11 @@ export const messages = {
     "無料版に対応した広告が表示されます"
   ],
   "바로 쓸 수 있는 이용권": [
-    "Immediate Use Voucher",
+    "Ready to use",
     "すぐ使える利用券"
   ],
   "바로 쓸 수 있는 이용권이 없어요": [
-    "No Immediate Use Vouchers Available",
+    "Nothing is ready to use",
     "すぐ使える利用券はありません"
   ],
   "바코드를 읽어 코드를 채웠어요": [
@@ -1917,32 +1913,32 @@ export const messages = {
     "バックアップの復元に失敗しました。"
   ],
   "보관된 이용권이에요 · 사용 내역은 그대로 남아 있어요": [
-    "Stored Coupon · Usage history remains intact",
-    "保管中の利用権です・使用履歴はそのまま残っています"
+    "This pass is archived · Its usage history is kept",
+    "アーカイブ済みの利用券です · 利用履歴はそのまま残っています"
   ],
   "보관됨": [
-    "Stored",
-    "保管中"
+    "Archived",
+    "アーカイブ済み"
   ],
   "보관하기": [
-    "Store",
-    "保管する"
+    "Archive",
+    "アーカイブ"
   ],
   "보관함": [
-    "Storage",
-    "保管箱"
+    "Archived",
+    "アーカイブ"
   ],
   "보관함 보기 ({0})": [
-    "View Storage ({0})",
-    "保管箱を表示 ({0})"
+    "View archived ({0})",
+    "アーカイブを表示（{0}）"
   ],
   "보관함에서 꺼냈어요": [
-    "Taken from storage",
-    "保管箱から取り出しました"
+    "Unarchived",
+    "アーカイブを解除しました"
   ],
   "보관함으로 옮겼어요": [
-    "Moved to Vault",
-    "保管箱へ移動しました"
+    "Archived",
+    "アーカイブしました"
   ],
   "복원 데이터": [
     "Restore Data",
@@ -1969,16 +1965,16 @@ export const messages = {
     "新しいスタンプカードを開始しました"
   ],
   "새 판": [
-    "New Book",
-    "新規カード"
+    "New card",
+    "新しいカード"
   ],
   "새 판 시작": [
-    "Start New Book",
-    "新規カードを開始"
+    "Start a new card",
+    "新しいカードを始める"
   ],
   "새 판에 도장을 찍어서 되돌릴 수 없어요": [
-    "You can't undo stamping on a new book",
-    "新規カードにスタンプを押すと戻せません"
+    "The new card already has a stamp, so this can't be undone",
+    "新しいカードにスタンプを押したため、元に戻せません"
   ],
   "샘플 보기": [
     "View Sample",
@@ -1986,11 +1982,11 @@ export const messages = {
   ],
   "샘플 업체로 둘러보거나, 바로 내 이용권을 추가할 수 있어요.": [
     "Browse sample vendors or add your vouchers directly.",
-    "サンプル企業を巡るか、すぐに自分の利用券を追加できます"
+    "サンプルで試すか、すぐに自分の利用券を追加できます。"
   ],
   "선택한 날짜 안에 들어오면 알려줘요. 만료 당일도 포함해요.": [
-    "Notify me if it falls within the selected date. Includes the expiration day.",
-    "選択した日付以内に来たら教えてあげます。有効期限当日も含みます。"
+    "We'll remind you once a pass is within the chosen days. The expiry day counts too.",
+    "選んだ日数以内になるとお知らせします。有効期限当日も含みます。"
   ],
   "스킨 테마": [
     "Skin Theme",
@@ -2037,8 +2033,8 @@ export const messages = {
     "アプリを起動できません"
   ],
   "앱을 열어 둔 동안 등록한 가게 근처에 머물면 알려줘요": [
-    "While the app is open, let me know when you're near a registered store",
-    "アプリを開いたまま、登録したお店の近くに滞在中は通知します"
+    "While the app is open, we'll let you know when you stay near a saved store",
+    "アプリを開いている間、登録したお店の近くに滞在するとお知らせします"
   ],
   "어떻게 시작할까요?": [
     "How to start?",
@@ -2074,7 +2070,7 @@ export const messages = {
   ],
   "예: 1234-5678-9012 (선택)": [
     "Example: 1234-5678-9012 (optional)",
-    "例: 1234-5678-9012（選択）"
+    "例: 1234-5678-9012（任意）"
   ],
   "예: 마사지, 스타벅스 — 내 주변 검색": [
     "Example: massage, Starbucks — search nearby",
@@ -2085,20 +2081,20 @@ export const messages = {
     "例：安養スターマッサージ"
   ],
   "완성 {0}판": [
-    "Completed {0} Stamp",
-    "完了 {0}枚"
+    "{0} {0|card|cards} completed",
+    "完成 {0}枚"
   ],
   "완성한 도장판으로 되돌렸어요": [
-    "Reset to Completed Stamp",
+    "Restored the completed card",
     "完了したスタンプカードに戻りました"
   ],
   "완성한 판 {0}개": [
-    "Completed Stamps {0} Pieces",
-    "完了した枚数 {0}枚"
+    "{0} {0|card|cards} completed",
+    "完成したカード {0}枚"
   ],
   "위도": [
-    "Above",
-    "方位"
+    "Latitude",
+    "緯度"
   ],
   "위치 권한 허용됨": [
     "Location Access Enabled",
@@ -2113,8 +2109,8 @@ export const messages = {
     "位置情報を取得できません"
   ],
   "이 기기에 저장되는 내 이용권·쿠폰 지갑": [
-    "My Used Voucher & Coupon Wallet Stored on This Device",
-    "この端末に保存される利用権・クーポンの財布"
+    "Your pass and coupon wallet, stored on this device",
+    "この端末に保存される利用券・クーポンのウォレット"
   ],
   "이름으로 검색하면 주소·전화·위치를 자동으로 채워요. (내 위치 기준 가까운 순)": [
     "Search by Name to Automatically Fill Address, Phone, and Location (Sorted by Proximity from Your Current Location)",
@@ -2125,8 +2121,8 @@ export const messages = {
     "すでに使用した回数がある場合は、現在の使用回数を入力してください"
   ],
   "이미 찍은 도장이 있다면 개수를 입력하세요. 판을 다 채우면 새 판을 시작할 수 있어요.": [
-    "If You've Already Stamped It, Enter the Count. You Can Start a New Stamp When the Stamp Sheet is Full.",
-    "すでに押したスタンプがある場合は、個数を入力してください。一枚板を満たすと、新しい一枚板を開始できます"
+    "If you already have stamps, enter how many. When the card is full, you can start a new one.",
+    "すでに押したスタンプがある場合は、その数を入力してください。カードがいっぱいになると新しいカードを始められます。"
   ],
   "이미지 선택": [
     "Image Selection",
@@ -2145,8 +2141,8 @@ export const messages = {
     "画像を処理中です…"
   ],
   "이번 달 사용": [
-    "Use This Month",
-    "今月使用"
+    "Used this month",
+    "今月の利用"
   ],
   "이용권 등록": [
     "Register Voucher",
@@ -2185,8 +2181,8 @@ export const messages = {
     "残高と有効期限を一目で確認できます"
   ],
   "저장 공간이 부족해서 저장하지 못했어요. 필요 없는 기프티콘 이미지를 지우고 다시 시도해 주세요.": [
-    "Could not save due to insufficient storage. Please delete unnecessary gift icon images and try again.",
-    "保存領域が不足しているため保存できませんでした。不要なギフトアイコン画像を削除し、再度お試しください"
+    "Couldn't save because storage is full. Delete gift card images you no longer need and try again.",
+    "保存領域が不足しているため保存できませんでした。不要なギフト券の画像を削除して、もう一度お試しください。"
   ],
   "저장소(브라우저 데이터)를 열 수 없어요. 시크릿/프라이빗 모드이거나 브라우저 저장소가 차단되어 있으면 이용이 어려울 수 있어요.": [
     "Cannot access storage (browser data). It may be difficult to use if in secret/private mode or if browser storage is blocked.",
@@ -2201,7 +2197,7 @@ export const messages = {
     "貯まるタイプのスタンプカード"
   ],
   "주변 지도": [
-    "Surrounding Map",
+    "Nearby map",
     "周辺地図"
   ],
   "주소 · 전화 · 위치 · 메모 · 코드 · 이미지 · 테마": [
@@ -2237,12 +2233,12 @@ export const messages = {
     "手動で追加"
   ],
   "찍기": [
-    "Print",
-    "写真撮影"
+    "Stamp",
+    "押す"
   ],
   "찍을 도장 수": [
-    "Number of stamps to print",
-    "押すインクスタンス数"
+    "Stamps to add",
+    "押すスタンプの数"
   ],
   "첨부한 기프티콘 미리보기": [
     "Preview of attached gift card",
@@ -2338,11 +2334,11 @@ export const messages = {
   ],
   "🎉 도장판 완성!": [
     "🎉 Stamp Book Complete!",
-    "🎉 ドッジンカード完成！"
+    "🎉 スタンプカード完成！"
   ],
   "🎟️ 모바일 쿠폰 · 기프티콘": [
     "🎟️ Mobile Coupon · Gift Card",
-    "🎟️ モバイルクーポン · ギフトicon"
+    "🎟️ モバイルクーポン · ギフト券"
   ],
   "작성 중인 내용이 있어요": [
     "You have unsaved changes",
@@ -2363,5 +2359,73 @@ export const messages = {
   "알림 권한이 없어 만료 알림을 껐어요. 설정에서 다시 켤 수 있어요.": [
     "Notifications aren't allowed, so expiration reminders are now off. You can turn them back on in Settings.",
     "通知が許可されていないため、有効期限の通知をオフにしました。設定からいつでもオンにできます。"
+  ],
+  "사용@@used": [
+    "Used",
+    "使用済み"
+  ],
+  "{0}에 만든 백업의 이용권 {1}개 · 사용 내역 {2}건으로 바꿔요.": [
+    "Replace everything with the backup made on {0}: {1} {1|pass|passes} · {2} usage {2|record|records}.",
+    "{0}に作成したバックアップの利用券{1}枚・利用履歴{2}件に置き換えます。"
+  ],
+  "백업의 이용권 {0}개 · 사용 내역 {1}건으로 바꿔요.": [
+    "Replace everything with the backup: {0} {0|pass|passes} · {1} usage {1|record|records}.",
+    "バックアップの利用券{0}枚・利用履歴{1}件に置き換えます。"
+  ],
+  "병원, 클리닉": [
+    "Hospitals, clinics",
+    "病院・クリニック"
+  ],
+  "마사지, 찜질방": [
+    "Massage, Korean spas",
+    "マッサージ・チムジルバン"
+  ],
+  "카페, 벌크": [
+    "Cafés, bulk buys",
+    "カフェ・まとめ買い"
+  ],
+  "고급 마사지, 호텔": [
+    "Premium massage, hotels",
+    "高級マッサージ・ホテル"
+  ],
+  "식당, 패스트푸드": [
+    "Restaurants, fast food",
+    "飲食店・ファストフード"
+  ],
+  "안양 스타 마사지": [
+    "Star Massage Anyang",
+    "スターマッサージ 安養店"
+  ],
+  "경기도 안양시 동안구 시민대로 1234": [
+    "1234 Simin-daero, Dongan-gu, Anyang-si, Gyeonggi-do",
+    "京畿道 安養市 東安区 市民大路 1234"
+  ],
+  "100만원 충전권, 15만원 사용": [
+    "₩1,000,000 prepaid, ₩150,000 used",
+    "100万ウォンのチャージ券、15万ウォン使用済み"
+  ],
+  "허브 커피 로스터스": [
+    "Herb Coffee Roasters",
+    "ハーブコーヒーロースターズ"
+  ],
+  "경기도 안양시 동안구 관악로 56": [
+    "56 Gwanak-ro, Dongan-gu, Anyang-si, Gyeonggi-do",
+    "京畿道 安養市 東安区 冠岳路 56"
+  ],
+  "원두 구매도 스탬프 적립 가능": [
+    "Buying coffee beans earns stamps too",
+    "コーヒー豆の購入でもスタンプがたまります"
+  ],
+  "태양 찜질방": [
+    "Taeyang Korean Spa",
+    "太陽チムジルバン"
+  ],
+  "경기도 안양시 만안구 성남대로 789": [
+    "789 Seongnam-daero, Manan-gu, Anyang-si, Gyeonggi-do",
+    "京畿道 安養市 萬安区 城南大路 789"
+  ],
+  "주말 입장권은 쿠폰 제외 여부 확인": [
+    "Check whether weekend entry is excluded from the pass",
+    "週末の入場券がクーポンの対象外かどうか確認"
   ]
 };

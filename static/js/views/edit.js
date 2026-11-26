@@ -149,7 +149,7 @@ export function render(ctx, params = {}) {
       // A blank form used to land on the first key, 찜질방, for a gifticon or a
       // cafe card alike; 기타 is the neutral default.
       attrs: { value: c, selected: (hasInit ? src.category === c : c === '기타') ? '' : null }
-    }, c))
+    }, tr(c)))
   );
   form.appendChild(field(tr("카테고리"), 'f-category', catSelect));
 

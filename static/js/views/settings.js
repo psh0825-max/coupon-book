@@ -196,7 +196,9 @@ export function render(ctx) {
     try {
       const parsed = parseBackup(await file.text());
       const skipped = parsed.skipped.shops + parsed.skipped.logs;
-      const message = tr("{0}백업의 이용권 {1}개 · 사용 내역 {2}건으로 바꿔요.", (parsed.exportedAt ? `${formatDate(parsed.exportedAt)}에 만든 ` : ''), (parsed.shops.length), (parsed.logs.length))
+      const message = (parsed.exportedAt
+        ? tr("{0}에 만든 백업의 이용권 {1}개 · 사용 내역 {2}건으로 바꿔요.", formatDate(parsed.exportedAt), parsed.shops.length, parsed.logs.length)
+        : tr("백업의 이용권 {0}개 · 사용 내역 {1}건으로 바꿔요.", parsed.shops.length, parsed.logs.length))
         + (shops.length ? tr(" 지금 이 기기에 있는 이용권 {0}개 · 내역 {1}건은 지워져요.", (shops.length), (logs.length)) : '')
         + (skipped > 0 ? tr(" 읽을 수 없는 항목 {0}개는 건너뛰어요.", (skipped)) : '');
       const ok = await showConfirm({ title: tr("백업으로 복원할까요?"), confirmLabel: tr("복원하기"), danger: true, message });
