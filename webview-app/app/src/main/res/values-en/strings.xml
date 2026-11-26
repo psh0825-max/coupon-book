@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Coupon Book</string>
+    <string name="backup_saved_downloads">Backup saved to your Downloads folder</string>
+    <string name="backup_save_failed">Couldn\'t save the backup</string>
+    <string name="channel_expiry_name">Expiration reminders</string>
+    <string name="channel_expiry_description">Alerts when a coupon or pass is about to expire</string>
 </resources>

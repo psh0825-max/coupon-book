@@ -36,7 +36,7 @@ public class ReminderReceiver extends BroadcastReceiver {
 
     /** Post an expiry notification and reopen the app when it is tapped. */
     static void post(Context context, int id, String title, String body) {
-        if (title == null) title = "쿠폰북";
+        if (title == null) title = context.getString(R.string.app_name);
         if (body == null) body = "";
 
         ensureChannel(context);
@@ -66,8 +66,9 @@ public class ReminderReceiver extends BroadcastReceiver {
     static void ensureChannel(Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel ch = new NotificationChannel(
-                    CHANNEL_ID, "만료 알림", NotificationManager.IMPORTANCE_DEFAULT);
-            ch.setDescription("쿠폰/이용권 만료 임박 알림");
+                    CHANNEL_ID, context.getString(R.string.channel_expiry_name),
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            ch.setDescription(context.getString(R.string.channel_expiry_description));
             NotificationManager nm = context.getSystemService(NotificationManager.class);
             if (nm != null) nm.createNotificationChannel(ch);
         }

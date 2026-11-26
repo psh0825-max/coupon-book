@@ -48,8 +48,8 @@ public class WebAppBridge {
         this.presenter = presenter;
     }
 
-    private void toast(String msg) {
-        main.post(() -> Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show());
+    private void toast(int messageRes) {
+        main.post(() -> Toast.makeText(ctx, messageRes, Toast.LENGTH_SHORT).show());
     }
 
     /** Save a text file (the JSON backup) to the device's Downloads. */
@@ -64,7 +64,7 @@ public class WebAppBridge {
                 v.put(MediaStore.Downloads.IS_PENDING, 1);
                 Uri collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
                 Uri item = ctx.getContentResolver().insert(collection, v);
-                if (item == null) { toast("백업 저장 실패"); return; }
+                if (item == null) { toast(R.string.backup_save_failed); return; }
                 try (OutputStream os = ctx.getContentResolver().openOutputStream(item)) {
                     os.write(content.getBytes(StandardCharsets.UTF_8));
                 }
@@ -79,9 +79,9 @@ public class WebAppBridge {
                     fos.write(content.getBytes(StandardCharsets.UTF_8));
                 }
             }
-            toast("백업 파일을 저장했어요 (다운로드 폴더)");
+            toast(R.string.backup_saved_downloads);
         } catch (Exception e) {
-            toast("백업 저장 실패");
+            toast(R.string.backup_save_failed);
         }
     }
 
