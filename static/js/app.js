@@ -15,7 +15,9 @@ import {
 import { formatWon, groupDigits, parseNumber } from './services/format.js';
 
 import { setNotifySettings, startLocationWatch, stopLocationWatch } from './services/location.js';
-import { syncReminders, ensurePermission } from './services/reminders.js';
+import {
+  syncReminders, ensurePermission, verifyReminderPermission, markRemindersConfirmed, forgetRemindersConfirmed
+} from './services/reminders.js';
 import {
   registerSW, applyUpdate, initInstallPrompt, canInstall, promptInstall, isStandalone, isIos
 } from './services/pwa.js';
@@ -96,6 +98,16 @@ function onReminderDue(shop, info) {
   } else {
     showToast(tr("{0} · {1} 만료 임박", (shop.name), (info.days === 0 ? '오늘 만료' : 'D-' + info.days)), 'danger');
   }
+}
+
+// Reminders that are on without a way to notify (restored backup on Android
+// 13+): ask once; if the answer is no, switch them off and say so.
+async function checkReminderPermission() {
+  if (await verifyReminderPermission(store.getState().settings) !== 'denied') return;
+  await Settings.set('remindersEnabled', false);
+  await refresh();
+  resyncServices();
+  showToast(tr("알림 권한이 없어 만료 알림을 껐어요. 설정에서 다시 켤 수 있어요."), 'danger');
 }
 
 // A new service worker is waiting. Offer an accessible refresh prompt; applying it
@@ -548,7 +560,10 @@ const actions = {
 
   async toggleReminders(on) {
     let permission = 'granted';
-    if (on) permission = await ensurePermission();
+    if (on) {
+      permission = await ensurePermission();
+      markRemindersConfirmed();
+    }
     await Settings.set('remindersEnabled', on);
     await refresh();
     resyncServices();
@@ -593,6 +608,9 @@ const actions = {
       const sum = await restoreBackup(parsed);
       await refresh();
       resyncServices();
+      // The restored settings never went through this install's permission prompt.
+      forgetRemindersConfirmed();
+      checkReminderPermission().catch((err) => console.error(err));
       return sum;
     } catch (err) {
       reportSaveError(err);
@@ -692,6 +710,7 @@ async function init() {
   }
   store.setState({ ready: true });
   resyncServices();
+  checkReminderPermission().catch((err) => console.error(err));
 
   // Best-effort: ask the browser to keep IndexedDB durable so coupons aren't
   // silently evicted under storage pressure. Never await-block boot.

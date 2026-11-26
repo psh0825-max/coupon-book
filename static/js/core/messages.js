@@ -2359,5 +2359,9 @@ export const messages = {
   "사용할 금액을 입력해 주세요": [
     "Enter an amount to use",
     "使う金額を入力してください"
+  ],
+  "알림 권한이 없어 만료 알림을 껐어요. 설정에서 다시 켤 수 있어요.": [
+    "Notifications aren't allowed, so expiration reminders are now off. You can turn them back on in Settings.",
+    "通知が許可されていないため、有効期限の通知をオフにしました。設定からいつでもオンにできます。"
   ]
 };

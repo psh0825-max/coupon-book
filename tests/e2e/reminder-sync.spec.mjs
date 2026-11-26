@@ -47,3 +47,19 @@ test('S2: clearing all data cancels the alarms of the passes it removed', async 
   await expect(page.locator('#toast')).toContainText('전체 데이터를 초기화했어요');
   expect(await armed(page)).toBe(0);
 });
+
+test('S3: reminders restored on a shell that cannot notify are switched off after a denied prompt', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.AndroidBridge.canNotify = () => false;
+    window.AndroidBridge.requestNotificationPermission = () => {
+      window.__prompts = (window.__prompts || 0) + 1;
+      setTimeout(() => window.__cbNotifyPermission?.(false), 0);
+    };
+  });
+  await openApp(page, app.base, { settings, shops: [{ name: '만료 예정 이용권', kind: 'count', totalCoupons: 5, expiresAt: inDays(30) }] });
+  await expect(page.locator('#toast')).toContainText('알림 권한이 없어 만료 알림을 껐어요');
+  expect(await page.evaluate(() => window.__prompts)).toBe(1);
+  const enabled = await page.evaluate(async () => (await (await import('/js/data/repo.js')).Settings.getAll()).remindersEnabled);
+  expect(enabled).toBe(false);
+  expect(await armed(page)).toBe(0);
+});

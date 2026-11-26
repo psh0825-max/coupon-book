@@ -50,6 +50,34 @@ export async function ensurePermission() {
   return 'unsupported';
 }
 
+// Set when the user switches reminders on in this install. Data that arrives
+// another way (a restored backup) has not been through the permission prompt.
+const CONFIRMED_KEY = 'cb_reminders_confirmed';
+
+export function markRemindersConfirmed() {
+  try { localStorage.setItem(CONFIRMED_KEY, '1'); } catch (e) { /* best-effort */ }
+}
+
+export function forgetRemindersConfirmed() {
+  try { localStorage.removeItem(CONFIRMED_KEY); } catch (e) { /* best-effort */ }
+}
+
+function remindersConfirmed() {
+  try { return localStorage.getItem(CONFIRMED_KEY) === '1'; } catch (e) { return false; }
+}
+
+// A restored backup can switch reminders on in an Android shell that was never
+// granted notification permission (Android 13+), and its remindersOffered flag
+// stops the app from offering again. Ask through the shell once; 'denied' tells
+// the caller to switch reminders off. 'skip' when there is nothing to check.
+export async function verifyReminderPermission(settings) {
+  const bridge = typeof window !== 'undefined' ? window.AndroidBridge : null;
+  if (!settings || !settings.remindersEnabled) return 'skip';
+  if (!bridge || typeof bridge.canNotify !== 'function' || remindersConfirmed()) return 'skip';
+  if (bridge.canNotify()) return 'granted';
+  return (await ensurePermission()) === 'granted' ? 'granted' : 'denied';
+}
+
 // Post a system notification: the native bridge in the app shell (a bare WebView
 // has no Notification API), else the web Notification API when granted. The in-app
 // onDue toast fires regardless, so this is purely the OS-level surface.
