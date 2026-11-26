@@ -1,6 +1,7 @@
 package com.lightonpluslab.couponbook.twa;
 
 import android.Manifest;
+import android.annotation.TargetApi;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -8,9 +9,11 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -150,6 +153,16 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
                 return handleUri(request.getUrl());
             }
 
+            // API 26+: the renderer crashed or was killed to free memory. Returning
+            // false (the default) takes the whole app down; rebuild the WebView instead.
+            // Passes live in IndexedDB, so a reload loses only the page on screen.
+            @TargetApi(Build.VERSION_CODES.O)
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                if (view == webView) recreateWebView();
+                return true;
+            }
+
             // API 23 calls this String overload instead of the WebResourceRequest one.
             @SuppressWarnings("deprecation")
             @Override
@@ -192,6 +205,26 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
                 request.deny();
             }
         });
+    }
+
+    private void recreateWebView() {
+        ViewGroup parent = (ViewGroup) webView.getParent();
+        int index = parent.indexOfChild(webView);
+        ViewGroup.LayoutParams params = webView.getLayoutParams();
+        parent.removeView(webView);
+        webView.destroy();
+        // Callbacks owned by the dead renderer must not be answered later.
+        pendingFileCallback = null;
+        pendingGeoCallback = null;
+        pendingGeoOrigin = null;
+
+        webView = new WebView(this);
+        webView.setId(R.id.webview);
+        parent.addView(webView, index, params);
+        configureWebView();
+        showingOffline = false;
+        backCallback.setEnabled(false);
+        webView.loadUrl(APP_URL);
     }
 
     private static Intent buildFileChooserIntent(WebChromeClient.FileChooserParams params) {
@@ -318,6 +351,15 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
+    // A notification tap while the app is open arrives here (SINGLE_TOP) instead of
+    // recreating the activity, so the page on screen is kept. The intent carries no
+    // extras today; keep it current for anything that reads getIntent() later.
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
