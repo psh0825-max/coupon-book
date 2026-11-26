@@ -40,7 +40,11 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, 
     closeOverlays?.();
     currentName = name;
     currentParams = params || {};
+    const target = currentParams;
     render();
+    // The view redirected while it was built (detail of a deleted pass → home);
+    // that navigation wrote its own entry, so this route gets none.
+    if (currentName !== name || currentParams !== target) return;
     // Written after any pop the app already started (a sheet closing right
     // before this navigation), or it would land on the entry being popped.
     afterOwnPops(() => syncHistory(name, params));
