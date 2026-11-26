@@ -113,6 +113,16 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays }
 // in-app (sheet → sub page → root → exit) instead of exiting immediately.
 ```
 
+### core/history-queue.js — ordering of the app's own history writes
+`goBackBy(n)` pops n entries and marks the resulting popstate as the app's own;
+`takeOwnPop()` (first check in app.js's popstate handler) consumes that mark;
+`afterOwnPops(fn)` runs a history write now or right after pending own pops land.
+history.go() is asynchronous, so every write the router and overlay make goes
+through `afterOwnPops`. Going to a root from a sub page pops back to the first
+entry (`goBackBy(depth)`) before replacing it, so Back from a root leaves the app.
+A form view can register `router.setLeaveGuard({ isDirty, confirm })`; Back on a
+dirty form re-pushes its entry and asks before leaving.
+
 ### core/keyed-lock.js — per-key non-queuing async lock
 `createKeyedLock()` returns `run(key, fn)` and `isBusy(key)` with no dependencies.
 `run` immediately returns `undefined` for a busy key, otherwise awaits `fn` and releases in `finally`.
