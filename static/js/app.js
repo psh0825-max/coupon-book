@@ -16,7 +16,7 @@ import { formatWon, groupDigits, parseNumber } from './services/format.js';
 
 import { setNotifySettings, startLocationWatch, stopLocationWatch } from './services/location.js';
 import {
-  syncReminders, ensurePermission, verifyReminderPermission, markRemindersConfirmed, forgetRemindersConfirmed
+  syncReminders, ensurePermission, verifyReminderPermission, markRemindersConfirmed, flagRemindersForCheck
 } from './services/reminders.js';
 import {
   registerSW, applyUpdate, initInstallPrompt, canInstall, promptInstall, isStandalone, isIos
@@ -100,8 +100,9 @@ function onReminderDue(shop, info) {
   }
 }
 
-// Reminders that are on without a way to notify (restored backup on Android
-// 13+): ask once; if the answer is no, switch them off and say so.
+// Reminders a restore switched on without a way to notify (Android 13+): ask
+// once; if the answer is no, switch them off and say so. A no-op unless a
+// restore flagged the data (run again at boot in case the app closed mid-prompt).
 async function checkReminderPermission() {
   if (await verifyReminderPermission(store.getState().settings) !== 'denied') return;
   await Settings.set('remindersEnabled', false);
@@ -613,7 +614,7 @@ const actions = {
       await refresh();
       resyncServices();
       // The restored settings never went through this install's permission prompt.
-      forgetRemindersConfirmed();
+      flagRemindersForCheck();
       checkReminderPermission().catch((err) => console.error(err));
       return sum;
     } catch (err) {

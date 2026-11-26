@@ -48,18 +48,44 @@ test('S2: clearing all data cancels the alarms of the passes it removed', async 
   expect(await armed(page)).toBe(0);
 });
 
+const denyingShell = () => {
+  window.AndroidBridge.canNotify = () => false;
+  window.AndroidBridge.requestNotificationPermission = () => {
+    window.__prompts = (window.__prompts || 0) + 1;
+    setTimeout(() => window.__cbNotifyPermission?.(false), 0);
+  };
+};
+
+const backupWithReminders = () => ({
+  name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({
+    version: 3, exportedAt: 1700000000000,
+    shops: [{ id: 'r1', name: '복원된 이용권', kind: 'count', totalCoupons: 5, expiresAt: inDays(30), createdAt: 1, updatedAt: 2 }],
+    logs: [],
+    settings: [{ key: 'remindersEnabled', value: true }, { key: 'remindersOffered', value: true }, { key: 'reminderDays', value: [7, 3, 1] }]
+  }))
+});
+
+const remindersEnabled = (page) => page.evaluate(async () => (await (await import('/js/data/repo.js')).Settings.getAll()).remindersEnabled);
+
 test('S3: reminders restored on a shell that cannot notify are switched off after a denied prompt', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.AndroidBridge.canNotify = () => false;
-    window.AndroidBridge.requestNotificationPermission = () => {
-      window.__prompts = (window.__prompts || 0) + 1;
-      setTimeout(() => window.__cbNotifyPermission?.(false), 0);
-    };
-  });
-  await openApp(page, app.base, { settings, shops: [{ name: '만료 예정 이용권', kind: 'count', totalCoupons: 5, expiresAt: inDays(30) }] });
+  await page.addInitScript(denyingShell);
+  await openApp(page, app.base, { shops: [] });
+  await page.locator('[data-nav="settings"]').click();
+  await page.setInputFiles('#s-import', backupWithReminders());
+  await page.getByRole('dialog').getByRole('button', { name: '복원하기' }).click();
   await expect(page.locator('#toast')).toContainText('알림 권한이 없어 만료 알림을 껐어요');
   expect(await page.evaluate(() => window.__prompts)).toBe(1);
-  const enabled = await page.evaluate(async () => (await (await import('/js/data/repo.js')).Settings.getAll()).remindersEnabled);
-  expect(enabled).toBe(false);
+  expect(await remindersEnabled(page)).toBe(false);
   expect(await armed(page)).toBe(0);
+});
+
+// A 2.0.9 install whose user switched reminders on with notifications off: the
+// designed in-app-only mode. Launching this version must not ask or switch it off.
+test('S4: an existing install with reminders on and notifications off is left alone at launch', async ({ page }) => {
+  await page.addInitScript(denyingShell);
+  await openApp(page, app.base, { settings, shops: [{ name: '만료 예정 이용권', kind: 'count', totalCoupons: 5, expiresAt: inDays(30) }] });
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate(() => window.__prompts || 0)).toBe(0);
+  expect(await remindersEnabled(page)).toBe(true);
+  expect(await page.evaluate(() => document.querySelector('#toast')?.innerText || '')).not.toContain('알림 권한이 없어');
 });

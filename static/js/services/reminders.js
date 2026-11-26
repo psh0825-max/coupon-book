@@ -50,32 +50,40 @@ export async function ensurePermission() {
   return 'unsupported';
 }
 
-// Set when the user switches reminders on in this install. Data that arrives
-// another way (a restored backup) has not been through the permission prompt.
-const CONFIRMED_KEY = 'cb_reminders_confirmed';
+// Set by a restore: its settings never went through this install's permission
+// prompt. Only that data is checked; an install whose user switched reminders on
+// with notifications off keeps the in-app-only reminders it chose.
+const CHECK_KEY = 'cb_reminders_check';
 
+export function flagRemindersForCheck() {
+  try { localStorage.setItem(CHECK_KEY, '1'); } catch (e) { /* best-effort */ }
+}
+
+/** The user decided in this install (toggle) or the check ran: nothing left to check. */
 export function markRemindersConfirmed() {
-  try { localStorage.setItem(CONFIRMED_KEY, '1'); } catch (e) { /* best-effort */ }
+  try { localStorage.removeItem(CHECK_KEY); } catch (e) { /* best-effort */ }
 }
 
-export function forgetRemindersConfirmed() {
-  try { localStorage.removeItem(CONFIRMED_KEY); } catch (e) { /* best-effort */ }
-}
-
-function remindersConfirmed() {
-  try { return localStorage.getItem(CONFIRMED_KEY) === '1'; } catch (e) { return false; }
+function remindersNeedCheck() {
+  try { return localStorage.getItem(CHECK_KEY) === '1'; } catch (e) { return false; }
 }
 
 // A restored backup can switch reminders on in an Android shell that was never
 // granted notification permission (Android 13+), and its remindersOffered flag
 // stops the app from offering again. Ask through the shell once; 'denied' tells
 // the caller to switch reminders off. 'skip' when there is nothing to check.
+// The flag stays until the answer arrives, so a prompt cut short by closing the
+// app is asked again at the next launch.
 export async function verifyReminderPermission(settings) {
+  if (!remindersNeedCheck()) return 'skip';
   const bridge = typeof window !== 'undefined' ? window.AndroidBridge : null;
-  if (!settings || !settings.remindersEnabled) return 'skip';
-  if (!bridge || typeof bridge.canNotify !== 'function' || remindersConfirmed()) return 'skip';
-  if (bridge.canNotify()) return 'granted';
-  return (await ensurePermission()) === 'granted' ? 'granted' : 'denied';
+  if (!settings || !settings.remindersEnabled || !bridge || typeof bridge.canNotify !== 'function') {
+    markRemindersConfirmed();
+    return 'skip';
+  }
+  const granted = bridge.canNotify() || (await ensurePermission()) === 'granted';
+  markRemindersConfirmed();
+  return granted ? 'granted' : 'denied';
 }
 
 // Post a system notification: the native bridge in the app shell (a bare WebView

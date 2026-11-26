@@ -1,7 +1,7 @@
 // F3: reminders switched on by a restored backup on a shell that cannot notify.
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { verifyReminderPermission, markRemindersConfirmed, forgetRemindersConfirmed } from '../../static/js/services/reminders.js';
+import { verifyReminderPermission, markRemindersConfirmed, flagRemindersForCheck } from '../../static/js/services/reminders.js';
 
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
 const originalLocalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
@@ -34,39 +34,55 @@ function shell({ canNotify, answer }) {
   return win;
 }
 
+// Only data that came from a restore is checked.
+function restoredShell(options) {
+  const win = shell(options);
+  flagRemindersForCheck();
+  return win;
+}
+
 const on = { remindersEnabled: true };
 
-test('P1 enabled reminders on a shell that cannot notify ask once and report denied', async () => {
-  const win = shell({ canNotify: false, answer: false });
+test('P1 restored reminders on a shell that cannot notify ask once and report denied', async () => {
+  const win = restoredShell({ canNotify: false, answer: false });
   assert.equal(await verifyReminderPermission(on), 'denied');
+  assert.equal(win.requests, 1);
+  // The check is done; a later launch does not ask again.
+  assert.equal(await verifyReminderPermission(on), 'skip');
   assert.equal(win.requests, 1);
 });
 
 test('P2 a granted prompt keeps reminders on', async () => {
-  const win = shell({ canNotify: false, answer: true });
+  const win = restoredShell({ canNotify: false, answer: true });
   assert.equal(await verifyReminderPermission(on), 'granted');
   assert.equal(win.requests, 1);
+  assert.equal(await verifyReminderPermission(on), 'skip');
 });
 
 test('P3 a shell that can already notify is not prompted', async () => {
-  const win = shell({ canNotify: true, answer: false });
+  const win = restoredShell({ canNotify: true, answer: false });
   assert.equal(await verifyReminderPermission(on), 'granted');
   assert.equal(win.requests, 0);
 });
 
-test('P4 reminders the user switched on here are left alone until a restore', async () => {
+test('P4 an install whose reminders did not come from a restore is never asked (in-app-only mode stays)', async () => {
   const win = shell({ canNotify: false, answer: false });
+  assert.equal(await verifyReminderPermission(on), 'skip');
+  assert.equal(win.requests, 0);
+});
+
+test('P4b switching reminders on in this install settles a pending restore check', async () => {
+  const win = restoredShell({ canNotify: false, answer: false });
   markRemindersConfirmed();
   assert.equal(await verifyReminderPermission(on), 'skip');
   assert.equal(win.requests, 0);
-  forgetRemindersConfirmed();
-  assert.equal(await verifyReminderPermission(on), 'denied');
 });
 
 test('P5 nothing is asked when reminders are off or there is no app shell', async () => {
-  const win = shell({ canNotify: false, answer: false });
+  const win = restoredShell({ canNotify: false, answer: false });
   assert.equal(await verifyReminderPermission({ remindersEnabled: false }), 'skip');
   assert.equal(win.requests, 0);
   setGlobal('window', {});
+  flagRemindersForCheck();
   assert.equal(await verifyReminderPermission(on), 'skip');
 });
