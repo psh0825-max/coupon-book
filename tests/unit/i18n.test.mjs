@@ -67,3 +67,12 @@ test('I5 sample passes are created in the app language; Korean stays as before',
   speak('ko-KR');
   assert.equal(demoShops()[0].name, '안양 스타 마사지');
 });
+
+test('I6 a missing or non-text key comes back unchanged instead of throwing', () => {
+  for (const language of ['ko-KR', 'en-US']) {
+    speak(language);
+    assert.equal(t(undefined), undefined);
+    assert.equal(t(null), null);
+    assert.equal(t(5), 5);
+  }
+});

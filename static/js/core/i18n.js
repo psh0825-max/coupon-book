@@ -29,6 +29,9 @@ export function setLanguagePreference(language) {
 // Korean word (사용 as the Use button and as the Used label); Korean shows the
 // part before @@. {0|one|other} in a translation picks a plural form by {0}.
 export function t(key, ...values) {
+  // Callers pass data too (tr(shop.category)); a record without one must not
+  // break the page. Hand non-text back as is, as t() always did.
+  if (typeof key !== 'string') return key;
   const language = appLanguage();
   const korean = key.split('@@')[0];
   const template = language === 'ko' ? korean : (Object.hasOwn(messages, key) ? messages[key][language === 'en' ? 0 : 1] : korean);
