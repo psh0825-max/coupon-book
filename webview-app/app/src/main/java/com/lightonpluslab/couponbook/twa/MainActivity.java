@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.util.DisplayMetrics;
 import android.view.ViewGroup;
 import android.view.WindowManager;
@@ -49,6 +50,11 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
     // Per build type: debug uses Google test ads; release uses the real unit id (see app/build.gradle).
     private static final String BANNER_UNIT_ID = BuildConfig.BANNER_UNIT_ID;
 
+    // More renderer deaths than this inside the window means rebuilding is not
+    // helping (the page itself keeps taking the renderer down): stop and close.
+    private static final int MAX_RENDERER_DEATHS = 2;
+    private static final long RENDERER_DEATH_WINDOW_MS = 60_000L;
+
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_NOTIFY = 1002;
 
@@ -57,6 +63,8 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
     private AdView adView;
     private int bannerWidthDp;
     private boolean showingOffline;
+    private long rendererDeathWindowStart;
+    private int rendererDeaths;
     private final OnBackPressedCallback backCallback = new OnBackPressedCallback(false) {
         @Override
         public void handleOnBackPressed() {
@@ -166,7 +174,7 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
             @TargetApi(Build.VERSION_CODES.O)
             @Override
             public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
-                if (view == webView) recreateWebView();
+                if (view == webView) onRendererGone();
                 return true;
             }
 
@@ -212,6 +220,22 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
                 request.deny();
             }
         });
+    }
+
+    private void onRendererGone() {
+        long now = SystemClock.elapsedRealtime();
+        if (now - rendererDeathWindowStart > RENDERER_DEATH_WINDOW_MS) {
+            rendererDeathWindowStart = now;
+            rendererDeaths = 0;
+        }
+        rendererDeaths++;
+        if (rendererDeaths > MAX_RENDERER_DEATHS) {
+            finish(); // onDestroy destroys the dead WebView
+            return;
+        }
+        recreateWebView();
+        // The banner's WebView shares the renderer process; give it a fresh one too.
+        loadBanner();
     }
 
     private void recreateWebView() {
