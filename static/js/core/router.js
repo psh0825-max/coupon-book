@@ -33,10 +33,22 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, 
   let currentParams = {};
   let hasNavigated = false;
   let currentEntry = null; // history state of the page on screen
-  let leaveGuard = null;   // { isDirty(), confirm() -> Promise<bool> } set by a form view
+  let leaveGuard = null;   // { isDirty(), confirm() -> Promise<bool> } set by a form view;
+                           // asked before Back or navigate() leaves it
 
   function navigate(name, params = {}) {
     if (!routes || !routes[name]) return;
+    // In-app ways off a form with unsaved input (tabs, add button, templates,
+    // a sheet's link) ask first, like Back does.
+    if (leaveGuard && leaveGuard.isDirty()) {
+      const guard = leaveGuard;
+      guard.confirm().then((leave) => {
+        if (!leave || leaveGuard !== guard) return;
+        leaveGuard = null;
+        navigate(name, params);
+      });
+      return;
+    }
     closeOverlays?.();
     currentName = name;
     currentParams = params || {};

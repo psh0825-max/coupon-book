@@ -133,3 +133,42 @@ test('N7: Back on an untouched form leaves without asking', async ({ page }) => 
   expect(await activeSection(page)).toBe('home');
   expect(await page.locator('#overlay').count()).toBe(0);
 });
+
+test('N8: leaving a dirty form through the bottom tabs, the add button or a template asks first', async ({ page }) => {
+  await openApp(page, app.base, { shops: [pass('기존 이용권')] });
+  await page.locator('[data-fab]').click();
+  await page.locator('#f-name').fill('쓰다 만 이용권');
+
+  for (const leave of [
+    () => page.locator('[data-nav="settings"]').click(),
+    () => page.locator('[data-fab]').click(),
+    () => page.locator('.use-chips .chip').first().click()
+  ]) {
+    await leave();
+    const sheet = page.getByRole('dialog');
+    await expect(sheet).toContainText('저장하지 않은 내용은 사라져요');
+    await sheet.getByRole('button', { name: '취소' }).click();
+    await page.waitForTimeout(500);
+    expect(await activeSection(page)).toBe('add');
+    await expect(page.locator('#f-name')).toHaveValue('쓰다 만 이용권');
+  }
+
+  await page.locator('[data-nav="settings"]').click();
+  await page.getByRole('dialog').getByRole('button', { name: '나가기' }).click();
+  await expect(page.locator('#settings')).toHaveClass(/active/);
+  await page.waitForTimeout(500);
+  expect(await page.evaluate(() => history.state.depth)).toBe(0);
+});
+
+test('N9: deleting a pass from an edited form asks only the delete question', async ({ page }) => {
+  await openApp(page, app.base, { shops: [pass('지울 이용권'), pass('남길 이용권')] });
+  await openDetail(page, '지울 이용권');
+  await page.locator('.detail-actions').getByRole('button', { name: '편집' }).click();
+  await page.locator('#f-name').fill('바꾼 이름');
+  await page.locator('#shop-form .btn-danger').click();
+  await page.getByRole('dialog').getByRole('button', { name: '삭제' }).click();
+  await expect(page.locator('#home')).toHaveClass(/active/);
+  await page.waitForTimeout(600);
+  expect(await page.locator('#overlay').count()).toBe(0);
+  await expect(page.locator('#home .card-main', { hasText: '지울 이용권' })).toHaveCount(0);
+});
