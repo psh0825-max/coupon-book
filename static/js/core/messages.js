@@ -2355,5 +2355,9 @@ export const messages = {
   "나가기": [
     "Leave",
     "戻る"
+  ],
+  "사용할 금액을 입력해 주세요": [
+    "Enter an amount to use",
+    "使う金額を入力してください"
   ]
 };

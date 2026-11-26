@@ -1364,6 +1364,7 @@
 .stamp-preview-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .stamp-counter { font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
 .field-hint { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); }
+.field-hint.field-error { color: var(--danger); font-weight: 600; }
 .stamp-preview { margin-top: 12px; }
 
 /* Ad banner (free-tier ad slot) */

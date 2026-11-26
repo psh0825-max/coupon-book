@@ -166,8 +166,10 @@ const actions = {
       const updated = { ...shop };
       let logFields;
       if (isAmountKind(shop)) {
-        const amt = clamp(Math.round(opts.amount), 1, remainingValue(shop));
-        if (!amt) return;
+        // Reject before clamping: an empty or 0 entry must not become a 1-won use.
+        const requested = Math.round(Number(opts.amount));
+        if (!(requested >= 1)) return;
+        const amt = clamp(requested, 1, remainingValue(shop));
         updated.usedAmount = (shop.usedAmount || 0) + amt;
         logFields = { amount: amt };
       } else {
@@ -248,7 +250,12 @@ const actions = {
         id: 'use-amount',
         attrs: { type: 'text', inputmode: 'numeric', placeholder: tr("예: 30,000") }
       });
-      amountInput.addEventListener('input', () => { amountInput.value = groupDigits(amountInput.value); });
+      const amountError = h('p', { class: 'field-hint field-error', attrs: { role: 'alert' } });
+      amountError.hidden = true;
+      amountInput.addEventListener('input', () => {
+        amountInput.value = groupDigits(amountInput.value);
+        amountError.hidden = true;
+      });
       const chipValues = [10000, 30000, 50000, 100000];
       const chips = h('div', { class: 'use-chips' },
         chipValues.map((v) => h('button', {
@@ -265,6 +272,7 @@ const actions = {
         body: h('div', null,
           h('label', { class: 'field-label', attrs: { for: 'use-amount' } }, tr("사용 금액(원)")),
           amountInput,
+          amountError,
           chips,
           h('div', { class: 'amount-preview' }, tr("남은 금액: {0}", (formatWon(remaining)))),
           memoInput
@@ -272,8 +280,18 @@ const actions = {
         actions: [
           { id: 'cancel', label: tr("취소"), className: 'btn-secondary' },
           {
-            id: 'confirm', label: tr("사용"), className: 'btn-primary',
-            onClick: () => actions.usePass(shop.id, { amount: parseNumber(amountInput.value), note: memoInput.value.trim(), confirmExpired: true })
+            id: 'confirm', label: tr("사용"), className: 'btn-primary', close: false,
+            onClick: () => {
+              const amount = parseNumber(amountInput.value);
+              if (amount <= 0) {
+                amountError.textContent = tr("사용할 금액을 입력해 주세요");
+                amountError.hidden = false;
+                amountInput.focus();
+                return;
+              }
+              actions.usePass(shop.id, { amount, note: memoInput.value.trim(), confirmExpired: true });
+              closeOverlay();
+            }
           }
         ]
       });
