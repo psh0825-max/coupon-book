@@ -13,8 +13,10 @@ export default defineConfig({
     baseURL: BASE_URL,
     headless: true,
     viewport: { width: 414, height: 896 }, // mobile-ish, matches PWA layout
+    // The specs assert Korean copy; the app follows navigator.language.
+    locale: 'ko-KR',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], locale: 'ko-KR' } },
   ],
 });
