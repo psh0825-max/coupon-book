@@ -24,8 +24,10 @@ const TITLES = {
  *   getCtx: () -> ctx supplied by app.js at navigate time
  *   closeOverlays: () -> void — tears down an open sheet without popping
  *     history (its entry is reused by the navigation below)
+ *   isAvailable: ({ name, params }) -> bool — false when a history entry points
+ *     at something that no longer exists (a deleted pass); restore() then goes home
  */
-export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays } = {}) {
+export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, isAvailable } = {}) {
   let currentName = null;
   let currentParams = {};
   let hasNavigated = false;
@@ -59,6 +61,10 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays }
   // so scroll position survives.
   function restore(state) {
     const s = (state && state.name && routes[state.name]) ? state : { name: 'home', params: {} };
+    if (isAvailable && !isAvailable({ name: s.name, params: s.params || {} })) {
+      navigate('home');
+      return;
+    }
     if (s.name === currentName
       && JSON.stringify(s.params || {}) === JSON.stringify(currentParams || {})) return;
     currentName = s.name;
@@ -81,7 +87,13 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays }
 
   function render({ keepScroll = false } = {}) {
     const ctx = getCtx ? getCtx() : {};
-    const view = routes[currentName](ctx, currentParams);
+    const name = currentName;
+    const params = currentParams;
+    const view = routes[name](ctx, params);
+    // A view may redirect while it is being built (the detail of a deleted pass
+    // navigates home). That nested navigate already rendered its own target;
+    // mounting this view now would put a stale empty element into it.
+    if (name !== currentName || params !== currentParams) return;
     mountView(currentName, view);
     syncChrome(currentName, keepScroll);
     if (typeof onChange === 'function') {

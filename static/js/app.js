@@ -611,7 +611,10 @@ const router = createRouter({
   routes,
   getCtx: () => ctx,
   onChange: () => mountAds(), // page-level Auto Ads; no-op while ads are off
-  closeOverlays: () => closeOverlay(true, { keepHistory: true })
+  closeOverlays: () => closeOverlay(true, { keepHistory: true }),
+  // Back can land on the detail/edit entry of a pass deleted since.
+  isAvailable: ({ name, params }) => !(['detail', 'add'].includes(name) && params.id)
+    || store.getState().shops.some((s) => s.id === params.id)
 });
 ctx.router = router; // views read ctx.router at render time — must be set before any navigate
 
