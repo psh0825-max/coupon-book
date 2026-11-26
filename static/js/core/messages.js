@@ -2343,5 +2343,17 @@ export const messages = {
   "🎟️ 모바일 쿠폰 · 기프티콘": [
     "🎟️ Mobile Coupon · Gift Card",
     "🎟️ モバイルクーポン · ギフトicon"
+  ],
+  "작성 중인 내용이 있어요": [
+    "You have unsaved changes",
+    "保存していない変更があります"
+  ],
+  "저장하지 않은 내용은 사라져요. 그래도 나갈까요?": [
+    "Anything you haven't saved will be lost. Leave anyway?",
+    "保存していない内容は失われます。このまま戻りますか？"
+  ],
+  "나가기": [
+    "Leave",
+    "戻る"
   ]
 };

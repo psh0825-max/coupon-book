@@ -12,6 +12,17 @@ const FOCUSABLE =
 
 let titleSeq = 0;
 let activeState = null; // { overlay, onClose, prevFocus, onKeydown }
+const closing = new Map(); // overlay -> { timer, finish } while it animates out
+
+// A new sheet must not share the page with one still animating out: two
+// dialogs (and two sets of buttons) would be in the DOM at once.
+function finishClosing() {
+  for (const { timer, finish } of closing.values()) {
+    clearTimeout(timer);
+    finish();
+  }
+  closing.clear();
+}
 
 function getFocusable(container) {
   return Array.from(container.querySelectorAll(FOCUSABLE))
@@ -44,6 +55,7 @@ export function showSheet({ title, body, actions = [], onClose } = {}) {
   // Tear down any previous overlay synchronously; keep its history entry —
   // the replacement sheet takes it over.
   closeOverlay(true, { keepHistory: true });
+  finishClosing();
 
   const titleId = `sheet-title-${++titleSeq}`;
   const prevFocus = document.activeElement;
@@ -116,6 +128,7 @@ export function showSheet({ title, body, actions = [], onClose } = {}) {
 /** Full-screen counter presentation. Its backdrop deliberately does not dismiss. */
 export function showPresenter({ label, body, onOpen, onClose } = {}) {
   closeOverlay(true, { keepHistory: true });
+  finishClosing();
 
   const prevFocus = document.activeElement;
   const closeBtn = h('button', {
@@ -183,6 +196,7 @@ export function closeOverlay(immediate = false, { keepHistory = false } = {}) {
   overlay.classList.remove('active');
 
   const finish = () => {
+    closing.delete(overlay);
     overlay.remove();
     onClose?.();
     if (prevFocus && typeof prevFocus.focus === 'function') prevFocus.focus();
@@ -192,7 +206,7 @@ export function closeOverlay(immediate = false, { keepHistory = false } = {}) {
     clear(overlay);
     finish();
   } else {
-    setTimeout(finish, 400);
+    closing.set(overlay, { timer: setTimeout(finish, 400), finish });
   }
 
   if (!keepHistory) afterOwnPops(() => { if (history.state && history.state.overlay) goBackBy(1); });

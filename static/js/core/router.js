@@ -1,5 +1,5 @@
 import { t as tr } from './i18n.js';
-import { afterOwnPops } from './history-queue.js';
+import { afterOwnPops, goBackBy } from './history-queue.js';
 // core/router.js — view registry + browser-history-backed back stack. Owns
 // section visibility, nav active state, page title, back-button + FAB
 // visibility, scroll reset. Navigation pushes history state objects (URL never
@@ -32,6 +32,8 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, 
   let currentName = null;
   let currentParams = {};
   let hasNavigated = false;
+  let currentEntry = null; // history state of the page on screen
+  let leaveGuard = null;   // { isDirty(), confirm() -> Promise<bool> } set by a form view
 
   function navigate(name, params = {}) {
     if (!routes || !routes[name]) return;
@@ -44,18 +46,48 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, 
     afterOwnPops(() => syncHistory(name, params));
   }
 
-  // Roots replace (depth 0, so back exits from a root); an open sheet's entry is
-  // reused in place; everything else pushes one level deeper.
+  // Roots live at depth 0, so back exits from a root: going to one from deeper
+  // first pops back to the first entry, or every sub page passed on the way
+  // would stay behind as an entry Back walks through (or reopens). An open
+  // sheet's entry is reused in place; sub pages push one level deeper.
   function syncHistory(name, params) {
     const state = history.state || {};
-    if (!hasNavigated || ROOT_PAGES.includes(name)) {
-      history.replaceState({ name, params, depth: 0 }, '');
+    const depth = state.depth || 0;
+    if (!hasNavigated) {
+      // Boot: entries left by an earlier page load are not ours to walk.
       hasNavigated = true;
+      writeEntry('replaceState', { name, params, depth: 0 });
+    } else if (ROOT_PAGES.includes(name)) {
+      goBackBy(depth);
+      afterOwnPops(() => writeEntry('replaceState', { name, params, depth: 0 }));
     } else if (state.overlay) {
-      history.replaceState({ name, params, depth: (state.depth || 0) }, '');
+      writeEntry('replaceState', { name, params, depth });
     } else {
-      history.pushState({ name, params, depth: (state.depth || 0) + 1 }, '');
+      writeEntry('pushState', { name, params, depth: depth + 1 });
     }
+  }
+
+  function writeEntry(method, entry) {
+    history[method](entry, '');
+    currentEntry = entry;
+  }
+
+  function setLeaveGuard(guard) {
+    leaveGuard = guard || null;
+  }
+
+  // The pop already happened, so put the form's entry back while asking; leaving
+  // then goes back for real.
+  function holdForGuard() {
+    const guard = leaveGuard;
+    if (!guard || !currentEntry || !guard.isDirty()) return false;
+    history.pushState(currentEntry, '');
+    guard.confirm().then((leave) => {
+      if (!leave || leaveGuard !== guard) return;
+      leaveGuard = null;
+      afterOwnPops(() => history.back());
+    });
+    return true;
   }
 
   function back() {
@@ -69,6 +101,7 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, 
   // entry matches the current view (e.g. the back() an overlay close issues)
   // so scroll position survives.
   function restore(state) {
+    if (holdForGuard()) return;
     const s = (state && state.name && routes[state.name]) ? state : { name: 'home', params: {} };
     if (isAvailable && !isAvailable({ name: s.name, params: s.params || {} })) {
       navigate('home');
@@ -78,6 +111,7 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, 
       && JSON.stringify(s.params || {}) === JSON.stringify(currentParams || {})) return;
     currentName = s.name;
     currentParams = s.params || {};
+    if (s.depth != null) currentEntry = { name: s.name, params: currentParams, depth: s.depth };
     render();
   }
 
@@ -98,6 +132,7 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, 
     const ctx = getCtx ? getCtx() : {};
     const name = currentName;
     const params = currentParams;
+    leaveGuard = null; // the view being built sets its own
     const view = routes[name](ctx, params);
     // A view may redirect while it is being built (the detail of a deleted pass
     // navigates home). That nested navigate already rendered its own target;
@@ -144,7 +179,7 @@ export function createRouter({ outlet, routes, onChange, getCtx, closeOverlays, 
     }
   }
 
-  return { navigate, back, current, reload, restore };
+  return { navigate, back, current, reload, restore, setLeaveGuard };
 }
 
 function replaceChildren(parent, node) {

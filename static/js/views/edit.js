@@ -504,5 +504,24 @@ export function render(ctx, params = {}) {
   });
 
   applyKind();
+
+  // Back from a form with unsaved input asks before throwing it away. The place
+  // search box and the file picker hold no pass data of their own.
+  const formSnapshot = () => JSON.stringify([
+    ...Array.from(form.querySelectorAll('input, select, textarea'))
+      .filter((el) => el.type !== 'file' && el.id !== 'f-place-search')
+      .map((el) => el.value),
+    kind, collect, currentSkin, imageData
+  ]);
+  const pristine = formSnapshot();
+  router.setLeaveGuard?.({
+    isDirty: () => !saving && formSnapshot() !== pristine,
+    confirm: () => showConfirm({
+      title: tr("작성 중인 내용이 있어요"),
+      message: tr("저장하지 않은 내용은 사라져요. 그래도 나갈까요?"),
+      confirmLabel: tr("나가기"),
+      danger: true
+    })
+  });
   return root;
 }
