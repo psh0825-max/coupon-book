@@ -1,16 +1,20 @@
 package com.lightonpluslab.couponbook.twa;
 
 import android.Manifest;
+import android.annotation.TargetApi;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.util.DisplayMetrics;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -46,6 +50,11 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
     // Per build type: debug uses Google test ads; release uses the real unit id (see app/build.gradle).
     private static final String BANNER_UNIT_ID = BuildConfig.BANNER_UNIT_ID;
 
+    // More renderer deaths than this inside the window means rebuilding is not
+    // helping (the page itself keeps taking the renderer down): stop and close.
+    private static final int MAX_RENDERER_DEATHS = 2;
+    private static final long RENDERER_DEATH_WINDOW_MS = 60_000L;
+
     private static final int REQ_LOCATION = 1001;
     private static final int REQ_NOTIFY = 1002;
 
@@ -54,10 +63,19 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
     private AdView adView;
     private int bannerWidthDp;
     private boolean showingOffline;
+    private long rendererDeathWindowStart;
+    private int rendererDeaths;
     private final OnBackPressedCallback backCallback = new OnBackPressedCallback(false) {
         @Override
         public void handleOnBackPressed() {
-            webView.goBack();
+            // The page answers first: true means it handles Back itself (it is asking
+            // about an unsaved form). Anything else, including pages without the hook
+            // (the offline page, an older cached web build), goes back as before.
+            webView.evaluateJavascript(
+                    "(function(){try{return !!(window.__cbBack&&window.__cbBack());}catch(e){return false;}})()",
+                    handled -> {
+                        if (!"true".equals(handled) && webView.canGoBack()) webView.goBack();
+                    });
         }
     };
 
@@ -150,6 +168,16 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
                 return handleUri(request.getUrl());
             }
 
+            // API 26+: the renderer crashed or was killed to free memory. Returning
+            // false (the default) takes the whole app down; rebuild the WebView instead.
+            // Passes live in IndexedDB, so a reload loses only the page on screen.
+            @TargetApi(Build.VERSION_CODES.O)
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                if (view == webView) onRendererGone();
+                return true;
+            }
+
             // API 23 calls this String overload instead of the WebResourceRequest one.
             @SuppressWarnings("deprecation")
             @Override
@@ -192,6 +220,42 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
                 request.deny();
             }
         });
+    }
+
+    private void onRendererGone() {
+        long now = SystemClock.elapsedRealtime();
+        if (now - rendererDeathWindowStart > RENDERER_DEATH_WINDOW_MS) {
+            rendererDeathWindowStart = now;
+            rendererDeaths = 0;
+        }
+        rendererDeaths++;
+        if (rendererDeaths > MAX_RENDERER_DEATHS) {
+            finish(); // onDestroy destroys the dead WebView
+            return;
+        }
+        recreateWebView();
+        // The banner's WebView shares the renderer process; give it a fresh one too.
+        loadBanner();
+    }
+
+    private void recreateWebView() {
+        ViewGroup parent = (ViewGroup) webView.getParent();
+        int index = parent.indexOfChild(webView);
+        ViewGroup.LayoutParams params = webView.getLayoutParams();
+        parent.removeView(webView);
+        webView.destroy();
+        // Callbacks owned by the dead renderer must not be answered later.
+        pendingFileCallback = null;
+        pendingGeoCallback = null;
+        pendingGeoOrigin = null;
+
+        webView = new WebView(this);
+        webView.setId(R.id.webview);
+        parent.addView(webView, index, params);
+        configureWebView();
+        showingOffline = false;
+        backCallback.setEnabled(false);
+        webView.loadUrl(APP_URL);
     }
 
     private static Intent buildFileChooserIntent(WebChromeClient.FileChooserParams params) {
@@ -318,6 +382,15 @@ public class MainActivity extends AppCompatActivity implements WebAppBridge.Pres
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
+    // A notification tap while the app is open arrives here (SINGLE_TOP) instead of
+    // recreating the activity, so the page on screen is kept. The intent carries no
+    // extras today; keep it current for anything that reads getIntent() later.
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);

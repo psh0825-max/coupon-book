@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">쿠폰북</string>
+    <string name="backup_saved_downloads">백업 파일을 저장했어요 (다운로드 폴더)</string>
+    <string name="backup_saved_app_folder">백업 파일을 이 앱 전용 폴더(%1$s)에 저장했어요. 앱을 지우면 함께 지워지니 다른 곳에 복사해 두세요.</string>
+    <string name="backup_save_failed">백업 저장 실패</string>
+    <string name="channel_expiry_name">만료 알림</string>
+    <string name="channel_expiry_description">쿠폰/이용권 만료 임박 알림</string>
 </resources>

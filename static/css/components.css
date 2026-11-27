@@ -1364,6 +1364,7 @@
 .stamp-preview-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .stamp-counter { font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
 .field-hint { margin-top: 6px; font-size: 0.78rem; color: var(--text-muted); }
+.field-hint.field-error { color: var(--danger); font-weight: 600; }
 .stamp-preview { margin-top: 12px; }
 
 /* Ad banner (free-tier ad slot) */
@@ -1385,9 +1386,8 @@
 .shop-rail::-webkit-scrollbar { display: none; }
 .shop-rail > .card { scroll-snap-align: center; }
 .shop-rail.is-empty { display: block; grid-auto-flow: row; margin: 0; padding: 0; }
-@media (min-width: 768px) {
-  .shop-rail { grid-auto-columns: 48%; }
-}
+/* No wider rail on tablets: the shell stays a 480px column there (layout.css),
+   and 48% of it made ~210px cards that broke words mid-line. */
 
 /* ── Backup nudge banner (home) ─────────────────────────────────────────── */
 .nudge-banner {
@@ -1526,8 +1526,11 @@
   background: #ffffff; color: #0b1220; font-weight: 850; font-size: 0.95rem; cursor: pointer;
 }
 
-/* Depleted pass: two equal ends (재구매 / 삭제) — neither is a minor action. */
-.detail-actions.depleted-actions { grid-template-columns: 1fr 1fr; }
+/* Depleted pass: two equal ends (재구매 / 삭제) — neither is a minor action.
+   Labels wrap inside their column: 'Register again (repurchase)' and friends
+   are wider than half a 360px screen, and nowrap pushed the row sideways. */
+.detail-actions.depleted-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.detail-actions.depleted-actions .btn { min-width: 0; white-space: normal; line-height: 1.25; text-align: center; }
 
 /* ── Disabled buttons ─────────────────────────────────────────────────────── */
 /* There was no disabled styling anywhere, so a spent pass showed '사용하기' as a

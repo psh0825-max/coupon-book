@@ -16,6 +16,7 @@ import androidx.core.app.NotificationManagerCompat;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -48,14 +49,22 @@ public class WebAppBridge {
         this.presenter = presenter;
     }
 
-    private void toast(String msg) {
-        main.post(() -> Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show());
+    private void toast(int messageRes) {
+        main.post(() -> Toast.makeText(ctx, messageRes, Toast.LENGTH_SHORT).show());
     }
 
-    /** Save a text file (the JSON backup) to the device's Downloads. */
+    private void toastLong(String message) {
+        main.post(() -> Toast.makeText(ctx, message, Toast.LENGTH_LONG).show());
+    }
+
+    /**
+     * Save a text file (the JSON backup). Returns whether it was written, so the
+     * web only records a backup that exists; this method shows the toast either way.
+     */
     @JavascriptInterface
-    public void saveText(String filename, String content) {
+    public boolean saveText(String filename, String content) {
         if (filename == null || filename.isEmpty()) filename = "coupon-backup.json";
+        if (content == null) content = "";
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ContentValues v = new ContentValues();
@@ -64,24 +73,40 @@ public class WebAppBridge {
                 v.put(MediaStore.Downloads.IS_PENDING, 1);
                 Uri collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
                 Uri item = ctx.getContentResolver().insert(collection, v);
-                if (item == null) { toast("백업 저장 실패"); return; }
+                if (item == null) {
+                    toast(R.string.backup_save_failed);
+                    return false;
+                }
                 try (OutputStream os = ctx.getContentResolver().openOutputStream(item)) {
+                    if (os == null) throw new IOException("no output stream");
                     os.write(content.getBytes(StandardCharsets.UTF_8));
+                } catch (Exception e) {
+                    // Do not leave an empty pending entry in Downloads.
+                    ctx.getContentResolver().delete(item, null, null);
+                    throw e;
                 }
                 v.clear();
                 v.put(MediaStore.Downloads.IS_PENDING, 0);
                 ctx.getContentResolver().update(item, v, null, null);
+                toast(R.string.backup_saved_downloads);
             } else {
-                // API 23–28: write to the app's external files dir (no permission needed).
+                // API 23-28: Downloads would need WRITE_EXTERNAL_STORAGE, so the file
+                // goes to this app's own folder, which is removed with the app. Say so.
                 File dir = ctx.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                if (dir == null) {
+                    toast(R.string.backup_save_failed);
+                    return false;
+                }
                 File out = new File(dir, filename);
                 try (FileOutputStream fos = new FileOutputStream(out)) {
                     fos.write(content.getBytes(StandardCharsets.UTF_8));
                 }
+                toastLong(ctx.getString(R.string.backup_saved_app_folder, dir.getAbsolutePath()));
             }
-            toast("백업 파일을 저장했어요 (다운로드 폴더)");
+            return true;
         } catch (Exception e) {
-            toast("백업 저장 실패");
+            toast(R.string.backup_save_failed);
+            return false;
         }
     }
 

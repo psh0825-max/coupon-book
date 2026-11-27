@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Coupon Book</string>
+    <string name="backup_saved_downloads">バックアップをダウンロードフォルダに保存しました</string>
+    <string name="backup_saved_app_folder">バックアップをこのアプリ専用のフォルダ（%1$s）に保存しました。アプリを削除すると一緒に消えるため、別の場所にコピーしてください。</string>
+    <string name="backup_save_failed">バックアップを保存できませんでした</string>
+    <string name="channel_expiry_name">有効期限の通知</string>
+    <string name="channel_expiry_description">クーポンや利用券の有効期限が近づいたときのお知らせ</string>
 </resources>

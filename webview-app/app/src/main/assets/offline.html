@@ -80,11 +80,38 @@
       <path d="M18 43h-2a10 10 0 0 1 2-19.8A15 15 0 0 1 45.6 25 10 10 0 0 1 48 44H32" />
       <path d="M8 8l48 48" />
     </svg>
-    <h1>인터넷에 연결되지 않았어요</h1>
-    <p>쿠폰북을 처음 열 때는 인터넷 연결이 한 번 필요해요. 연결되면 자동으로 다시 시도해요.</p>
-    <button type="button">다시 시도</button>
+    <h1 data-text="heading">인터넷에 연결되지 않았어요</h1>
+    <p data-text="body">쿠폰북을 처음 열 때는 인터넷 연결이 한 번 필요해요. 연결되면 자동으로 다시 시도해요.</p>
+    <button type="button" data-text="retry">다시 시도</button>
   </main>
   <script>
+    // Same rule as the web app (core/i18n.js): first of the device languages that
+    // is ko, en or ja, else Korean.
+    const TEXT = {
+      en: {
+        title: 'Internet connection needed',
+        heading: 'You\u2019re not connected to the internet',
+        body: 'Coupon Book needs an internet connection the first time it opens. It will try again automatically once you\u2019re connected.',
+        retry: 'Try again'
+      },
+      ja: {
+        title: 'インターネット接続が必要です',
+        heading: 'インターネットに接続されていません',
+        body: 'Coupon Book を初めて開くときは、一度インターネット接続が必要です。接続されると自動でもう一度試します。',
+        retry: 'もう一度試す'
+      }
+    };
+    const language = (navigator.languages || [navigator.language])
+      .map((tag) => String(tag || '').toLowerCase().split('-')[0])
+      .find((code) => code === 'ko' || code === 'en' || code === 'ja') || 'ko';
+    if (TEXT[language]) {
+      document.documentElement.lang = language;
+      document.title = TEXT[language].title;
+      document.querySelectorAll('[data-text]').forEach((node) => {
+        node.textContent = TEXT[language][node.dataset.text];
+      });
+    }
+
     const APP_URL = 'https://coupon.lightonpluslab.com/';
     function retry() { location.replace(APP_URL); }
     document.querySelector('button').addEventListener('click', retry);

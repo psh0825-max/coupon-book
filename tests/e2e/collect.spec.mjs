@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { appServerCommand } from './support/server.mjs';
 
 // 적립형 도장판: the cafe template creates a board that starts empty, fills
 // with each stamp, celebrates when full and can start a new board.
@@ -9,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const PORT = 7819;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-const PYTHON = path.join(ROOT, '.venv', 'Scripts', 'python.exe');
+const SERVER = appServerCommand(ROOT);
 const NAME = '동네 카페';
 let server;
 
@@ -44,7 +45,7 @@ async function readBoard(page) {
 const card = (page) => page.locator('#home .shop-rail .card', { hasText: NAME });
 
 test.beforeAll(async () => {
-  server = spawn(PYTHON, ['app.py'], { cwd: ROOT, env: { ...process.env, COUPON_BOOK_PORT: String(PORT) }, stdio: 'ignore' });
+  server = spawn(SERVER.command, SERVER.args, { cwd: ROOT, env: { ...process.env, COUPON_BOOK_PORT: String(PORT) }, stdio: 'ignore' });
   await waitForServer();
 });
 test.afterAll(async () => { if (server && !server.killed) server.kill(); });

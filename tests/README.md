@@ -44,7 +44,9 @@ Result: 1 test, passing.
   ```
   npx playwright install chromium
   ```
-- The Flask venv at `.venv/Scripts/python.exe` with the app dependencies installed.
+- On Windows, the Flask venv at `.venv/Scripts/python.exe` with the app dependencies installed.
+  Elsewhere (or without that venv) the specs start `tests/e2e/support/static-server.mjs`,
+  a Node twin of `app.py`. `playwright.config.mjs` sets locale `ko-KR`, which the specs assume.
 
 ### If Playwright / Chromium is unavailable
 The e2e layer is best-effort. If the browser binary cannot be installed in your

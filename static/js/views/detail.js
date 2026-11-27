@@ -75,11 +75,11 @@ export function render(ctx, params = {}) {
       h('div', { class: `detail-status ${status.className}` }, status.label),
       h('h2', null, shop.name),
       shop.benefit ? h('div', { class: 'benefit-line' }, shop.benefit) : null,
-      h('div', { class: 'address' }, `${shop.address || tr("주소 없음")} · ${shop.category}`)
+      h('div', { class: 'address' }, `${shop.address || tr("주소 없음")} · ${tr(shop.category)}`)
     ),
     h('div', { class: 'stats' },
       stat(totalLabel(shop), amount ? tr("총 금액") : collect ? tr("도장 칸") : tr("총 횟수")),
-      stat(usedLabel(shop), collect ? tr("모은 도장") : tr("사용")),
+      stat(usedLabel(shop), collect ? tr("모은 도장") : tr("사용@@used")),
       stat(remainingLabel(shop), collect ? tr("남은 칸") : tr("남음"))
     )
   ));
